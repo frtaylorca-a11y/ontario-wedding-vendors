@@ -1,0 +1,293 @@
+@import "tailwindcss";
+
+/* ============================================
+   Design tokens — sourced from nwd-styles.css
+   (Niagara Edit). Raw CSS variables match the
+   mockup names so approved mockup markup can be
+   pasted in without rewriting `var(--rose)` etc.
+   ============================================ */
+:root {
+  --rose:         #B96476;
+  --rose-hover:   #A5536A;
+  --rose-light:   #F7EEF1;
+  --rose-pale:    #FDF5F7;
+  --charcoal:     #2C2C2C;
+  --taupe:        #8C7B6E;
+  --bg:           #FFFFFF;
+  --bg-soft:      #FAFAFA;
+  --bg-warm:      #F8F4F1;
+  --gold:         #C9A96E;
+  --gold-light:   #EFE0C0;
+  --border:       #E8E4E0;
+  --border-light: #F2EFEC;
+  --text:         #1A1A1A;
+  --text-mid:     #5C5C5C;
+  --text-muted:   #A0A0A0;
+  --white:        #FFFFFF;
+  --green:        #4A7C59;
+
+  --font-display: "Cormorant Garamond", Georgia, serif;
+  --font-body:    "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  --radius-card:  16px;
+  --radius-pill:  30px;
+  --radius-btn:   10px;
+
+  --shadow-card:  0 4px 20px rgba(0, 0, 0, 0.06);
+  --shadow-hover: 0 12px 36px rgba(0, 0, 0, 0.10);
+}
+
+/* ============================================
+   Tailwind v4 @theme — exposes tokens as utility
+   classes (bg-rose, text-charcoal, font-display,
+   rounded-card, shadow-card, etc.)
+   ============================================ */
+@theme {
+  --color-rose:         #B96476;
+  --color-rose-hover:   #A5536A;
+  --color-rose-light:   #F7EEF1;
+  --color-rose-pale:    #FDF5F7;
+  --color-charcoal:     #2C2C2C;
+  --color-taupe:        #8C7B6E;
+  --color-bg:           #FFFFFF;
+  --color-bg-soft:      #FAFAFA;
+  --color-bg-warm:      #F8F4F1;
+  --color-gold:         #C9A96E;
+  --color-gold-light:   #EFE0C0;
+  --color-border:       #E8E4E0;
+  --color-border-light: #F2EFEC;
+  --color-text:         #1A1A1A;
+  --color-text-mid:     #5C5C5C;
+  --color-text-muted:   #A0A0A0;
+  --color-green:        #4A7C59;
+
+  --font-display: "Cormorant Garamond", Georgia, serif;
+  --font-sans:    "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  --radius-card: 16px;
+  --radius-pill: 30px;
+  --radius-btn:  10px;
+
+  --shadow-card:  0 4px 20px rgba(0, 0, 0, 0.06);
+  --shadow-hover: 0 12px 36px rgba(0, 0, 0, 0.10);
+}
+
+/* ============================================
+   Base — mirrors nwd-styles.css typography rules
+   ============================================ */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--charcoal);
+  line-height: 1.15;
+}
+h1 { font-size: clamp(2.6rem, 6vw, 4.8rem); }
+h2 { font-size: clamp(1.8rem, 3.5vw, 2.8rem); }
+h3 { font-size: 1.4rem; }
+em { color: var(--rose); font-style: italic; }
+p  { line-height: 1.75; color: var(--text-mid); font-weight: 300; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.4; }
+}
+
+/* ============================================
+   Hero — full-bleed image with dark warm overlay
+   ============================================ */
+.hero {
+  --hero-image: none;
+  position: relative;
+  min-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 120px 24px 80px;
+  overflow: hidden;
+  background-color: #1C1419; /* placeholder until licensed photo is sourced */
+}
+
+.hero-has-image {
+  background-image: var(--hero-image);
+  background-size: cover;
+  background-position: center;
+}
+
+.hero-has-image::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(28, 20, 25, 0.45);
+  z-index: 0;
+}
+
+.hero > * { position: relative; z-index: 1; }
+
+.hero-has-image h1,
+.hero-has-image .hero-sub {
+  color: var(--white);
+}
+
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  color: var(--text-mid);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 700;
+  padding: 7px 18px;
+  border-radius: var(--radius-pill);
+  margin-bottom: 28px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+.hero-eyebrow::before { content: '✦'; color: var(--rose); font-size: 0.6rem; }
+
+.hero h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2.8rem, 7vw, 5.2rem);
+  font-weight: 600;
+  line-height: 1.08;
+  max-width: 760px;
+  margin: 0 auto;
+}
+.hero h1 em { color: var(--rose); font-style: italic; }
+
+.hero-sub {
+  font-size: 1.05rem;
+  max-width: 500px;
+  line-height: 1.75;
+  margin: 18px auto 0;
+  font-weight: 300;
+}
+
+/* Search — always white, regardless of hero background */
+.hero-search { margin-top: 36px; width: 100%; max-width: 580px; }
+.search-wrap {
+  display: flex;
+  background: var(--white);
+  border-radius: 60px;
+  border: 1.5px solid var(--border);
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+}
+.search-wrap select {
+  flex: 1; padding: 16px 20px;
+  border: none; outline: none;
+  font-family: var(--font-body);
+  font-size: 0.88rem; color: var(--text);
+  background: transparent; cursor: pointer;
+  border-right: 1.5px solid var(--border);
+  appearance: none;
+}
+.search-wrap input {
+  flex: 2; padding: 16px 20px;
+  border: none; outline: none;
+  font-family: var(--font-body);
+  font-size: 0.88rem; color: var(--text);
+}
+.search-wrap input::placeholder { color: var(--text-muted); }
+.search-btn {
+  background: var(--rose); color: var(--white);
+  border: none; padding: 16px 26px;
+  font-family: var(--font-body);
+  font-size: 0.82rem; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  cursor: pointer; transition: background 0.2s; white-space: nowrap;
+}
+.search-btn:hover { background: var(--rose-hover); }
+
+/* Quick-filter pills */
+.hero-filters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 22px;
+  max-width: 720px;
+}
+.hero-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  color: var(--text-mid);
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.18s;
+  white-space: nowrap;
+}
+.hero-filter-pill:hover,
+.hero-filter-pill.active {
+  border-color: var(--rose);
+  color: var(--rose);
+  background: var(--rose-light);
+}
+.hero-filter-pill.active {
+  background: var(--rose);
+  color: var(--white);
+  border-color: var(--rose);
+}
+
+/* Stats row */
+.hero-stats {
+  display: inline-flex;
+  gap: 48px;
+  margin-top: 44px;
+  padding: 18px 36px;
+  border-radius: 30px;
+  background: rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.stat { text-align: center; }
+.stat-num {
+  font-family: var(--font-display);
+  font-size: 1.9rem; font-weight: 700;
+  color: var(--charcoal);
+}
+.stat-label {
+  font-size: 0.72rem; letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--text-muted);
+  margin-top: 3px;
+}
+.stat-divider { width: 1px; background: var(--border); align-self: stretch; }
+
+.hero-has-image .stat-num    { color: var(--white); }
+.hero-has-image .stat-label  { color: rgba(255, 255, 255, 0.7); }
+.hero-has-image .stat-divider { background: rgba(255, 255, 255, 0.18); }
+
+@media (max-width: 768px) {
+  .search-wrap { flex-direction: column; border-radius: 16px; }
+  .search-wrap select,
+  .search-wrap input { border-right: none; border-bottom: 1.5px solid var(--border); }
+  .search-btn { border-radius: 0 0 14px 14px; }
+  .hero-stats { gap: 20px; }
+  .stat-divider { display: none; }
+}

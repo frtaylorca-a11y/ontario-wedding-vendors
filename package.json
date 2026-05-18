@@ -1,0 +1,45 @@
+{
+  "name": "ontario-wedding-venues",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
+    "db:seed": "tsx scripts/import-venues.ts",
+    "import:venues": "tsx scripts/import-venues.ts",
+    "import:vendors": "tsx scripts/import-vendors.ts",
+    "generate:slugs": "tsx scripts/generate-slugs.ts"
+  },
+  "dependencies": {
+    "next": "^15.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "drizzle-orm": "^0.36.4",
+    "@neondatabase/serverless": "^0.10.4",
+    "@anthropic-ai/sdk": "^0.32.1",
+    "zod": "^3.23.8",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.5.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@tailwindcss/postcss": "^4.0.0",
+    "tailwindcss": "^4.0.0",
+    "postcss": "^8.4.49",
+    "typescript": "^5.7.2",
+    "drizzle-kit": "^0.30.0",
+    "tsx": "^4.19.2",
+    "dotenv": "^16.4.7",
+    "eslint": "^9",
+    "eslint-config-next": "^15.1.0"
+  }
+}

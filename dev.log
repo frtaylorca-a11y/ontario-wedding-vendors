@@ -1,0 +1,29 @@
+
+> ontario-wedding-venues@0.1.0 dev
+> next dev
+
+   ▲ Next.js 15.5.18
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.2.58:3000
+   - Environments: .env.local, .env
+
+ ✓ Starting...
+ ✓ Ready in 1879ms
+ ○ Compiling / ...
+ ✓ Compiled / in 3.2s (784 modules)
+ GET / 200 in 3973ms
+ GET / 200 in 325ms
+ GET / 200 in 283ms
+ GET / 200 in 261ms
+ GET / 200 in 273ms
+ GET / 200 in 340ms
+ GET / 200 in 359ms
+ GET / 200 in 336ms
+ ✓ Compiled in 276ms (254 modules)
+ GET / 200 in 91ms
+ ✓ Compiled in 257ms (766 modules)
+ GET / 200 in 231ms
+ ✓ Compiled in 219ms (767 modules)
+ GET / 200 in 226ms
+ GET / 200 in 551ms
+ GET / 200 in 221ms

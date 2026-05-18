@@ -1,0 +1,3 @@
+18:42:53  INFO      [1/3] Scraping hitched/niagara-on-the-lake...
+18:42:58  WARNING   Attempt 1 failed: HTTPSConnectionPool(host='www.hitched.ca', port=443): Max retries exceeded with url: /wedding-venues/ontario/niagara-on-the-lake/ (Caused by NameResolutionError("HTTPSConnection(host='www.hitched.ca', port=443): Failed to resolve 'www.hitched.ca' ([Errno 11001] getaddrinfo failed)"))
+18:43:15  WARNING   Attempt 2 failed: HTTPSConnectionPool(host='www.hitched.ca', port=443): Max retries exceeded with url: /wedding-venues/ontario/niagara-on-the-lake/ (Caused by NameResolutionError("HTTPSConnection(host='www.hitched.ca', port=443): Failed to resolve 'www.hitched.ca' ([Errno 11001] getaddrinfo failed)"))

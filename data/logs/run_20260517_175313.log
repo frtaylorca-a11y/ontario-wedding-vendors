@@ -1,0 +1,12 @@
+17:53:13  INFO      [1/2] Scraping weddingwire/niagara-on-the-lake...
+17:53:13  INFO        Fetching page 1: https://www.weddingwire.ca/wedding-venues/ontario/niagara-on-the-lake
+17:53:37  INFO        Found 0 cards with primary selectors
+17:53:37  INFO        Link-based extraction found 0 venues
+17:53:37  INFO        No venues on page 1 — stopping
+17:53:37  INFO        -> 0 venues found
+17:53:54  INFO      [2/2] Scraping weddingwire/niagara-falls...
+17:53:54  INFO        Fetching page 1: https://www.weddingwire.ca/wedding-venues/ontario/niagara-falls
+17:54:11  INFO        Found 0 cards with primary selectors
+17:54:11  INFO        Link-based extraction found 0 venues
+17:54:11  INFO        No venues on page 1 — stopping
+17:54:11  INFO        -> 0 venues found
