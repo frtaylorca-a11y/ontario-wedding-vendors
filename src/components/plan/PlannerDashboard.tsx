@@ -95,6 +95,7 @@ export function PlannerDashboard({ sessionId, initialPlan, totalVenueCount }: Pr
             weddingDate:          state.weddingDate,
             venueId:              state.venueId,
             bookedVendors:        state.bookedVendors,
+            savedVendors:         state.savedVendors,
             budgetCategoryStates: state.budgetCategoryStates,
           }),
         });
@@ -197,6 +198,7 @@ export function PlannerDashboard({ sessionId, initialPlan, totalVenueCount }: Pr
               return {
                 ...s,
                 venueId:           venue.id,
+                venueSlug:         venue.slug,
                 venueName:         venue.name,
                 venueCity:         venue.city,
                 venueType:         venue.venueType,
@@ -210,6 +212,7 @@ export function PlannerDashboard({ sessionId, initialPlan, totalVenueCount }: Pr
             setState((s) => ({
               ...s,
               venueId: null,
+              venueSlug: null,
               venueName: null,
               venueCity: null,
               venueType: null,
@@ -224,6 +227,8 @@ export function PlannerDashboard({ sessionId, initialPlan, totalVenueCount }: Pr
       {state.venueId ? (
         <VendorSlots
           region={state.region}
+          venueSlug={state.venueSlug}
+          weddingDate={state.weddingDate}
           slots={(() => {
             const rows = calculateBudgetWithState(state.totalBudget, state.budgetCategoryStates);
             let slots = getActiveVendorSlots(rows);
@@ -234,6 +239,7 @@ export function PlannerDashboard({ sessionId, initialPlan, totalVenueCount }: Pr
             return slots;
           })()}
           bookedVendors={state.bookedVendors}
+          savedVendors={state.savedVendors}
           onAddVendor={(category) => setAddVendorCategory(category)}
           onRemoveBooking={handleRemoveBooking}
         />

@@ -40,6 +40,7 @@ export default async function PlanPage() {
         weddingDate: row.weddingDate ?? null,
         venueId:     row.venueId ?? null,
         bookedVendors: (row.bookedVendors as PlanState["bookedVendors"]) ?? {},
+        savedVendors:  (row.savedVendors  as PlanState["savedVendors"])  ?? {},
         budgetCategoryStates:
           (row.budgetCategoryStates as BudgetCategoryStates | null) ?? undefined,
       };

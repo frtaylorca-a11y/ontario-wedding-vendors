@@ -130,6 +130,14 @@ export const vendors = pgTable(
     isPicBooth: boolean("is_pic_booth").default(false),
     isNiagaraPhotoBooth: boolean("is_niagara_photo_booth").default(false),
 
+    /* Recommended Partner system — pinned vendors sort first when they
+     * fall within the active radius + a pinned category/region. Disclosed
+     * as "Recommended Partner" with a rose border; never labelled Ad. */
+    isPinned: boolean("is_pinned").default(false),
+    pinnedCategories: text("pinned_categories").array(),
+    pinnedRegions: text("pinned_regions").array(),
+    pinnedNote: text("pinned_note"),
+
     /* Promotional fields — drives the Variant A photo card + sort-to-top behavior */
     heroImage: varchar("hero_image", { length: 500 }),
     isFeatured: boolean("is_featured").default(false),
@@ -204,6 +212,9 @@ export const weddingPlans = pgTable(
     venueId:            integer("venue_id"),
     style:              varchar("style", { length: 50 }),
     bookedVendors:      jsonb("booked_vendors"),
+    /* Saved (favourited) vendors per category — Mode 1 of the vendor slot:
+     *   { photographer: ["vendor-slug-1", "vendor-slug-2"], dj: [...] } */
+    savedVendors:       jsonb("saved_vendors"),
     suggestedVendors:   jsonb("suggested_vendors"),
     stagAndDoe:         jsonb("stag_and_doe"),
     budgetCategoryStates: jsonb("budget_category_states"),

@@ -15,6 +15,7 @@ type Props = {
     venue:
       | {
           id: number;
+          slug: string;
           name: string;
           city: string | null;
           region: string | null;
@@ -162,6 +163,7 @@ export function VenueSearch({ venueId, venueName, venueCity, region, totalVenueC
                 onClick={() => {
                   onSelect({
                     id:          v.id,
+                    slug:        v.slug,
                     name:        v.name,
                     city:        v.city,
                     region:      v.region,

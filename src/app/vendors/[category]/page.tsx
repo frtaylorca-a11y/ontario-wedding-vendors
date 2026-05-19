@@ -2,6 +2,9 @@ import Link from "next/link";
 import type { Route } from "next";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { eq } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { venues as venuesTable } from "@/lib/schema";
 import { listVendors } from "@/lib/queries";
 import { VENDOR_CATEGORIES, type VendorCategory } from "@/types";
 import { VendorCard } from "@/components/ui/VendorCard";
@@ -88,16 +91,50 @@ export default async function VendorCategoryPage({
 
   const region    = first(raw.region);
   const priceTier = first(raw.priceTier);
+  const venueSlug = first(raw.venue);
+  const radiusRaw = first(raw.radius);
   const page      = Math.max(1, parseInt(first(raw.page) ?? "1", 10) || 1);
   const offset    = (page - 1) * PAGE_SIZE;
 
+  /* Proximity matching when a venue slug is passed */
+  const ALLOWED_RADII = [50, 100, 150] as const;
+  type RadiusKm = (typeof ALLOWED_RADII)[number];
+  const parsedRadius = Number.parseInt(radiusRaw ?? "100", 10);
+  const radiusKm: RadiusKm | "all" =
+    radiusRaw === "all" ? "all" :
+    ALLOWED_RADII.includes(parsedRadius as RadiusKm) ? (parsedRadius as RadiusKm) : 100;
+
+  let venueLat: number | null = null;
+  let venueLng: number | null = null;
+  let venueName: string | null = null;
+  if (venueSlug) {
+    const [v] = await db
+      .select({ name: venuesTable.name, lat: venuesTable.lat, lng: venuesTable.lng })
+      .from(venuesTable)
+      .where(eq(venuesTable.slug, venueSlug))
+      .limit(1);
+    if (v) {
+      venueName = v.name;
+      const latNum = v.lat == null ? null : Number(v.lat);
+      const lngNum = v.lng == null ? null : Number(v.lng);
+      if (latNum != null && lngNum != null && Number.isFinite(latNum) && Number.isFinite(lngNum)) {
+        venueLat = latNum;
+        venueLng = lngNum;
+      }
+    }
+  }
+
   const showSitePartner = categorySlug === "photo_booth";
 
+  const useProximity = venueLat != null && venueLng != null && radiusKm !== "all";
   const { vendors, total } = await listVendors({
     category: categorySlug,
     region,
     priceTier,
     excludePicBooth: showSitePartner,
+    lat: useProximity ? venueLat! : undefined,
+    lng: useProximity ? venueLng! : undefined,
+    radiusKm: useProximity ? (radiusKm as number) : undefined,
     limit: PAGE_SIZE,
     offset,
   });
@@ -203,6 +240,46 @@ export default async function VendorCategoryPage({
             />
 
             <div>
+              {/* Radius toggle — only when a venue is locked in */}
+              {venueName && (
+                <div className="mb-4 rounded-card border border-border bg-bg-soft p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="text-sm text-text-mid">
+                      Matching by distance from{" "}
+                      <strong className="font-semibold text-charcoal">{venueName}</strong>
+                    </div>
+                    <div className="inline-flex rounded-pill border border-border bg-white p-1">
+                      {([50, 100, 150, "all"] as const).map((r) => {
+                        const isActive = (r === "all" && radiusKm === "all") || r === radiusKm;
+                        const qs = new URLSearchParams();
+                        if (region)    qs.set("region", region);
+                        if (priceTier) qs.set("priceTier", priceTier);
+                        if (venueSlug) qs.set("venue", venueSlug);
+                        qs.set("radius", String(r));
+                        const href = `/vendors/${rawSlug}?${qs.toString()}` as Route;
+                        return (
+                          <Link
+                            key={String(r)}
+                            href={href}
+                            className={`rounded-pill px-3 py-1 text-xs font-bold transition-colors ${
+                              isActive ? "bg-rose text-white" : "text-text-mid hover:text-rose"
+                            }`}
+                          >
+                            {r === "all" ? "All Ontario" : `${r}km`}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+              {!venueName && region && (
+                <div className="mb-4 rounded-card border border-dashed border-border bg-bg-soft p-3 text-xs text-text-muted">
+                  Showing {label.plural.toLowerCase()} in {region.replace(/-/g, " ")} ·
+                  Select a venue in the planner for distance matching.
+                </div>
+              )}
+
               {/* Result count */}
               <div className="mb-6 flex flex-wrap items-center justify-between gap-2 border-b border-border-light pb-4">
                 <p className="text-sm text-text-mid">

@@ -4,6 +4,7 @@ import type { CSSProperties, ReactNode } from "react";
 import type { Vendor } from "@/lib/schema";
 import { formatRating } from "@/lib/utils";
 import { categoryColourVars } from "@/lib/vendor-colours";
+import { SaveVendorButton } from "@/components/plan/SaveVendorButton";
 
 const CATEGORY_LABEL: Record<string, string> = {
   photographer:    "Photographer",
@@ -139,13 +140,22 @@ function categoryUrlSlug(category: string): string {
   return category.replace(/_/g, "-");
 }
 
-export function VendorCard({ vendor }: { vendor: Vendor }) {
+export function VendorCard({
+  vendor,
+}: {
+  vendor: Vendor & { distanceKm?: number | null };
+}) {
   const categoryLabel = CATEGORY_LABEL[vendor.category] ?? vendor.category;
   const priceTier = vendor.priceTier ? PRICE_TIER[vendor.priceTier] : null;
   const ratingStr = formatRating(vendor.googleRating);
   const cityRegion = [vendor.city, regionLabel(vendor.region)].filter(Boolean).join(" · ");
 
   const href = `/vendors/${categoryUrlSlug(vendor.category)}/${vendor.slug}` as Route;
+  const isPinned = vendor.isPinned === true;
+  const distanceLabel =
+    vendor.distanceKm != null && Number.isFinite(vendor.distanceKm)
+      ? `${Math.round(vendor.distanceKm)} km from your venue`
+      : null;
 
   /* CSS vars from the category's signature colour drive every accent on the card */
   const cssVars = categoryColourVars(vendor.category) as CSSProperties;
@@ -153,12 +163,31 @@ export function VendorCard({ vendor }: { vendor: Vendor }) {
   return (
     <article
       style={cssVars}
-      className="group relative overflow-hidden rounded-card border-[1.5px] border-border bg-white p-5 pt-6 transition-all duration-200 hover:-translate-y-[3px] hover:border-[var(--cat-primary)] hover:shadow-[0_12px_32px_rgba(var(--cat-rgb),0.16)]"
+      className={`group relative overflow-hidden rounded-card border-[1.5px] bg-white p-5 pt-6 transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_12px_32px_rgba(var(--cat-rgb),0.16)] ${
+        isPinned ? "border-rose hover:border-rose" : "border-border hover:border-[var(--cat-primary)]"
+      }`}
     >
-      {/* 3px accent bar — category signature colour */}
+      {/* Pinned recommendation badge — disclosed, never labelled Ad */}
+      {isPinned && (
+        <div className="absolute right-3 top-3 z-[2] inline-flex items-center gap-1 rounded-pill bg-rose-pale px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-[0.08em] text-rose">
+          <svg aria-hidden viewBox="0 0 24 24" className="h-2.5 w-2.5 fill-none stroke-current" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+          </svg>
+          Recommended Partner
+        </div>
+      )}
+
+      {/* Save heart — top right corner, below the pin badge if present */}
+      <div className={`absolute z-[2] ${isPinned ? "right-3 top-9" : "right-3 top-3"}`}>
+        <SaveVendorButton category={vendor.category} slug={vendor.slug} />
+      </div>
+
+      {/* 3px accent bar — category signature colour (or rose for pinned) */}
       <span
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[3px] bg-[var(--cat-primary)]"
+        className={`pointer-events-none absolute inset-x-0 top-0 h-[3px] ${
+          isPinned ? "bg-rose" : "bg-[var(--cat-primary)]"
+        }`}
       />
 
       <div className="flex items-start justify-between gap-3">
@@ -198,6 +227,16 @@ export function VendorCard({ vendor }: { vendor: Vendor }) {
         <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-text-mid">
           {vendor.description}
         </p>
+      )}
+
+      {distanceLabel && (
+        <div className="mt-3 inline-flex items-center gap-1 rounded-pill bg-bg-soft px-2 py-0.5 text-[0.65rem] font-medium text-text-mid">
+          <svg aria-hidden viewBox="0 0 24 24" className="h-2.5 w-2.5 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+            <circle cx="12" cy="10" r="3" />
+          </svg>
+          {distanceLabel}
+        </div>
       )}
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border-light pt-3">

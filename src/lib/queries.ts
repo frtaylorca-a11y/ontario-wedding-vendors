@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { and, asc, desc, eq, gte, ilike, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, gte, ilike, ne, or, sql } from "drizzle-orm";
 import { db } from "./db";
 import { venues, vendors, vendorRelationships } from "./schema";
 import type { Venue, Vendor } from "./schema";
@@ -188,13 +188,34 @@ export type VendorListParams = {
   priceTier?: string;
   /** Exclude Pic Booth — pinned card renders it separately to avoid duplicates */
   excludePicBooth?: boolean;
+  /** Proximity matching: when lat/lng/radiusKm are all provided, vendors are
+   *  filtered to those within `radiusKm` of (lat,lng) using a Haversine
+   *  distance and the result `vendors[i].distanceKm` is populated. */
+  lat?: number;
+  lng?: number;
+  radiusKm?: number;
   limit?: number;
   offset?: number;
 };
 
+/* Admin note — pinning a vendor as a Recommended Partner:
+ *   UPDATE vendors SET
+ *     is_pinned = true,
+ *     pinned_categories = ARRAY['photographer'],
+ *     pinned_regions    = ARRAY['niagara','gta'],
+ *     pinned_note       = 'Partner vendor — preferred-vendor agreement'
+ *   WHERE slug = 'vendor-slug-here';
+ *
+ * Rules: only renders if the vendor falls within the active radius and
+ * the current category/region is in pinned_categories/pinned_regions.
+ * Max 2 pinned per category in a result page (enforced at render time). */
+
+/** Vendor row decorated with a distance-to-venue value in kilometers, when proximity matching is in use. */
+export type VendorWithDistance = Vendor & { distanceKm: number | null };
+
 export async function listVendors(
   params: VendorListParams,
-): Promise<{ vendors: Vendor[]; total: number; page: number }> {
+): Promise<{ vendors: VendorWithDistance[]; total: number; page: number }> {
   const limit = Math.min(Math.max(params.limit ?? 20, 1), 100);
   const offset = Math.max(params.offset ?? 0, 0);
 
@@ -207,19 +228,81 @@ export async function listVendors(
   if (params.priceTier) conditions.push(eq(vendors.priceTier, params.priceTier));
   if (params.excludePicBooth) conditions.push(sql`${vendors.isPicBooth} is not true`);
 
+  /* Proximity matching: Haversine distance in km. Earth radius = 6371. We compute
+   * it inline so we can both filter by radius and sort closest-first. */
+  const hasProximity =
+    params.lat != null && params.lng != null && params.radiusKm != null &&
+    Number.isFinite(params.lat) && Number.isFinite(params.lng);
+  const distanceSql = hasProximity
+    ? sql<number>`(
+        CASE
+          WHEN ${vendors.lat} IS NULL OR ${vendors.lng} IS NULL THEN NULL
+          ELSE 6371 * acos(
+            LEAST(1.0, GREATEST(-1.0,
+              cos(radians(${params.lat})) * cos(radians(${vendors.lat}::float)) *
+              cos(radians(${vendors.lng}::float) - radians(${params.lng})) +
+              sin(radians(${params.lat})) * sin(radians(${vendors.lat}::float))
+            ))
+          )
+        END
+      )`
+    : null;
+
+  if (hasProximity && distanceSql) {
+    /* Only include vendors that (a) are within radius OR (b) have no coords
+     * AND share the region — we don't want to exclude vendors missing lat/lng. */
+    conditions.push(
+      or(
+        sql`${vendors.lat} is null OR ${vendors.lng} is null`,
+        sql`${distanceSql} <= ${params.radiusKm}`,
+      )!,
+    );
+  }
+
   const where = and(...conditions);
+
+  /* Selection: all vendor columns plus a derived distanceKm (NULL when not in proximity mode). */
+  const selection = {
+    ...getTableColumns(vendors),
+    distanceKm: distanceSql ?? sql<number | null>`NULL::float`,
+  };
+
+  /* Sort order — Recommended Partner pins first when they fall in
+   * pinnedCategories + pinnedRegions, then featured, isPicBooth (photo_booth),
+   * then proximity (when available), then readiness/rating/reviews.
+   *
+   * pinnedMatch is only "true" when category + region are both known and
+   * appear in the vendor's pinned arrays. Otherwise it falls back to FALSE
+   * so the order clause is well-defined. */
+  const pinnedMatch = params.category && params.region
+    ? sql<boolean>`(
+        ${vendors.isPinned} = true
+        AND ${params.category} = ANY(${vendors.pinnedCategories})
+        AND ${params.region}   = ANY(${vendors.pinnedRegions})
+      )`
+    : params.category
+      ? sql<boolean>`(
+          ${vendors.isPinned} = true
+          AND ${params.category} = ANY(${vendors.pinnedCategories})
+        )`
+      : sql<boolean>`false`;
+
+  const orderBy: ReturnType<typeof desc>[] = [
+    desc(pinnedMatch),
+    desc(vendors.featured),
+    desc(vendors.isPicBooth),
+  ];
+  if (hasProximity && distanceSql) orderBy.push(asc(distanceSql));
+  orderBy.push(desc(vendors.vendorReadinessScore));
+  orderBy.push(desc(vendors.googleRating));
+  orderBy.push(desc(vendors.reviewCount));
 
   const [items, totalRow] = await Promise.all([
     db
-      .select()
+      .select(selection)
       .from(vendors)
       .where(where)
-      .orderBy(
-        desc(vendors.featured),
-        desc(vendors.vendorReadinessScore),
-        desc(vendors.googleRating),
-        desc(vendors.reviewCount),
-      )
+      .orderBy(...orderBy)
       .limit(limit)
       .offset(offset),
     db
@@ -228,8 +311,17 @@ export async function listVendors(
       .where(where),
   ]);
 
+  const decorated: VendorWithDistance[] = items.map((r) => {
+    const distRaw = (r as { distanceKm: number | string | null }).distanceKm;
+    const distNum = distRaw == null ? null : Number(distRaw);
+    return {
+      ...(r as Vendor),
+      distanceKm: distNum != null && Number.isFinite(distNum) ? distNum : null,
+    };
+  });
+
   return {
-    vendors: items,
+    vendors: decorated,
     total: totalRow[0]?.count ?? 0,
     page: Math.floor(offset / limit) + 1,
   };
@@ -326,6 +418,16 @@ export async function getVenuesRecommendingVendor(
     .limit(limit);
 
   return rows as Venue[];
+}
+
+/** Fetch a set of vendors by slug — used by the planner to hydrate saved vendor cards. */
+export async function getVendorsBySlugs(slugs: string[]): Promise<Vendor[]> {
+  if (slugs.length === 0) return [];
+  const rows = await db
+    .select()
+    .from(vendors)
+    .where(sql`${vendors.slug} = ANY(${slugs})`);
+  return rows;
 }
 
 /** Aggregate vendor count per category (excludes Google-closed listings). */

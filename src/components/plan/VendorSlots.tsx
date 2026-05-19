@@ -4,11 +4,15 @@ import Link from "next/link";
 import type { Route } from "next";
 import { useEffect, useState, type ReactNode } from "react";
 import { PLANNER_REGIONS, type BookedVendor, type VendorSlot } from "@/lib/plan-state";
+import type { Vendor } from "@/lib/schema";
 
 type Props = {
   region: string;
+  venueSlug?: string | null;
+  weddingDate?: string | null;
   slots: VendorSlot[];
   bookedVendors: Record<string, BookedVendor>;
+  savedVendors: Record<string, string[]>;
   onAddVendor: (category: string) => void;
   onRemoveBooking: (category: string) => void;
 };
@@ -167,8 +171,11 @@ function formatMoney(n: number): string {
 
 export function VendorSlots({
   region,
+  venueSlug,
+  weddingDate,
   slots,
   bookedVendors,
+  savedVendors,
   onAddVendor,
   onRemoveBooking,
 }: Props) {
@@ -189,8 +196,39 @@ export function VendorSlots({
     };
   }, [region]);
 
+  /* Hydrate saved vendor metadata (name, phone, email, website, etc.) for every
+   * unique slug across all saved categories. Single round trip via the
+   * /api/vendors?slugs=... endpoint that we lean on for batched lookup. */
+  const allSavedSlugs = Array.from(
+    new Set(Object.values(savedVendors ?? {}).flat()),
+  );
+  const [savedDetails, setSavedDetails] = useState<Record<string, Vendor & { distanceKm?: number | null }>>({});
+  useEffect(() => {
+    if (allSavedSlugs.length === 0) {
+      setSavedDetails({});
+      return;
+    }
+    let cancelled = false;
+    const url = new URL("/api/vendors", window.location.origin);
+    url.searchParams.set("slugs", allSavedSlugs.join(","));
+    if (venueSlug) url.searchParams.set("venue", venueSlug);
+    fetch(url.toString())
+      .then((r) => (r.ok ? r.json() : { vendors: [] }))
+      .then((data: { vendors: (Vendor & { distanceKm?: number | null })[] }) => {
+        if (cancelled) return;
+        const out: Record<string, Vendor & { distanceKm?: number | null }> = {};
+        for (const v of data.vendors ?? []) out[v.slug] = v;
+        setSavedDetails(out);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [allSavedSlugs.join(","), venueSlug]);
+
   const regionLabel = regionDisplayLabel(region);
   const picBoothFeatured = PIC_BOOTH_FEATURED_REGIONS.has(region);
+  const hasDate = !!weddingDate;
 
   return (
     <section className="rounded-card border-[1.5px] border-border bg-white p-6 lg:p-8">
@@ -222,10 +260,16 @@ export function VendorSlots({
             const meta = CATEGORY_META[cat];
             if (!meta) return null;
             const booked = bookedVendors[cat];
-            const findHref =
-              (region && region !== "other"
-                ? `/vendors/${cat.replace(/_/g, "-")}?region=${region}`
-                : `/vendors/${cat.replace(/_/g, "-")}`) as Route;
+            const findHref = (() => {
+              const qs = new URLSearchParams();
+              if (region && region !== "other") qs.set("region", region);
+              if (venueSlug) {
+                qs.set("venue", venueSlug);
+                qs.set("radius", "100");
+              }
+              const tail = qs.toString();
+              return (`/vendors/${cat.replace(/_/g, "-")}${tail ? `?${tail}` : ""}`) as Route;
+            })();
             const showPicBoothFeatured =
               cat === "photo_booth" && picBoothFeatured && !booked;
 
@@ -362,12 +406,96 @@ export function VendorSlots({
                       </p>
                     </div>
                   ) : (
-                    <div className="mt-4 space-y-2">
+                    <div className="mt-4 space-y-3">
+                      {/* Mode 1 — saved vendors with direct contact, always visible */}
+                      {(() => {
+                        const savedSlugs = savedVendors?.[cat] ?? [];
+                        if (savedSlugs.length === 0) return null;
+                        return (
+                          <div className="space-y-2">
+                            <div className="text-[0.65rem] font-bold uppercase tracking-[0.1em] text-text-muted">
+                              Your saved {CATEGORY_PLURAL[cat] ?? "vendors"} ({savedSlugs.length})
+                            </div>
+                            {savedSlugs.map((slug) => {
+                              const v = savedDetails[slug];
+                              if (!v) {
+                                return (
+                                  <div key={slug} className="rounded-card border border-border-light bg-bg-soft p-2 text-xs text-text-muted">
+                                    Loading {slug}…
+                                  </div>
+                                );
+                              }
+                              const distance =
+                                v.distanceKm != null && Number.isFinite(v.distanceKm)
+                                  ? `${Math.round(v.distanceKm)} km away`
+                                  : null;
+                              return (
+                                <div key={slug} className="rounded-card border border-border-light bg-bg-soft px-3 py-2">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <Link
+                                      href={`/vendors/${cat.replace(/_/g, "-")}/${v.slug}` as Route}
+                                      className="text-sm font-semibold text-charcoal hover:text-rose"
+                                    >
+                                      {v.name}
+                                    </Link>
+                                    {distance && (
+                                      <span className="shrink-0 rounded-pill bg-white px-1.5 py-0.5 text-[0.6rem] text-text-muted">
+                                        {distance}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="mt-2 flex flex-wrap gap-2 text-[0.7rem]">
+                                    {v.website && (
+                                      <a href={v.website} target="_blank" rel="noopener" className="rounded-pill border border-border bg-white px-2 py-0.5 font-medium text-charcoal hover:border-rose hover:text-rose">
+                                        Website ↗
+                                      </a>
+                                    )}
+                                    {v.phone && (
+                                      <a href={`tel:${v.phone}`} className="rounded-pill border border-border bg-white px-2 py-0.5 font-medium text-charcoal hover:border-rose hover:text-rose">
+                                        Call
+                                      </a>
+                                    )}
+                                    {v.email && (
+                                      <a href={`mailto:${v.email}`} className="rounded-pill border border-border bg-white px-2 py-0.5 font-medium text-charcoal hover:border-rose hover:text-rose">
+                                        Email
+                                      </a>
+                                    )}
+                                    {v.instagramHandle && (
+                                      <a href={`https://instagram.com/${v.instagramHandle.replace(/^@/, "")}`} target="_blank" rel="noopener" className="rounded-pill border border-border bg-white px-2 py-0.5 font-medium text-charcoal hover:border-rose hover:text-rose">
+                                        Instagram
+                                      </a>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                            {!hasDate && (
+                              <p className="text-[0.65rem] italic text-text-muted">
+                                Set your wedding date to request quotes from these vendors.
+                              </p>
+                            )}
+                            {hasDate && (
+                              <button
+                                type="button"
+                                disabled
+                                title="Quote requests coming soon — Brevo + vendor response page next"
+                                className="block w-full cursor-not-allowed rounded-pill border border-dashed border-rose bg-rose-pale px-4 py-2 text-center text-xs font-bold text-rose"
+                              >
+                                Request quotes from saved vendors → (soon)
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })()}
+
+                      {/* Browse / find more in directory */}
                       {(() => {
                         const count = counts[cat];
                         const plural = CATEGORY_PLURAL[cat] ?? "vendors";
-                        const label =
-                          count == null
+                        const savedCount = savedVendors?.[cat]?.length ?? 0;
+                        const label = savedCount > 0
+                          ? `+ Save another ${plural.replace(/s$/, "")}`
+                          : count == null
                             ? `Find ${plural} →`
                             : count === 0
                               ? `No ${plural} in ${regionLabel} yet`

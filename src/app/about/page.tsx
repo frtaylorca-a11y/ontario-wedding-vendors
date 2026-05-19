@@ -228,6 +228,11 @@ export default async function AboutPage() {
               ranking in venue or category listings — venues are ranked
               purely on the wedding-readiness score above.
             </p>
+            <p>
+              Certain vendors may appear at the top of search results as
+              Recommended Partners. These relationships are disclosed on each
+              listing.
+            </p>
           </Section>
 
           <Section eyebrow="Get in touch" title="Contact us">

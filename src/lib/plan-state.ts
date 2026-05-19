@@ -248,6 +248,7 @@ export type PlanState = {
   region: string;
   weddingDate: string | null; /* ISO date */
   venueId: number | null;
+  venueSlug: string | null;
   venueName: string | null;
   venueCity: string | null;
   /** Captured at venue selection — drives venue-aware budget pricing in Step 1 */
@@ -255,6 +256,9 @@ export type PlanState = {
   venueCapacityMax: number | null;
   venueCatering: string | null;
   bookedVendors: Record<string, BookedVendor>; /* keyed by vendor category */
+  /** Saved (favourited) vendor slugs per category. Mode 1 of the vendor slot —
+   *  before a date is set, couples just save vendors with direct-contact links. */
+  savedVendors: Record<string, string[]>;
   /** Toggle + lock + order overrides for the 20-category budget allocation.
    *  Persists to localStorage immediately; DB sync via budget_category_states column. */
   budgetCategoryStates: BudgetCategoryStates;
@@ -266,12 +270,14 @@ export const DEFAULT_PLAN: Omit<PlanState, "sessionId"> = {
   region: "niagara",
   weddingDate: null,
   venueId: null,
+  venueSlug: null,
   venueName: null,
   venueCity: null,
   venueType: null,
   venueCapacityMax: null,
   venueCatering: null,
   bookedVendors: {},
+  savedVendors: {},
   get budgetCategoryStates() {
     return defaultBudgetCategoryStates();
   },

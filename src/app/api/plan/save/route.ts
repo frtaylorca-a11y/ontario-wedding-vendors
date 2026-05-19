@@ -27,6 +27,7 @@ const planSchema = z.object({
   weddingDate:    z.string().nullable().optional(),
   venueId:        z.number().int().nullable().optional(),
   bookedVendors:  z.record(z.string(), bookedVendorSchema).optional(),
+  savedVendors:   z.record(z.string(), z.array(z.string().max(255))).optional(),
   stagAndDoe:     z.unknown().optional(), /* validated client-side; arbitrary JSONB persisted */
   budgetCategoryStates: z.unknown().optional(), /* { order, toggles } — see plan-state.ts */
   checklistTasks: z.unknown().optional(), /* per-task done state + custom-added tasks */
@@ -70,6 +71,7 @@ export async function POST(request: Request) {
   if (data.weddingDate   !== undefined) { updateSet.weddingDate   = data.weddingDate;   insertValues.weddingDate   = data.weddingDate;   }
   if (data.venueId       !== undefined) { updateSet.venueId       = data.venueId;       insertValues.venueId       = data.venueId;       }
   if (data.bookedVendors !== undefined) { updateSet.bookedVendors = data.bookedVendors; insertValues.bookedVendors = data.bookedVendors; }
+  if (data.savedVendors  !== undefined) { updateSet.savedVendors  = data.savedVendors;  insertValues.savedVendors  = data.savedVendors;  }
   if (data.stagAndDoe    !== undefined) { updateSet.stagAndDoe    = data.stagAndDoe;    insertValues.stagAndDoe    = data.stagAndDoe;    }
   if (data.budgetCategoryStates !== undefined) { updateSet.budgetCategoryStates = data.budgetCategoryStates; insertValues.budgetCategoryStates = data.budgetCategoryStates; }
   if (data.checklistTasks !== undefined) { updateSet.checklistTasks = data.checklistTasks; insertValues.checklistTasks = data.checklistTasks; }
