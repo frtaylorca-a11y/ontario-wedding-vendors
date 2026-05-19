@@ -128,6 +128,7 @@ export function PlannerDashboard({ sessionId, initialPlan }: Props) {
         guestCount={state.guestCount}
         region={state.region}
         weddingDate={state.weddingDate}
+        budgetCategoryStates={state.budgetCategoryStates}
         onChange={(patch) => setState((s) => ({ ...s, ...patch }))}
       />
 

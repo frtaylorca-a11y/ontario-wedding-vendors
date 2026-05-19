@@ -245,6 +245,9 @@ export type PlanState = {
   venueName: string | null;
   venueCity: string | null;
   bookedVendors: Record<string, BookedVendor>; /* keyed by vendor category */
+  /** Toggle + lock + order overrides for the 20-category budget allocation.
+   *  Persists to localStorage immediately; DB sync is a follow-up. */
+  budgetCategoryStates: BudgetCategoryStates;
 };
 
 export const DEFAULT_PLAN: Omit<PlanState, "sessionId"> = {
@@ -256,6 +259,9 @@ export const DEFAULT_PLAN: Omit<PlanState, "sessionId"> = {
   venueName: null,
   venueCity: null,
   bookedVendors: {},
+  get budgetCategoryStates() {
+    return defaultBudgetCategoryStates();
+  },
 };
 
 export function calculateBudget(
@@ -267,4 +273,124 @@ export function calculateBudget(
     amount: Math.round(totalBudget * c.pct),
     pct: c.pct,
   }));
+}
+
+/* ─── Interactive budget personalization ─────────────────────────────────
+ * Per-category state for the BudgetCalculator's toggle/lock/reorder UI.
+ * Persists in PlanState.budgetCategoryStates → localStorage. */
+
+export type BudgetCategoryToggle = {
+  enabled: boolean;
+  /** Locked dollar override; null = follow proportional allocation */
+  lockedAmount: number | null;
+};
+
+export type BudgetCategoryStates = {
+  order: VendorCategoryKey[];
+  toggles: Record<VendorCategoryKey, BudgetCategoryToggle>;
+};
+
+/** Typical Ontario floor per category — drives the amber "below minimum" warning */
+export const MIN_FLOORS: Record<VendorCategoryKey, number> = {
+  venue_rental:    3000,
+  catering_bar:    3000,
+  photo_video:     2000,
+  music_dj:        1200,
+  flowers_decor:   1500,
+  cake:             400,
+  hair_makeup:      600,
+  officiant:        300,
+  stationery:       200,
+  transportation:   500,
+  attire_bride:     500,
+  attire_groom:     200,
+  lighting_sound:   300,
+  photo_booth:      800,
+  wedding_rings:   1000,
+  favors_gifts:     150,
+  accommodation:    200,
+  rentals:          200,
+  wedding_planner: 1000,
+  miscellaneous:    200,
+};
+
+export function defaultBudgetCategoryStates(): BudgetCategoryStates {
+  return {
+    order: BUDGET_CATEGORIES.map((c) => c.key),
+    toggles: Object.fromEntries(
+      BUDGET_CATEGORIES.map((c) => [c.key, { enabled: true, lockedAmount: null }]),
+    ) as Record<VendorCategoryKey, BudgetCategoryToggle>,
+  };
+}
+
+export type BudgetRow = {
+  key: VendorCategoryKey;
+  label: string;
+  pct: number;            /* original Ontario % */
+  amount: number;         /* computed dollar amount */
+  enabled: boolean;
+  locked: boolean;
+  lockedAmount: number | null;
+  belowFloor: boolean;    /* true when locked amount < floor for that category */
+  minFloor: number;
+};
+
+/**
+ * Allocate budget across the 20 categories given user state.
+ *   - Disabled categories: amount = 0
+ *   - Enabled + locked:    amount = locked value (does not move with total)
+ *   - Enabled + unlocked:  proportional share of (total - locked sum) by original pct
+ * If locked sum exceeds total, unlocked enabled categories collapse to $0.
+ */
+export function calculateBudgetWithState(
+  totalBudget: number,
+  states: BudgetCategoryStates,
+): BudgetRow[] {
+  const byKey = new Map(BUDGET_CATEGORIES.map((c) => [c.key, c]));
+
+  const lockedTotal = BUDGET_CATEGORIES.reduce((sum, c) => {
+    const t = states.toggles[c.key];
+    return t?.enabled && t.lockedAmount != null ? sum + t.lockedAmount : sum;
+  }, 0);
+
+  const unlockedPctSum = BUDGET_CATEGORIES.reduce((sum, c) => {
+    const t = states.toggles[c.key];
+    return t?.enabled && t.lockedAmount == null ? sum + c.pct : sum;
+  }, 0);
+
+  const remaining = Math.max(0, totalBudget - lockedTotal);
+
+  /* Build rows in user-selected order. Unknown keys (shouldn't happen) get filtered. */
+  const ordered = states.order
+    .map((k) => byKey.get(k))
+    .filter((c): c is BudgetCategory => c != null);
+
+  /* Append any categories missing from order (forward-compat for new keys added in code) */
+  for (const c of BUDGET_CATEGORIES) {
+    if (!ordered.find((o) => o.key === c.key)) ordered.push(c);
+  }
+
+  return ordered.map((c) => {
+    const t = states.toggles[c.key] ?? { enabled: true, lockedAmount: null };
+    const minFloor = MIN_FLOORS[c.key];
+    let amount = 0;
+    if (t.enabled) {
+      if (t.lockedAmount != null) {
+        amount = t.lockedAmount;
+      } else if (unlockedPctSum > 0) {
+        amount = Math.round((c.pct / unlockedPctSum) * remaining);
+      }
+    }
+    return {
+      key: c.key,
+      label: c.label,
+      pct: c.pct,
+      amount,
+      enabled: t.enabled,
+      locked: t.enabled && t.lockedAmount != null,
+      lockedAmount: t.lockedAmount,
+      belowFloor: t.enabled && t.lockedAmount != null && t.lockedAmount < minFloor,
+      minFloor,
+    };
+  });
 }
