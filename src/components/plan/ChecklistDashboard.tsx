@@ -307,16 +307,50 @@ export function ChecklistDashboard({
                           {booked.name}
                         </span>
                       )}
+                      {task.partner && (
+                        <a
+                          href={task.partner.url}
+                          target="_blank"
+                          rel="noopener"
+                          className="inline-flex items-center gap-1 rounded-pill bg-rose-pale px-2 py-0.5 text-[0.65rem] font-bold uppercase tracking-[0.08em] text-rose transition-colors hover:bg-rose hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
+                          aria-label={`${task.partner.label} — opens in a new tab`}
+                        >
+                          {task.partner.label}
+                          <svg aria-hidden viewBox="0 0 24 24" className="h-2.5 w-2.5 fill-none stroke-current" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M14 5h5v5" />
+                            <path d="M19 5l-9 9" />
+                            <path d="M19 14v5H5V5h5" />
+                          </svg>
+                        </a>
+                      )}
                     </div>
 
-                    {!booked && vendorHref && !task.done && (
-                      <Link
-                        href={vendorHref as Route}
-                        className="mt-1 inline-flex items-center text-[0.7rem] font-semibold text-rose hover:underline"
-                      >
-                        Book now →
-                      </Link>
+                    {task.description && (
+                      <p className="mt-1 text-[0.75rem] leading-relaxed text-text-mid">
+                        {task.description}
+                      </p>
                     )}
+
+                    <div className="mt-1 flex flex-wrap items-center gap-3">
+                      {!booked && vendorHref && !task.done && (
+                        <Link
+                          href={vendorHref as Route}
+                          className="inline-flex items-center text-[0.7rem] font-semibold text-rose hover:underline"
+                        >
+                          Book now →
+                        </Link>
+                      )}
+                      {task.partner?.cta && !task.done && (
+                        <a
+                          href={task.partner.url}
+                          target="_blank"
+                          rel="noopener"
+                          className="inline-flex items-center gap-1 rounded-pill bg-rose px-3 py-1 text-[0.7rem] font-bold text-white shadow-[0_2px_8px_rgba(185,100,118,0.25)] transition-all hover:bg-rose-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
+                        >
+                          {task.partner.cta}
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </li>
               );
