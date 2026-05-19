@@ -14,6 +14,7 @@ import { InstagramCard } from "@/components/ui/InstagramCard";
 import { VenueSchema, BreadcrumbSchema, FaqSchema } from "@/components/seo/SchemaInjector";
 import {
   formatCapacity,
+  getEstimatedCapacity,
   formatRating,
   scoreTier,
   SCORE_TIER_LABEL,
@@ -557,7 +558,26 @@ export default async function VenuePage({ params }: { params: Params }) {
                     <DetailRow
                       icon={<IconUsers />}
                       label="Capacity"
-                      value={capacity ?? <span className="italic text-text-muted">Contact venue for capacity</span>}
+                      value={
+                        capacity ?? (() => {
+                          const est = getEstimatedCapacity(venue.venueType);
+                          return (
+                            <span className="inline-flex items-center gap-1 italic text-text-muted">
+                              <span>{est.label}</span>
+                              <span
+                                title="Estimated range based on venue type. Contact venue to confirm exact capacity."
+                                aria-label="Estimated range based on venue type. Contact venue to confirm exact capacity."
+                                className="inline-flex h-3.5 w-3.5 cursor-help items-center justify-center rounded-full bg-gray-200 text-text-muted not-italic"
+                              >
+                                <svg aria-hidden viewBox="0 0 24 24" className="h-2.5 w-2.5 fill-none stroke-current" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                  <line x1="12" y1="11" x2="12" y2="17" />
+                                  <line x1="12" y1="7"  x2="12" y2="7" />
+                                </svg>
+                              </span>
+                            </span>
+                          );
+                        })()
+                      }
                     />
                     <DetailRow
                       icon={<IconUtensils />}

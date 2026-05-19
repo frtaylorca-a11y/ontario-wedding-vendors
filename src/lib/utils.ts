@@ -64,6 +64,43 @@ export function formatCapacity(
   return `Up to ${hi} guests`;
 }
 
+/**
+ * Typical guest-count envelopes per venue type. Used to surface an estimated
+ * range on venue cards where capacity_max IS NULL — couples see a sensible
+ * ballpark and a "Contact to confirm" prompt instead of nothing.
+ */
+const CAPACITY_ESTIMATES: Record<string, { min: number; max: number }> = {
+  winery:        { min: 50,  max: 200 },
+  barn:          { min: 50,  max: 250 },
+  estate:        { min: 50,  max: 300 },
+  hotel:         { min: 100, max: 500 },
+  golf_club:     { min: 100, max: 400 },
+  conservation:  { min: 50,  max: 150 },
+  intimate:      { min: 10,  max: 60  },
+  outdoor:       { min: 50,  max: 500 },
+  banquet_hall:  { min: 100, max: 500 },
+};
+
+const DEFAULT_CAPACITY_ESTIMATE = { min: 50, max: 300 };
+
+/** Normalize "Golf Club" / "golf club" / "golf-club" to the underscore key. */
+function normalizeVenueTypeKey(venueType: string | null | undefined): string | null {
+  if (!venueType) return null;
+  return venueType.toLowerCase().replace(/[\s-]+/g, "_");
+}
+
+/**
+ * Return the estimated capacity range for a venue type. Always returns a
+ * range — callers should only show it when actual capacity is unknown.
+ */
+export function getEstimatedCapacity(
+  venueType: string | null | undefined,
+): { min: number; max: number; label: string } {
+  const key = normalizeVenueTypeKey(venueType);
+  const range = (key && CAPACITY_ESTIMATES[key]) || DEFAULT_CAPACITY_ESTIMATE;
+  return { ...range, label: `Typically ${range.min}–${range.max} guests · Contact to confirm` };
+}
+
 export type ScoreTier = "premier" | "active" | "listed" | "hidden";
 
 export function scoreTier(score: number | null | undefined): ScoreTier {

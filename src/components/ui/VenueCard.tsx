@@ -5,6 +5,7 @@ import type { Venue } from "@/lib/schema";
 import {
   formatCapacity,
   formatRating,
+  getEstimatedCapacity,
   scoreTier,
   SCORE_TIER_LABEL,
 } from "@/lib/utils";
@@ -98,9 +99,11 @@ function indoorLabel(v: string | null | undefined): string | null {
   return s;
 }
 
-function Chip({ children }: { children: React.ReactNode }) {
+function Chip({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <span className="inline-flex items-center rounded-pill border border-border-light bg-bg-soft px-2.5 py-1 text-[0.7rem] font-medium text-text-mid">
+    <span
+      className={`inline-flex items-center rounded-pill border border-border-light px-2.5 py-1 text-[0.7rem] font-medium ${className ?? "bg-bg-soft text-text-mid"}`}
+    >
       {children}
     </span>
   );
@@ -205,21 +208,37 @@ export function VenueCard({ venue }: { venue: Venue }) {
           </div>
         )}
 
-        {/* Chips — each value individually checked for null / "unknown".
-         * When capacity is missing, surface the "contact venue" note so
-         * couples know to follow up rather than assume the venue is too small. */}
-        {(capacity || cateringText || indoorText) && (
+        {/* Chips — confirmed capacity gets the regular chip; missing capacity
+         * gets a "Capacity unconfirmed" chip plus an italic estimated range
+         * below, derived from venue_type. */}
+        {(capacity || cateringText || indoorText || !capacity) && (
           <div className="mt-3 flex flex-wrap gap-1.5">
             {capacity && <Chip>{capacity}</Chip>}
+            {!capacity && (
+              <Chip className="bg-gray-50 text-text-muted">Capacity unconfirmed</Chip>
+            )}
             {cateringText && <Chip>{cateringText}</Chip>}
             {indoorText && <Chip>{indoorText}</Chip>}
           </div>
         )}
-        {!capacity && (
-          <p className="mt-2 text-[0.7rem] italic text-text-muted">
-            Capacity not listed — contact venue to confirm
-          </p>
-        )}
+        {!capacity && (() => {
+          const est = getEstimatedCapacity(venue.venueType);
+          return (
+            <p className="mt-2 inline-flex items-start gap-1 text-[0.7rem] italic text-text-muted">
+              <span>{est.label}</span>
+              <span
+                aria-label="Estimated range based on venue type. Contact venue to confirm exact capacity."
+                title="Estimated range based on venue type. Contact venue to confirm exact capacity."
+                className="mt-[1px] inline-flex h-3 w-3 flex-shrink-0 cursor-help items-center justify-center rounded-full bg-gray-200 text-text-muted not-italic"
+              >
+                <svg aria-hidden viewBox="0 0 24 24" className="h-2 w-2 fill-none stroke-current" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="11" x2="12" y2="17" />
+                  <line x1="12" y1="7"  x2="12" y2="7" />
+                </svg>
+              </span>
+            </p>
+          );
+        })()}
 
         <div className="mt-4 flex items-center justify-between border-t border-border-light pt-4">
           <div className="flex items-center gap-2">
