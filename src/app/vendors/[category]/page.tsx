@@ -195,12 +195,15 @@ export default async function VendorCategoryPage({
         style={categoryColourVars(categorySlug) as CSSProperties}
         className="bg-bg-warm"
       >
-        {/* Hero band — category photograph behind a uniform black overlay.
-         * Image is desaturated and the overlay is pure black at 50% so the
-         * white headline reads crisp against any photo. No colour tint, no
-         * gradient, no ghost text decoration. */}
+        {/* Hero band — explicit z-index stacking so text never lands behind
+         * the dark overlay regardless of how the browser resolves implicit
+         * stacking among absolute siblings.
+         *   0  Image    (absolute inset-0, z-index 0)
+         *   1  Overlay  (absolute inset-0, z-index 1)
+         *   2  Content  (relative, z-index 2)
+         */}
         <section
-          className="relative overflow-hidden bg-[var(--cat-primary)] text-white"
+          className="relative overflow-hidden bg-[var(--cat-primary)]"
         >
           {CATEGORY_HERO_IMAGE[categorySlug] && (
             <>
@@ -211,61 +214,88 @@ export default async function VendorCategoryPage({
                 priority
                 sizes="100vw"
                 className="object-cover"
-                style={{ filter: "saturate(0.7)" }}
+                style={{ filter: "saturate(0.7)", zIndex: 0 }}
               />
-              {/* Uniform black overlay — pure rgba(0,0,0,0.5), no colour tint */}
               <span
                 aria-hidden
                 className="pointer-events-none absolute inset-0"
-                style={{ background: "rgba(0,0,0,0.50)" }}
+                style={{ background: "rgba(0,0,0,0.45)", zIndex: 1 }}
               />
             </>
           )}
 
-          <div className="relative mx-auto max-w-[1280px] px-6 pb-14 pt-10 lg:pb-16 lg:pt-12">
+          <div
+            className="relative mx-auto max-w-[1280px] px-6 pb-14 pt-10 lg:pb-16 lg:pt-12"
+            style={{ zIndex: 2 }}
+          >
             <nav
               aria-label="Breadcrumb"
               className="mb-6 text-xs font-medium"
-              style={{ color: "rgba(255,255,255,0.75)" }}
+              style={{ color: "rgba(255,255,255,0.8)" }}
             >
               <ol className="flex flex-wrap items-center gap-1">
-                <li><Link href={"/" as Route} className="hover:text-white">Home</Link></li>
+                <li>
+                  <Link
+                    href={"/" as Route}
+                    className="hover:text-white"
+                    style={{ color: "rgba(255,255,255,0.8)" }}
+                  >
+                    Home
+                  </Link>
+                </li>
                 <li aria-hidden>/</li>
-                <li><Link href={"/vendors" as Route} className="hover:text-white">Vendors</Link></li>
+                <li>
+                  <Link
+                    href={"/vendors" as Route}
+                    className="hover:text-white"
+                    style={{ color: "rgba(255,255,255,0.8)" }}
+                  >
+                    Vendors
+                  </Link>
+                </li>
                 <li aria-hidden>/</li>
-                <li aria-current="page" className="text-white">{label.plural}</li>
+                <li aria-current="page" style={{ color: "#ffffff" }}>{label.plural}</li>
               </ol>
             </nav>
 
             <div
               className="text-xs font-bold uppercase tracking-[0.14em]"
-              style={{ color: "rgba(255,255,255,0.75)" }}
+              style={{ color: "rgba(255,255,255,0.8)" }}
             >
               Vendor directory
             </div>
             <h1
-              className="mt-2 font-display text-4xl leading-tight text-white md:text-5xl"
+              className="mt-2 font-display text-4xl leading-tight md:text-5xl text-white!"
               style={{
+                color: "#ffffff",
                 fontWeight: 600,
-                textShadow: "0 1px 12px rgba(0,0,0,0.5)",
+                textShadow:
+                  "0 2px 20px rgba(0,0,0,0.9), 0 1px 3px rgba(0,0,0,1)",
               }}
             >
               Ontario wedding {label.plural.toLowerCase()}
             </h1>
             <p
-              className="mt-3 max-w-[640px] text-white"
-              style={{ textShadow: "0 1px 8px rgba(0,0,0,0.45)" }}
+              className="mt-3 max-w-[640px]"
+              style={{
+                color: "#ffffff",
+                textShadow:
+                  "0 1px 8px rgba(0,0,0,0.6), 0 1px 2px rgba(0,0,0,0.9)",
+              }}
             >
               {label.intro}
             </p>
 
-            {/* Count badge — translucent white with backdrop blur */}
+            {/* Count badge — dark translucent with white border + white text */}
             <div
-              className="mt-5 inline-flex items-center gap-2 rounded-pill px-4 py-1.5 text-sm font-bold text-white"
+              className="mt-5 inline-flex items-center gap-2 rounded-pill px-4 py-1.5 text-sm font-bold"
               style={{
-                background: "rgba(255,255,255,0.15)",
+                color: "#ffffff",
+                background: "rgba(0,0,0,0.4)",
+                border: "1px solid rgba(255,255,255,0.3)",
                 backdropFilter: "blur(8px)",
                 WebkitBackdropFilter: "blur(8px)",
+                textShadow: "0 1px 6px rgba(0,0,0,0.7)",
               }}
             >
               <svg
