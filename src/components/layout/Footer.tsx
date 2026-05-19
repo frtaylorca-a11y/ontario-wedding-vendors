@@ -28,6 +28,7 @@ const FOR_VENDORS: FooterLink[] = [
   { label: "List your venue free",  href: "/list-your-venue" as Route },
   { label: "Claim your listing",    href: "/claim-listing" as Route },
   { label: "Featured placement",    href: "/featured" as Route },
+  { label: "About us",              href: "/about" as Route },
   { label: "Contact us",            href: "/contact" as Route },
 ];
 

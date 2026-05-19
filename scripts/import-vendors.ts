@@ -1,179 +1,292 @@
 /**
- * Import vendors from an Excel (.xlsx) or CSV export into Neon.
+ * Import vendors from the JSON files produced by the ontario-venues-scraper.
+ *
+ * Reads every *.json file in the scraper's data/vendors/ directory, normalizes
+ * the rows to NewVendor shape, and upserts on place_id.
+ *
+ * Default source path:
+ *   C:\Users\rtayl\OneDrive\Desktop\ontario-venues-scraper\data\vendors\
+ *
+ * Behaviour:
+ *   - Skips vendors with vendor_readiness_score < 50 (configurable via SCORE_MIN)
+ *   - Skips vendors with no place_id (can't upsert without a unique key)
+ *   - Skips rows from the "unknown.json" file (no actionable category)
+ *   - Forces Pic Booth's slug to "pic-booth-st-catharines" (must match the
+ *     hardcoded reference in PicBoothSitePartnerCard)
+ *   - Sets isPicBooth / isNiagaraPhotoBooth from name match in addition to
+ *     the scraper's own flag — belt and suspenders
+ *   - Maps business_status "OPERATIONAL" → googleClosed "no", else "yes"
  *
  * Usage:
- *   npx tsx scripts/import-vendors.ts <path-to-file>
- *
- * Expects columns matching the vendors schema (see src/lib/schema.ts).
- * For .xlsx support, install `xlsx`:
- *   npm i -D xlsx
- *
- * This stub handles CSV out of the box and emits a clear error for .xlsx
- * until the optional dependency is installed.
+ *   npx tsx scripts/import-vendors.ts
+ *   npx tsx scripts/import-vendors.ts <path-to-vendors-dir>
  */
 import "dotenv/config";
-import { readFile } from "node:fs/promises";
-import { extname, resolve } from "node:path";
-import { sql } from "drizzle-orm";
+import { readdir, readFile } from "node:fs/promises";
+import { basename, join, resolve } from "node:path";
 import { db } from "../src/lib/db";
 import { vendors, type NewVendor } from "../src/lib/schema";
-import { cityToRegion } from "../src/lib/regions";
-import { generateSlug, citySlug } from "../src/lib/utils";
 
-function splitCsvLine(line: string): string[] {
-  const out: string[] = [];
-  let cur = "";
-  let q = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i]!;
-    if (q) {
-      if (ch === '"' && line[i + 1] === '"') {
-        cur += '"';
-        i++;
-      } else if (ch === '"') q = false;
-      else cur += ch;
-    } else if (ch === '"') q = true;
-    else if (ch === ",") {
-      out.push(cur);
-      cur = "";
-    } else cur += ch;
-  }
-  out.push(cur);
-  return out.map((s) => s.trim());
-}
+const DEFAULT_DIR =
+  "C:\\Users\\rtayl\\OneDrive\\Desktop\\ontario-venues-scraper\\data\\vendors";
 
-function parseCsv(text: string): Record<string, string>[] {
-  const lines = text.split(/\r?\n/).filter(Boolean);
-  if (!lines.length) return [];
-  const headers = splitCsvLine(lines[0]!);
-  return lines.slice(1).map((l) => {
-    const cells = splitCsvLine(l);
-    const row: Record<string, string> = {};
-    headers.forEach((h, i) => (row[h] = cells[i] ?? ""));
-    return row;
-  });
-}
+const SCORE_MIN = 50;
+const PIC_BOOTH_SLUG = "pic-booth-st-catharines";
 
-const str = (v: string | undefined) => (v && v.trim() ? v.trim() : null);
-const num = (v: string | undefined) => {
-  if (!v || !v.trim()) return null;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-};
-const int = (v: string | undefined) => {
-  const n = num(v);
-  return n == null ? null : Math.trunc(n);
-};
-const dec = (v: string | undefined) => {
-  const n = num(v);
-  return n == null ? null : String(n);
+/* Raw row shape coming out of the scraper JSON */
+type ScrapedVendor = {
+  place_id?: string | null;
+  slug?: string | null;
+  name?: string | null;
+  category?: string | null;
+  address?: string | null;
+  city?: string | null;
+  province?: string | null;
+  region?: string | null;
+  phone?: string | null;
+  website?: string | null;
+  email?: string | null;
+  instagram_handle?: string | null;
+  google_rating?: number | null;
+  review_count?: number | null;
+  business_status?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  vendor_readiness_score?: number | null;
+  description?: string | null;
+  price_tier?: string | null;
+  price_from?: number | null;
+  price_to?: number | null;
+  is_pic_booth?: boolean | null;
+  is_niagara_photo_booth?: boolean | null;
+  source?: string | null;
 };
 
-function pick(row: Record<string, string>, ...keys: string[]): string | undefined {
-  for (const k of keys) if (row[k]) return row[k];
-  return undefined;
-}
+type Stats = {
+  inserted: number;
+  updated: number;
+  skippedLowScore: number;
+  skippedNoPlaceId: number;
+  skippedUnknownCategory: number;
+  errors: number;
+};
+type PerCategory = Record<string, Stats>;
 
-function rowToVendor(row: Record<string, string>): NewVendor | null {
-  const name = pick(row, "name", "Name");
-  const category = pick(row, "category", "Category");
-  if (!name || !category) return null;
-  const city = pick(row, "city", "City");
-  const slug = pick(row, "slug") ?? generateSlug(name, city ?? "");
-  const region = pick(row, "region") ?? cityToRegion(citySlug(city ?? "")) ?? null;
-
+function newStats(): Stats {
   return {
-    placeId: str(pick(row, "place_id", "placeId")),
-    slug,
-    name,
-    category,
-    city: str(city),
-    region: region ?? null,
-    province: str(pick(row, "province")) ?? "ON",
-    address: str(pick(row, "address")),
-    phone: str(pick(row, "phone")),
-    website: str(pick(row, "website")),
-    email: str(pick(row, "email")),
-    instagramHandle: str(pick(row, "instagram_handle", "instagramHandle", "instagram")),
-    googleRating: dec(pick(row, "google_rating", "googleRating", "rating")),
-    reviewCount: int(pick(row, "review_count", "reviewCount", "user_ratings_total")),
-    googleClosed: str(pick(row, "google_closed", "googleClosed")) ?? "no",
-    priceTier: str(pick(row, "price_tier", "priceTier")),
-    priceFrom: int(pick(row, "price_from", "priceFrom")),
-    priceTo: int(pick(row, "price_to", "priceTo")),
-    description: str(pick(row, "description")),
-    lat: dec(pick(row, "lat", "latitude")),
-    lng: dec(pick(row, "lng", "longitude")),
-    serveRadiusKm: int(pick(row, "serve_radius_km", "serveRadiusKm")) ?? 100,
-    tier: str(pick(row, "tier")) ?? "free",
-    isPicBooth: /^(true|1|yes)$/i.test(pick(row, "is_pic_booth", "isPicBooth") ?? ""),
-    source: str(pick(row, "source")) ?? "vendor-import",
+    inserted: 0, updated: 0,
+    skippedLowScore: 0, skippedNoPlaceId: 0, skippedUnknownCategory: 0,
+    errors: 0,
   };
 }
 
-async function upsert(v: NewVendor): Promise<"inserted" | "updated"> {
-  const target = v.placeId ? vendors.placeId : vendors.slug;
+function isPicBoothName(name: string): boolean {
+  return /\bpic\s*booth\b/i.test(name);
+}
+function isNiagaraPhotoBoothName(name: string): boolean {
+  return /\bniagara\s+photo\s+booth\b/i.test(name);
+}
+
+function cleanString(s: string | null | undefined): string | null {
+  if (!s) return null;
+  const t = s.trim();
+  if (!t || t.toLowerCase() === "unknown") return null;
+  return t;
+}
+
+function toRow(raw: ScrapedVendor): NewVendor | null {
+  if (!raw.place_id) return null;
+  if (!raw.name?.trim()) return null;
+
+  const name = raw.name.trim();
+  const picBooth = Boolean(raw.is_pic_booth) || isPicBoothName(name);
+  const niagaraPhotoBooth = Boolean(raw.is_niagara_photo_booth) || isNiagaraPhotoBoothName(name);
+
+  const slug = picBooth ? PIC_BOOTH_SLUG : (raw.slug ?? "").trim();
+  if (!slug) return null;
+
+  const googleClosed =
+    raw.business_status && raw.business_status.toUpperCase() === "OPERATIONAL"
+      ? "no"
+      : raw.business_status
+        ? "yes"
+        : "no";
+
+  return {
+    placeId:               raw.place_id,
+    slug,
+    name,
+    category:              raw.category ?? "unknown",
+    address:               cleanString(raw.address),
+    city:                  cleanString(raw.city),
+    province:              raw.province ?? "ON",
+    region:                cleanString(raw.region),
+    phone:                 cleanString(raw.phone),
+    website:               cleanString(raw.website),
+    email:                 cleanString(raw.email),
+    instagramHandle:       cleanString(raw.instagram_handle),
+    googleRating:          raw.google_rating != null ? String(raw.google_rating) : null,
+    reviewCount:           raw.review_count ?? null,
+    googleClosed,
+    priceTier:             cleanString(raw.price_tier),
+    priceFrom:             raw.price_from ?? null,
+    priceTo:               raw.price_to ?? null,
+    description:           cleanString(raw.description),
+    lat:                   raw.lat != null ? String(raw.lat) : null,
+    lng:                   raw.lng != null ? String(raw.lng) : null,
+    isPicBooth:            picBooth,
+    isNiagaraPhotoBooth:   niagaraPhotoBooth,
+    vendorReadinessScore:  raw.vendor_readiness_score ?? null,
+    source:                cleanString(raw.source) ?? "google_places",
+  };
+}
+
+/** Insert or update one row by place_id. Returns "inserted" | "updated". */
+async function upsertOne(row: NewVendor): Promise<"inserted" | "updated"> {
   const result = await db
     .insert(vendors)
-    .values(v)
+    .values(row)
     .onConflictDoUpdate({
-      target,
-      set: { ...v, updatedAt: sql`now()` },
+      target: vendors.placeId,
+      set: {
+        slug:                 row.slug,
+        name:                 row.name,
+        category:             row.category,
+        address:              row.address,
+        city:                 row.city,
+        province:             row.province,
+        region:               row.region,
+        phone:                row.phone,
+        website:              row.website,
+        email:                row.email,
+        instagramHandle:      row.instagramHandle,
+        googleRating:         row.googleRating,
+        reviewCount:          row.reviewCount,
+        googleClosed:         row.googleClosed,
+        priceTier:            row.priceTier,
+        priceFrom:            row.priceFrom,
+        priceTo:              row.priceTo,
+        description:          row.description,
+        lat:                  row.lat,
+        lng:                  row.lng,
+        isPicBooth:           row.isPicBooth,
+        isNiagaraPhotoBooth:  row.isNiagaraPhotoBooth,
+        vendorReadinessScore: row.vendorReadinessScore,
+        source:               row.source,
+        updatedAt:            new Date(),
+      },
     })
-    .returning({ createdAt: vendors.createdAt, updatedAt: vendors.updatedAt });
-  const row = result[0];
-  if (!row || !row.createdAt || !row.updatedAt) return "inserted";
-  return row.createdAt.getTime() === row.updatedAt.getTime() ? "inserted" : "updated";
+    .returning({ id: vendors.id, createdAt: vendors.createdAt, updatedAt: vendors.updatedAt });
+
+  const r = result[0];
+  if (!r) return "inserted";
+  const created = r.createdAt?.getTime() ?? 0;
+  const updated = r.updatedAt?.getTime() ?? 0;
+  return Math.abs(updated - created) < 1500 ? "inserted" : "updated";
 }
 
 async function main() {
-  const file = process.argv[2];
-  if (!file) {
-    console.error("Usage: tsx scripts/import-vendors.ts <path-to-csv>");
-    process.exit(1);
-  }
-  const path = resolve(file);
-  const ext = extname(path).toLowerCase();
-  if (ext === ".xlsx") {
-    console.error(
-      "xlsx parsing not enabled. Convert to .csv, or `npm i -D xlsx` and extend this script.",
-    );
-    process.exit(1);
-  }
-  if (ext !== ".csv") {
-    console.error(`Unsupported file: ${ext}. Expected .csv`);
+  const sourceDir = resolve(process.argv[2] ?? DEFAULT_DIR);
+  console.log(`Source: ${sourceDir}\n`);
+
+  let files: string[];
+  try {
+    files = (await readdir(sourceDir))
+      .filter((f) => f.endsWith(".json"))
+      .filter((f) => f.toLowerCase() !== "unknown.json");
+  } catch (err) {
+    console.error(`Cannot read ${sourceDir}:`, err);
     process.exit(1);
   }
 
-  const rows = parseCsv(await readFile(path, "utf8"));
-  console.log(`Parsed ${rows.length} rows from ${path}`);
+  console.log(`Found ${files.length} JSON files\n`);
 
-  let inserted = 0;
-  let updated = 0;
-  let skipped = 0;
-  let failed = 0;
-  for (const row of rows) {
-    const v = rowToVendor(row);
-    if (!v) {
-      skipped++;
+  const perFile: Record<string, Stats> = {};
+  const perCategory: PerCategory = {};
+  const total = newStats();
+
+  for (const filename of files) {
+    const filepath = join(sourceDir, filename);
+    const fileStats = newStats();
+    perFile[filename] = fileStats;
+
+    let rows: ScrapedVendor[] = [];
+    try {
+      const text = await readFile(filepath, "utf8");
+      const parsed = JSON.parse(text);
+      rows = Array.isArray(parsed) ? parsed : [];
+    } catch (err) {
+      console.error(`  ${filename}: parse failed — ${err}`);
+      total.errors++;
       continue;
     }
-    try {
-      const op = await upsert(v);
-      if (op === "inserted") inserted++;
-      else updated++;
-    } catch (err) {
-      failed++;
-      console.error(`  ✗ ${v.slug}: ${(err as Error).message}`);
+
+    for (const raw of rows) {
+      const cat = raw.category ?? "unknown";
+      if (!perCategory[cat]) perCategory[cat] = newStats();
+      const catStats = perCategory[cat];
+
+      if (!raw.place_id) {
+        fileStats.skippedNoPlaceId++; catStats.skippedNoPlaceId++; total.skippedNoPlaceId++;
+        continue;
+      }
+      if ((raw.vendor_readiness_score ?? 0) < SCORE_MIN) {
+        fileStats.skippedLowScore++; catStats.skippedLowScore++; total.skippedLowScore++;
+        continue;
+      }
+
+      const row = toRow(raw);
+      if (!row) {
+        fileStats.skippedUnknownCategory++; catStats.skippedUnknownCategory++; total.skippedUnknownCategory++;
+        continue;
+      }
+
+      try {
+        const result = await upsertOne(row);
+        if (result === "inserted") { fileStats.inserted++; catStats.inserted++; total.inserted++; }
+        else                       { fileStats.updated++;  catStats.updated++;  total.updated++; }
+      } catch (err) {
+        fileStats.errors++; catStats.errors++; total.errors++;
+        console.error(`    ${row.name} (${row.placeId}): ${err instanceof Error ? err.message : err}`);
+      }
     }
+
+    console.log(
+      `  ${basename(filename).padEnd(22)} ` +
+      `ins=${fileStats.inserted}, upd=${fileStats.updated}, ` +
+      `skip(low=${fileStats.skippedLowScore}, noPid=${fileStats.skippedNoPlaceId}, unkCat=${fileStats.skippedUnknownCategory}), ` +
+      `err=${fileStats.errors}`,
+    );
   }
+
+  /* Per-category summary */
+  console.log("\n" + "=".repeat(70));
+  console.log("Per-category summary");
+  console.log("=".repeat(70));
   console.log(
-    `Done. inserted=${inserted} updated=${updated} skipped=${skipped} failed=${failed}`,
+    `  ${"category".padEnd(20)} ${"ins".padStart(5)} ${"upd".padStart(5)} ` +
+    `${"low".padStart(5)} ${"errs".padStart(5)}`,
   );
-  process.exit(failed > 0 ? 1 : 0);
+  for (const c of Object.keys(perCategory).sort()) {
+    const s = perCategory[c];
+    console.log(
+      `  ${c.padEnd(20)} ${String(s.inserted).padStart(5)} ${String(s.updated).padStart(5)} ` +
+      `${String(s.skippedLowScore).padStart(5)} ${String(s.errors).padStart(5)}`,
+    );
+  }
+
+  console.log("\n" + "=".repeat(70));
+  console.log("Total");
+  console.log("=".repeat(70));
+  console.log(`  Inserted: ${total.inserted}`);
+  console.log(`  Updated:  ${total.updated}`);
+  console.log(`  Skipped (low score):    ${total.skippedLowScore}`);
+  console.log(`  Skipped (no place_id):  ${total.skippedNoPlaceId}`);
+  console.log(`  Skipped (unknown cat):  ${total.skippedUnknownCategory}`);
+  console.log(`  Errors:   ${total.errors}`);
 }
 
 main().catch((err) => {
-  console.error(err);
+  console.error("Fatal:", err);
   process.exit(1);
 });

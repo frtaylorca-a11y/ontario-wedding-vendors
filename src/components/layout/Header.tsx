@@ -6,6 +6,7 @@ const NAV_LINKS: { label: string; href: Route }[] = [
   { label: "Vendors", href: "/vendors" as Route },
   { label: "Plan",    href: "/plan" as Route },
   { label: "Blog",    href: "/blog" as Route },
+  { label: "About",   href: "/about" as Route },
 ];
 
 const TRUST_ITEMS = [

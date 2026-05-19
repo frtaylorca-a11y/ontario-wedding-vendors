@@ -38,13 +38,13 @@ export const venues = pgTable(
     coordinatorPhone: varchar("coordinator_phone", { length: 50 }),
 
     catering: varchar("catering", { length: 100 }),
-    accommodations: varchar("accommodations", { length: 50 }),
-    indoorOutdoor: varchar("indoor_outdoor", { length: 50 }),
+    accommodations: varchar("accommodations", { length: 500 }),
+    indoorOutdoor: varchar("indoor_outdoor", { length: 100 }),
 
     hasWeddingsPage: varchar("has_weddings_page", { length: 10 }),
     weddingsPageUrl: varchar("weddings_page_url", { length: 500 }),
     hasPackages: varchar("has_packages", { length: 10 }),
-    packages: text("packages"),
+    packages: varchar("packages", { length: 500 }),
     hasPricing: varchar("has_pricing", { length: 10 }),
     hasTestimonials: varchar("has_testimonials", { length: 10 }),
     bookingPlatform: varchar("booking_platform", { length: 100 }),
@@ -125,8 +125,11 @@ export const vendors = pgTable(
     verified: boolean("verified").default(false),
     featured: boolean("featured").default(false),
     isPicBooth: boolean("is_pic_booth").default(false),
+    isNiagaraPhotoBooth: boolean("is_niagara_photo_booth").default(false),
 
     source: varchar("source", { length: 100 }),
+    /* Wedding-readiness signal for vendors discovered through referrals + reviews */
+    vendorReadinessScore: integer("vendor_readiness_score"),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
@@ -139,7 +142,47 @@ export const vendors = pgTable(
   }),
 );
 
+/**
+ * Edge table for "X recommends Y" relationships.
+ *   Source: exactly one of sourceVenueId / sourceVendorId is set (the recommender).
+ *   Recommended: recommendedVendorId set when the target is in our DB;
+ *     otherwise recommendedVendorName captures the raw mention for later matching.
+ * Populated by scripts/enrich-venues.ts (Pass 2 + Google-review mining).
+ */
+export const vendorRelationships = pgTable(
+  "vendor_relationships",
+  {
+    id:                    serial("id").primaryKey(),
+
+    sourceVenueId:         integer("source_venue_id"),
+    sourceVendorId:        integer("source_vendor_id"),
+
+    recommendedVendorId:   integer("recommended_vendor_id"),
+    recommendedVendorName: varchar("recommended_vendor_name", { length: 255 }),
+    recommendedCategory:   varchar("recommended_category", { length: 50 }),
+
+    relationshipType:      varchar("relationship_type", { length: 50 }).notNull(),
+      // "preferred_vendor" | "frequent_collaborator" | "review_mention"
+    source:                varchar("source", { length: 50 }).notNull(),
+      // "venue_website" | "vendor_website" | "google_review"
+    sourceUrl:             text("source_url"),
+    context:               text("context"),     // sentence / quote for review mentions
+    sentiment:             varchar("sentiment", { length: 20 }), // review_mention only
+
+    createdAt:             timestamp("created_at").defaultNow(),
+    updatedAt:             timestamp("updated_at").defaultNow(),
+  },
+  (t) => ({
+    sourceVenueIdx:        index("vr_source_venue_idx").on(t.sourceVenueId),
+    sourceVendorIdx:       index("vr_source_vendor_idx").on(t.sourceVendorId),
+    recommendedIdx:        index("vr_recommended_idx").on(t.recommendedVendorId),
+    typeIdx:               index("vr_type_idx").on(t.relationshipType),
+  }),
+);
+
 export type Venue = typeof venues.$inferSelect;
 export type NewVenue = typeof venues.$inferInsert;
 export type Vendor = typeof vendors.$inferSelect;
 export type NewVendor = typeof vendors.$inferInsert;
+export type VendorRelationship = typeof vendorRelationships.$inferSelect;
+export type NewVendorRelationship = typeof vendorRelationships.$inferInsert;

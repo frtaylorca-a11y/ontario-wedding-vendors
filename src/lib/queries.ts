@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, ilike, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, ne, or, sql } from "drizzle-orm";
 import { db } from "./db";
 import { venues, vendors } from "./schema";
 import type { Venue, Vendor } from "./schema";
@@ -30,7 +30,11 @@ export async function listVenues(
 
   if (params.region) conditions.push(eq(venues.region, params.region));
   if (params.city) conditions.push(ilike(venues.city, `%${params.city}%`));
-  if (params.type) conditions.push(eq(venues.venueType, params.type));
+  if (params.type) {
+    // DB stores "golf club" / "banquet hall"; URLs use "golf-club" / "banquet-hall"
+    const normalized = params.type.replace(/-/g, " ").toLowerCase();
+    conditions.push(eq(venues.venueType, normalized));
+  }
   if (params.capacity != null) conditions.push(gte(venues.capacityMax, params.capacity));
 
   if (params.indoor && params.indoor !== "both") {
@@ -94,6 +98,46 @@ export async function getVenuesByRegion(
     .limit(limit);
 }
 
+/**
+ * Find venues geographically near a reference point.
+ * Uses squared lat/lng diff as a cheap proximity proxy — good enough
+ * for sorting within Ontario where curvature distortion is negligible.
+ * Falls back to score-ordering within the same region when no coords.
+ */
+export async function getSimilarVenues(opts: {
+  region: string | null;
+  lat: string | number | null;
+  lng: string | number | null;
+  excludeId: number;
+  limit?: number;
+}): Promise<Venue[]> {
+  const limit = Math.min(Math.max(opts.limit ?? 3, 1), 12);
+
+  const conditions = [
+    ne(venues.id, opts.excludeId),
+    gte(venues.weddingReadinessScore, 50),
+    or(eq(venues.googleClosed, "no"), sql`${venues.googleClosed} is null`)!,
+  ];
+  if (opts.region) conditions.push(eq(venues.region, opts.region));
+
+  const hasCoords = opts.lat != null && opts.lng != null;
+  const lat = hasCoords ? Number(opts.lat) : null;
+  const lng = hasCoords ? Number(opts.lng) : null;
+
+  const orderBy = hasCoords && lat != null && lng != null && Number.isFinite(lat) && Number.isFinite(lng)
+    ? [
+        sql`(${venues.lat}::float - ${lat}) * (${venues.lat}::float - ${lat}) + (${venues.lng}::float - ${lng}) * (${venues.lng}::float - ${lng}) ASC NULLS LAST`,
+      ]
+    : [desc(venues.weddingReadinessScore), desc(venues.reviewCount)];
+
+  return db
+    .select()
+    .from(venues)
+    .where(and(...conditions))
+    .orderBy(...orderBy)
+    .limit(limit);
+}
+
 export async function getFeaturedVenues(limit = 6): Promise<Venue[]> {
   return db
     .select()
@@ -107,6 +151,9 @@ export type VendorListParams = {
   region?: string;
   city?: string;
   category?: string;
+  priceTier?: string;
+  /** Exclude Pic Booth — pinned card renders it separately to avoid duplicates */
+  excludePicBooth?: boolean;
   limit?: number;
   offset?: number;
 };
@@ -123,6 +170,8 @@ export async function listVendors(
   if (params.region) conditions.push(eq(vendors.region, params.region));
   if (params.city) conditions.push(ilike(vendors.city, `%${params.city}%`));
   if (params.category) conditions.push(eq(vendors.category, params.category));
+  if (params.priceTier) conditions.push(eq(vendors.priceTier, params.priceTier));
+  if (params.excludePicBooth) conditions.push(sql`${vendors.isPicBooth} is not true`);
 
   const where = and(...conditions);
 
@@ -132,8 +181,8 @@ export async function listVendors(
       .from(vendors)
       .where(where)
       .orderBy(
-        desc(vendors.isPicBooth),
         desc(vendors.featured),
+        desc(vendors.vendorReadinessScore),
         desc(vendors.googleRating),
         desc(vendors.reviewCount),
       )
