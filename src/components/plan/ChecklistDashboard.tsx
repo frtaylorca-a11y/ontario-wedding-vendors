@@ -14,11 +14,16 @@ import type { BookedVendor } from "@/lib/plan-state";
 const LOCAL_STORAGE_KEY = "owv_checklist_state_v1";
 const SAVE_DEBOUNCE_MS = 800;
 
+export type AlertChannel = "sms" | "email" | "both" | "none";
+
 type Props = {
   sessionId: string;
   weddingDate: string | null;
   bookedVendors: Record<string, BookedVendor>;
   initialTasks: ChecklistTasksBlob | null;
+  initialAlertPhone: string | null;
+  initialAlertEmail: string | null;
+  initialAlertChannel: AlertChannel | null;
 };
 
 function formatDueDate(d: Date | null): string {
@@ -30,13 +35,31 @@ function formatDueDate(d: Date | null): string {
   });
 }
 
-export function ChecklistDashboard({ sessionId, weddingDate, bookedVendors, initialTasks }: Props) {
+export function ChecklistDashboard({
+  sessionId,
+  weddingDate,
+  bookedVendors,
+  initialTasks,
+  initialAlertPhone,
+  initialAlertEmail,
+  initialAlertChannel,
+}: Props) {
   const [tasks, setTasks] = useState<ChecklistTasksBlob>(
     initialTasks ?? DEFAULT_CHECKLIST_TASKS,
   );
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const firstRender = useRef(true);
+
+  /* Alert signup form state */
+  const [alertPhone, setAlertPhone] = useState(initialAlertPhone ?? "");
+  const [alertEmail, setAlertEmail] = useState(initialAlertEmail ?? "");
+  const [alertChannel, setAlertChannel] = useState<AlertChannel>(initialAlertChannel ?? "email");
+  const [alertSavedAt, setAlertSavedAt] = useState<string | null>(
+    initialAlertChannel && initialAlertChannel !== "none" ? "loaded" : null,
+  );
+  const [alertSubmitting, setAlertSubmitting] = useState(false);
+  const [alertError, setAlertError] = useState<string | null>(null);
 
   /* Hydrate from localStorage on first client render */
   useEffect(() => {
@@ -88,6 +111,42 @@ export function ChecklistDashboard({ sessionId, weddingDate, bookedVendors, init
   const doneCount = generated.filter((t) => t.done).length;
   const totalCount = generated.length;
   const progressPct = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
+
+  async function submitAlertSignup() {
+    setAlertError(null);
+    /* Validate per chosen channel */
+    const needsPhone = alertChannel === "sms" || alertChannel === "both";
+    const needsEmail = alertChannel === "email" || alertChannel === "both";
+    if (needsPhone && alertPhone.trim().length < 7) {
+      setAlertError("Enter a valid phone number for SMS reminders.");
+      return;
+    }
+    if (needsEmail && !/^\S+@\S+\.\S+$/.test(alertEmail.trim())) {
+      setAlertError("Enter a valid email for email reminders.");
+      return;
+    }
+    setAlertSubmitting(true);
+    try {
+      const res = await fetch("/api/plan/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          alertPhone:   needsPhone ? alertPhone.trim() : null,
+          alertEmail:   needsEmail ? alertEmail.trim() : null,
+          alertChannel: alertChannel,
+        }),
+      });
+      if (res.ok) {
+        setAlertSavedAt(new Date().toISOString());
+      } else {
+        setAlertError("Couldn't save reminder preferences. Try again.");
+      }
+    } catch {
+      setAlertError("Network error. Try again.");
+    } finally {
+      setAlertSubmitting(false);
+    }
+  }
 
   function toggleTask(key: string) {
     setTasks((s) => {
@@ -265,6 +324,108 @@ export function ChecklistDashboard({ sessionId, weddingDate, bookedVendors, init
           </ul>
         </section>
       ))}
+
+      {/* Alert signup */}
+      <section className="rounded-card border-[1.5px] border-border bg-white p-6 lg:p-8">
+        <header className="mb-5">
+          <div className="text-xs font-bold uppercase tracking-[0.14em] text-rose">
+            Reminders
+          </div>
+          <h3 className="mt-2 font-display text-2xl font-semibold text-charcoal">
+            Get reminders when tasks are due
+          </h3>
+          <p className="mt-2 text-sm text-text-mid">
+            We&rsquo;ll nudge you two weeks and three days before each task
+            deadline so nothing slips through.
+          </p>
+        </header>
+
+        {/* Channel toggle */}
+        <div role="radiogroup" aria-label="Reminder channel" className="mb-5 inline-flex rounded-pill border border-border bg-bg-soft p-1">
+          {(["email", "sms", "both"] as const).map((ch) => (
+            <button
+              key={ch}
+              type="button"
+              role="radio"
+              aria-checked={alertChannel === ch}
+              onClick={() => setAlertChannel(ch)}
+              className={`rounded-pill px-4 py-1.5 text-xs font-bold uppercase tracking-[0.08em] transition-colors ${
+                alertChannel === ch
+                  ? "bg-rose text-white"
+                  : "text-text-mid hover:text-rose"
+              }`}
+            >
+              {ch === "email" ? "Email" : ch === "sms" ? "SMS" : "Both"}
+            </button>
+          ))}
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          {(alertChannel === "email" || alertChannel === "both") && (
+            <div>
+              <label htmlFor="alert-email" className="text-[0.7rem] font-bold uppercase tracking-[0.1em] text-text-muted">
+                Email
+              </label>
+              <input
+                id="alert-email"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                value={alertEmail}
+                onChange={(e) => setAlertEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="mt-1 w-full rounded-pill border border-border bg-white px-4 py-2.5 text-sm text-charcoal placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
+              />
+            </div>
+          )}
+          {(alertChannel === "sms" || alertChannel === "both") && (
+            <div>
+              <label htmlFor="alert-phone" className="text-[0.7rem] font-bold uppercase tracking-[0.1em] text-text-muted">
+                Phone (SMS)
+              </label>
+              <input
+                id="alert-phone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                value={alertPhone}
+                onChange={(e) => setAlertPhone(e.target.value)}
+                placeholder="(905) 555-0142"
+                className="mt-1 w-full rounded-pill border border-border bg-white px-4 py-2.5 text-sm text-charcoal placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
+              />
+            </div>
+          )}
+        </div>
+
+        {alertError && (
+          <p className="mt-3 text-sm text-red-600">{alertError}</p>
+        )}
+
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={submitAlertSignup}
+            disabled={alertSubmitting}
+            className="inline-flex items-center gap-2 rounded-pill bg-rose px-5 py-2.5 text-sm font-bold text-white shadow-[0_4px_14px_rgba(185,100,118,0.3)] transition-all hover:bg-rose-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2 disabled:opacity-60"
+          >
+            {alertSubmitting ? "Saving…" : alertSavedAt ? "Update reminders" : "Start reminders"}
+            <span aria-hidden>→</span>
+          </button>
+          {alertSavedAt && !alertError && !alertSubmitting && (
+            <span className="inline-flex items-center gap-1 rounded-pill bg-emerald-100 px-3 py-1 text-[0.7rem] font-bold uppercase tracking-[0.08em] text-emerald-700">
+              <svg aria-hidden viewBox="0 0 24 24" className="h-3 w-3 fill-none stroke-current" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Reminders active
+            </span>
+          )}
+        </div>
+
+        <p className="mt-4 text-[0.7rem] leading-relaxed text-text-muted">
+          We&rsquo;ll remind you 2 weeks and 3 days before each task deadline.
+          Standard messaging rates may apply.
+        </p>
+      </section>
     </div>
   );
 }

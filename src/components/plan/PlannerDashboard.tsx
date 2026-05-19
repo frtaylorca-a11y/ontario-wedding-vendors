@@ -7,7 +7,10 @@ import { VendorSlots } from "./VendorSlots";
 import { AddVendorSlideOver } from "./AddVendorSlideOver";
 import {
   DEFAULT_PLAN,
+  CATERING_PER_GUEST,
+  cateringMidPerHead,
   getVenuePricingRange,
+  normalizeCateringType,
   venueMidRange,
   type PlanState,
   type BookedVendor,
@@ -138,6 +141,7 @@ export function PlannerDashboard({ sessionId, initialPlan }: Props) {
         venueName={state.venueName}
         venueType={state.venueType}
         venueCapacityMax={state.venueCapacityMax}
+        venueCatering={state.venueCatering}
         budgetCategoryStates={state.budgetCategoryStates}
         onChange={(patch) => setState((s) => ({ ...s, ...patch }))}
       />
@@ -152,24 +156,37 @@ export function PlannerDashboard({ sessionId, initialPlan }: Props) {
           if (venue) {
             setState((s) => {
               const nextRegion = venue.region ?? s.region;
-              /* Auto-lock venue_rental to mid-range of the venue type pricing
-               * model. User can unlock at any time. Skip if already locked. */
-              const range = getVenuePricingRange(venue.venueType, nextRegion);
-              const venueToggle = s.budgetCategoryStates.toggles.venue_rental;
-              const shouldAutoLock = range && venueToggle.lockedAmount == null;
-              const nextStates = shouldAutoLock
-                ? {
-                    ...s.budgetCategoryStates,
-                    toggles: {
-                      ...s.budgetCategoryStates.toggles,
-                      venue_rental: {
-                        ...venueToggle,
-                        enabled: true,
-                        lockedAmount: venueMidRange(range),
-                      },
-                    },
-                  }
-                : s.budgetCategoryStates;
+
+              /* Build the next toggles map, auto-locking venue_rental and
+               * catering_bar to mid-range estimates. User can unlock either
+               * at any time; auto-lock is skipped if the row is already locked. */
+              const nextToggles = { ...s.budgetCategoryStates.toggles };
+
+              const venueRange = getVenuePricingRange(venue.venueType, nextRegion);
+              const venueToggle = nextToggles.venue_rental;
+              if (venueRange && venueToggle.lockedAmount == null) {
+                nextToggles.venue_rental = {
+                  ...venueToggle,
+                  enabled: true,
+                  lockedAmount: venueMidRange(venueRange),
+                };
+              }
+
+              const cateringType = normalizeCateringType(venue.catering);
+              const cateringToggle = nextToggles.catering_bar;
+              if (cateringType && cateringToggle.lockedAmount == null) {
+                const perHead = cateringMidPerHead(CATERING_PER_GUEST[cateringType]);
+                nextToggles.catering_bar = {
+                  ...cateringToggle,
+                  enabled: true,
+                  lockedAmount: perHead * s.guestCount,
+                };
+              }
+
+              const nextStates = {
+                ...s.budgetCategoryStates,
+                toggles: nextToggles,
+              };
               return {
                 ...s,
                 venueId:           venue.id,

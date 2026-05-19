@@ -371,12 +371,39 @@ const VENUE_PRICING_MODEL: Record<string, Record<string, VenuePricingRange>> = {
   outdoor:  { default: { low: 2000, high: 10000 } },
 };
 
-export type CateringPricingRange = VenuePricingRange & { perGuest: true };
+export type CateringType = "in-house" | "external";
 
-export const CATERING_PER_GUEST: Record<string, CateringPricingRange> = {
-  "in-house": { low: 85, high: 185, perGuest: true },
-  "external": { low: 65, high: 150, perGuest: true },
+export type CateringPricingRange = {
+  low: number;        /* $ per guest, low end */
+  high: number;       /* $ per guest, high end */
+  type: CateringType;
 };
+
+export const CATERING_PER_GUEST: Record<CateringType, CateringPricingRange> = {
+  "in-house": { low: 85, high: 185, type: "in-house" },
+  "external": { low: 65, high: 150, type: "external" },
+};
+
+export const CATERING_TYPE_LABELS: Record<CateringType, string> = {
+  "in-house": "in-house catering",
+  "external": "external catering",
+};
+
+/** Normalize venue.catering free-text into one of our lookup keys.
+ *  Returns null when the venue doesn't disclose a catering arrangement. */
+export function normalizeCateringType(raw: string | null | undefined): CateringType | null {
+  if (!raw) return null;
+  const s = raw.toLowerCase();
+  if (s.includes("in-house") || s.includes("in house") || s.includes("inhouse")) return "in-house";
+  if (s.includes("external") || s.includes("outside") || s.includes("off-site") || s.includes("offsite")) return "external";
+  /* "Both available", "Yes", or anything affirmative — default to in-house as the most common Ontario case */
+  if (s.includes("both") || s === "yes") return "in-house";
+  return null;
+}
+
+export function cateringMidPerHead(range: CateringPricingRange): number {
+  return Math.round((range.low + range.high) / 2);
+}
 
 /** Look up a venue rental range — falls back to outdoor/default for unknown combinations */
 export function getVenuePricingRange(

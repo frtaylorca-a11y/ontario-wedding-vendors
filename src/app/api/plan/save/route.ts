@@ -30,6 +30,9 @@ const planSchema = z.object({
   stagAndDoe:     z.unknown().optional(), /* validated client-side; arbitrary JSONB persisted */
   budgetCategoryStates: z.unknown().optional(), /* { order, toggles } — see plan-state.ts */
   checklistTasks: z.unknown().optional(), /* per-task done state + custom-added tasks */
+  alertPhone:     z.string().max(50).nullable().optional(),
+  alertEmail:     z.string().max(255).nullable().optional(),
+  alertChannel:   z.enum(["sms", "email", "both", "none"]).nullable().optional(),
 });
 
 export async function POST(request: Request) {
@@ -70,6 +73,9 @@ export async function POST(request: Request) {
   if (data.stagAndDoe    !== undefined) { updateSet.stagAndDoe    = data.stagAndDoe;    insertValues.stagAndDoe    = data.stagAndDoe;    }
   if (data.budgetCategoryStates !== undefined) { updateSet.budgetCategoryStates = data.budgetCategoryStates; insertValues.budgetCategoryStates = data.budgetCategoryStates; }
   if (data.checklistTasks !== undefined) { updateSet.checklistTasks = data.checklistTasks; insertValues.checklistTasks = data.checklistTasks; }
+  if (data.alertPhone   !== undefined) { updateSet.alertPhone   = data.alertPhone;   insertValues.alertPhone   = data.alertPhone;   }
+  if (data.alertEmail   !== undefined) { updateSet.alertEmail   = data.alertEmail;   insertValues.alertEmail   = data.alertEmail;   }
+  if (data.alertChannel !== undefined) { updateSet.alertChannel = data.alertChannel; insertValues.alertChannel = data.alertChannel; }
 
   try {
     await db

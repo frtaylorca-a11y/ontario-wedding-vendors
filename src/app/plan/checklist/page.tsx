@@ -5,9 +5,11 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { weddingPlans } from "@/lib/schema";
 import { readPlanSessionId } from "@/lib/session";
-import { ChecklistDashboard } from "@/components/plan/ChecklistDashboard";
+import { ChecklistDashboard, type AlertChannel } from "@/components/plan/ChecklistDashboard";
 import type { ChecklistTasksBlob } from "@/lib/checklist";
 import type { BookedVendor } from "@/lib/plan-state";
+
+const VALID_CHANNELS: ReadonlySet<AlertChannel> = new Set(["sms", "email", "both", "none"]);
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +26,9 @@ export default async function ChecklistPage() {
   let weddingDate: string | null = null;
   let bookedVendors: Record<string, BookedVendor> = {};
   let checklistTasks: ChecklistTasksBlob | null = null;
+  let alertPhone: string | null = null;
+  let alertEmail: string | null = null;
+  let alertChannel: AlertChannel | null = null;
 
   try {
     const [row] = await db
@@ -31,14 +36,22 @@ export default async function ChecklistPage() {
         weddingDate:    weddingPlans.weddingDate,
         bookedVendors:  weddingPlans.bookedVendors,
         checklistTasks: weddingPlans.checklistTasks,
+        alertPhone:     weddingPlans.alertPhone,
+        alertEmail:     weddingPlans.alertEmail,
+        alertChannel:   weddingPlans.alertChannel,
       })
       .from(weddingPlans)
       .where(eq(weddingPlans.sessionId, sessionId))
       .limit(1);
     if (row) {
-      weddingDate = row.weddingDate ?? null;
-      bookedVendors = (row.bookedVendors as Record<string, BookedVendor>) ?? {};
+      weddingDate    = row.weddingDate ?? null;
+      bookedVendors  = (row.bookedVendors as Record<string, BookedVendor>) ?? {};
       checklistTasks = (row.checklistTasks as ChecklistTasksBlob) ?? null;
+      alertPhone     = row.alertPhone ?? null;
+      alertEmail     = row.alertEmail ?? null;
+      alertChannel   = row.alertChannel && VALID_CHANNELS.has(row.alertChannel as AlertChannel)
+        ? (row.alertChannel as AlertChannel)
+        : null;
     }
   } catch (err) {
     console.error("[/plan/checklist] failed to load state", err);
@@ -92,6 +105,9 @@ export default async function ChecklistPage() {
           weddingDate={weddingDate}
           bookedVendors={bookedVendors}
           initialTasks={checklistTasks}
+          initialAlertPhone={alertPhone}
+          initialAlertEmail={alertEmail}
+          initialAlertChannel={alertChannel}
         />
       </div>
     </main>
