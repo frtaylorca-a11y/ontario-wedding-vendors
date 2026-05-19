@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Route } from "next";
 import type { CSSProperties, ReactNode } from "react";
 import type { Vendor } from "@/lib/schema";
-import { formatRating, vendorHeroImageUrl } from "@/lib/utils";
+import { formatRating, normalizeRegionDisplay, vendorHeroImageUrl } from "@/lib/utils";
 import { categoryColourVars } from "@/lib/vendor-colours";
 import { SaveVendorButton } from "@/components/plan/SaveVendorButton";
 
@@ -57,8 +57,10 @@ function CategoryIcon({ category }: { category: string }): ReactNode {
     case "dj":
       return (
         <svg aria-hidden {...ICON_PROPS}>
-          <path d="M4 6v8a4 4 0 0 0 8 0V6" />
-          <path d="M20 6v8a4 4 0 0 1-8 0" />
+          <circle cx="12" cy="12" r="10" />
+          <circle cx="12" cy="12" r="3" />
+          <path d="M12 2a10 10 0 0 1 7.07 17.07" />
+          <path d="M4.93 4.93A10 10 0 0 0 12 22" />
         </svg>
       );
     case "florist":
@@ -131,10 +133,7 @@ function CategoryIcon({ category }: { category: string }): ReactNode {
   }
 }
 
-function regionLabel(slug: string | null): string {
-  if (!slug) return "Ontario";
-  return slug.split("-").map((s) => (s[0] ? s[0].toUpperCase() + s.slice(1) : s)).join(" ");
-}
+const regionLabel = normalizeRegionDisplay;
 
 function categoryUrlSlug(category: string): string {
   return category.replace(/_/g, "-");
@@ -199,7 +198,14 @@ export function VendorCard({
         {/* Top row: category pill (L) + price tier / save heart / pinned (R) */}
         <div className="absolute inset-x-3 top-3 z-[2] flex items-start justify-between gap-2">
           <span
-            className="inline-flex items-center gap-1.5 rounded-pill bg-white/15 px-2.5 py-1 text-[0.7rem] font-bold uppercase tracking-[0.1em] text-white backdrop-blur-sm"
+            className="inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1 text-[0.7rem] font-bold uppercase tracking-[0.1em] text-white"
+            style={{
+              background:       "rgba(0,0,0,0.35)",
+              backdropFilter:   "blur(4px)",
+              WebkitBackdropFilter: "blur(4px)",
+              border:           "1px solid rgba(255,255,255,0.2)",
+              textShadow:       "0 1px 8px rgba(0,0,0,0.6)",
+            }}
           >
             <CategoryIcon category={vendor.category} />
             {categoryLabel}
@@ -225,10 +231,21 @@ export function VendorCard({
           </div>
         </div>
 
-        {/* Bottom: name + city + rating + distance — all white over photo */}
+        {/* Bottom: name + city + rating + distance — all white with text-shadow.
+         * Every text element gets the same drop shadow (0 1px 8px rgba(0,0,0,0.6))
+         * so the card stays readable on any underlying photo. */}
         <div className="absolute inset-x-5 bottom-4 z-[2]">
           {distanceLabel && (
-            <div className="mb-2 inline-flex items-center gap-1 rounded-pill bg-white/15 px-2 py-0.5 text-[0.65rem] font-medium text-white backdrop-blur-sm">
+            <div
+              className="mb-2 inline-flex items-center gap-1 rounded-pill px-2 py-0.5 text-[0.65rem] font-medium text-white"
+              style={{
+                background:           "rgba(0,0,0,0.35)",
+                backdropFilter:       "blur(4px)",
+                WebkitBackdropFilter: "blur(4px)",
+                border:               "1px solid rgba(255,255,255,0.2)",
+                textShadow:           "0 1px 8px rgba(0,0,0,0.6)",
+              }}
+            >
               <svg aria-hidden viewBox="0 0 24 24" className="h-2.5 w-2.5 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                 <circle cx="12" cy="10" r="3" />
@@ -238,7 +255,7 @@ export function VendorCard({
           )}
           <h3
             className="font-display text-[1.5rem] leading-tight text-white"
-            style={{ fontWeight: 600, textShadow: "0 1px 12px rgba(0,0,0,0.55)" }}
+            style={{ fontWeight: 600, textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}
           >
             <Link
               href={href}
@@ -250,30 +267,49 @@ export function VendorCard({
           {cityRegion && (
             <div
               className="mt-1 text-xs text-white"
-              style={{ textShadow: "0 1px 6px rgba(0,0,0,0.45)" }}
+              style={{ textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}
             >
               {cityRegion}
             </div>
           )}
-          <div className="mt-2 flex items-center gap-2">
-            {ratingStr ? (
-              <>
-                <span className="text-sm leading-none tracking-wider text-gold" style={{ textShadow: "0 1px 6px rgba(0,0,0,0.5)" }}>
-                  {"★".repeat(Math.round(Number(ratingStr)))}
-                  <span className="text-white/40">
-                    {"★".repeat(5 - Math.round(Number(ratingStr)))}
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              {ratingStr ? (
+                <>
+                  <span
+                    className="text-sm leading-none tracking-wider text-gold"
+                    style={{ textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}
+                  >
+                    {"★".repeat(Math.round(Number(ratingStr)))}
+                    <span className="text-white/40">
+                      {"★".repeat(5 - Math.round(Number(ratingStr)))}
+                    </span>
                   </span>
+                  <span
+                    className="text-xs text-white"
+                    style={{ textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}
+                  >
+                    {ratingStr}
+                    {vendor.reviewCount != null && (
+                      <span className="text-white/85"> ({vendor.reviewCount})</span>
+                    )}
+                  </span>
+                </>
+              ) : (
+                <span
+                  className="text-xs text-white"
+                  style={{ textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}
+                >
+                  No reviews yet
                 </span>
-                <span className="text-xs text-white" style={{ textShadow: "0 1px 6px rgba(0,0,0,0.45)" }}>
-                  {ratingStr}
-                  {vendor.reviewCount != null && (
-                    <span className="text-white/75"> ({vendor.reviewCount})</span>
-                  )}
-                </span>
-              </>
-            ) : (
-              <span className="text-xs text-white/80">No reviews yet</span>
-            )}
+              )}
+            </div>
+            <span
+              className="relative z-[1] text-xs font-bold tracking-[0.04em] text-white"
+              style={{ textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}
+            >
+              View →
+            </span>
           </div>
         </div>
       </article>

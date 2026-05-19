@@ -16,6 +16,7 @@ import {
   formatCapacity,
   getEstimatedCapacity,
   formatRating,
+  normalizeRegionDisplay,
   scoreTier,
   SCORE_TIER_LABEL,
 } from "@/lib/utils";
@@ -50,10 +51,7 @@ function norm(s: string | null | undefined): string {
   return s.trim().toLowerCase().replace(/\s+/g, "-");
 }
 
-function regionLabel(slug: string | null): string {
-  if (!slug) return "Ontario";
-  return slug.split("-").map((s) => s[0] ? s[0].toUpperCase() + s.slice(1) : s).join(" ");
-}
+const regionLabel = normalizeRegionDisplay;
 
 function clean(s: string | null | undefined): string | null {
   if (!s) return null;

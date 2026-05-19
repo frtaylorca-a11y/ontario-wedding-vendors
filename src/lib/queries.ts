@@ -10,24 +10,24 @@ import type { Venue, Vendor } from "./schema";
  * generateMetadata, and any page reading these all share one round trip.
  */
 export const getSiteStats = cache(async () => {
-  const closedClause = or(eq(vendors.googleClosed, "no"), sql`${vendors.googleClosed} is null`)!;
-  const venueClosedClause = or(eq(venues.googleClosed, "no"), sql`${venues.googleClosed} is null`)!;
-
-  const [vendorRows, venueRows, premierRows] = await Promise.all([
-    db.select({ count: sql<number>`count(*)::int` }).from(vendors).where(closedClause),
+  const [venueRows, vendorRows, premierRows] = await Promise.all([
     db
       .select({ count: sql<number>`count(*)::int` })
       .from(venues)
-      .where(and(gte(venues.weddingReadinessScore, 50), venueClosedClause)),
+      .where(gte(venues.weddingReadinessScore, 50)),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(vendors)
+      .where(gte(vendors.vendorReadinessScore, 50)),
     db
       .select({ count: sql<number>`count(*)::int` })
       .from(venues)
-      .where(and(gte(venues.weddingReadinessScore, 90), venueClosedClause)),
+      .where(gte(venues.weddingReadinessScore, 90)),
   ]);
 
   return {
-    vendorCount:  vendorRows[0]?.count  ?? 0,
     venueCount:   venueRows[0]?.count   ?? 0,
+    vendorCount:  vendorRows[0]?.count  ?? 0,
     premierCount: premierRows[0]?.count ?? 0,
   };
 });

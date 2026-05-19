@@ -63,10 +63,10 @@ const CATEGORIES: CategoryDef[] = [
     tagline: "Keep the dance floor full",
     icon: (
       <svg aria-hidden {...ICON_PROPS}>
-        <path d="M4 6v8a4 4 0 0 0 8 0V6" />
-        <path d="M20 6v8a4 4 0 0 1-8 0" />
-        <circle cx="8" cy="14" r="1.5" />
-        <circle cx="16" cy="14" r="1.5" />
+        <circle cx="12" cy="12" r="10" />
+        <circle cx="12" cy="12" r="3" />
+        <path d="M12 2a10 10 0 0 1 7.07 17.07" />
+        <path d="M4.93 4.93A10 10 0 0 0 12 22" />
       </svg>
     ),
   },

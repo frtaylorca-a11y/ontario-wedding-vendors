@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { Venue } from "@/lib/schema";
+import { normalizeRegionDisplay } from "@/lib/utils";
 
 type Props = {
   venueId: number | null;
@@ -27,10 +28,7 @@ type Props = {
   ) => void;
 };
 
-function regionLabel(slug: string | null): string {
-  if (!slug) return "Ontario";
-  return slug.split("-").map((s) => (s[0] ? s[0].toUpperCase() + s.slice(1) : s)).join(" ");
-}
+const regionLabel = normalizeRegionDisplay;
 
 export function VenueSearch({ venueId, venueName, venueCity, region, totalVenueCount, onSelect }: Props) {
   const [query, setQuery] = useState("");

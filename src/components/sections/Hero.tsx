@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Route } from "next";
 import type { CSSProperties } from "react";
+import { getSiteStats } from "@/lib/queries";
 
 const HERO_IMAGE_URL = "/images/hero-niagara-vineyard.png";
 
@@ -95,7 +96,8 @@ const FILTERS: FilterPill[] = [
   },
 ];
 
-export function Hero({ imageUrl = HERO_IMAGE_URL }: Props) {
+export async function Hero({ imageUrl = HERO_IMAGE_URL }: Props) {
+  const stats = await getSiteStats().catch(() => null);
   const hasImage = Boolean(imageUrl);
   const style: CSSProperties | undefined = hasImage
     ? ({ "--hero-image": `url('${imageUrl}')` } as CSSProperties)
@@ -160,13 +162,17 @@ export function Hero({ imageUrl = HERO_IMAGE_URL }: Props) {
 
       <div className="hero-stats">
         <div className="stat">
-          <div className="stat-num">1,200+</div>
+          <div className="stat-num">
+            {stats ? `${stats.venueCount.toLocaleString()}+` : "1,000+"}
+          </div>
           <div className="stat-label">Venues</div>
         </div>
         <div className="stat-divider" />
         <div className="stat">
-          <div className="stat-num">76</div>
-          <div className="stat-label">Premier listings</div>
+          <div className="stat-num">
+            {stats ? `${stats.vendorCount.toLocaleString()}+` : "1,500+"}
+          </div>
+          <div className="stat-label">Vendors</div>
         </div>
         <div className="stat-divider" />
         <div className="stat">

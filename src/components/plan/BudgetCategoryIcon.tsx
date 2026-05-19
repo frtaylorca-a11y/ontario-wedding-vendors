@@ -39,9 +39,10 @@ const ICON_PATHS: Record<VendorCategoryKey, ReactNode> = {
   ),
   music_dj: (
     <>
-      <path d="M9 18V5l12-2v13" />
-      <circle cx="6"  cy="18" r="3" />
-      <circle cx="18" cy="16" r="3" />
+      <circle cx="12" cy="12" r="10" />
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 2a10 10 0 0 1 7.07 17.07" />
+      <path d="M4.93 4.93A10 10 0 0 0 12 22" />
     </>
   ),
   flowers_decor: (

@@ -64,10 +64,10 @@ const CATEGORY_META: Record<string, { label: string; icon: ReactNode }> = {
     label: "DJ",
     icon: (
       <svg aria-hidden viewBox="0 0 24 24" fill="none" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 stroke-current">
-        <path d="M4 6v8a4 4 0 0 0 8 0V6" />
-        <path d="M20 6v8a4 4 0 0 1-8 0" />
-        <circle cx="8" cy="14" r="1.5" />
-        <circle cx="16" cy="14" r="1.5" />
+        <circle cx="12" cy="12" r="10" />
+        <circle cx="12" cy="12" r="3" />
+        <path d="M12 2a10 10 0 0 1 7.07 17.07" />
+        <path d="M4.93 4.93A10 10 0 0 0 12 22" />
       </svg>
     ),
   },

@@ -14,7 +14,7 @@ import { GoogleReviews } from "@/components/ui/GoogleReviews";
 import { VendorCard } from "@/components/ui/VendorCard";
 import { VenueCard } from "@/components/ui/VenueCard";
 import { VendorSchema, BreadcrumbSchema } from "@/components/seo/SchemaInjector";
-import { formatRating } from "@/lib/utils";
+import { formatRating, normalizeRegionDisplay } from "@/lib/utils";
 
 type Params = Promise<{ category: string; slug: string }>;
 
@@ -76,10 +76,7 @@ function normalizeCategorySlug(slug: string): string {
 function isValidCategory(slug: string): slug is VendorCategory {
   return (VENDOR_CATEGORIES as readonly string[]).includes(slug);
 }
-function regionLabel(slug: string | null): string {
-  if (!slug) return "Ontario";
-  return slug.split("-").map((s) => (s[0] ? s[0].toUpperCase() + s.slice(1) : s)).join(" ");
-}
+const regionLabel = normalizeRegionDisplay;
 function normalizeIgHandle(raw: string): string {
   return raw.trim().replace(/^@+/, "");
 }
@@ -179,12 +176,15 @@ export default async function VendorPage({ params }: { params: Params }) {
               </ol>
             </nav>
 
-            <div className="text-xs font-bold uppercase tracking-[0.14em] text-rose">
+            <div
+              className="text-xs font-bold uppercase tracking-[0.14em] text-white"
+              style={{ opacity: 0.8, textShadow: "0 1px 8px rgba(0,0,0,0.5)" }}
+            >
               {label} · {regionLabel(vendor.region)}
             </div>
             <h1
-              className="mt-2 font-display text-4xl font-semibold leading-tight md:text-6xl"
-              style={{ textShadow: "0 2px 8px rgba(0,0,0,0.4)" }}
+              className="mt-2 font-display text-4xl font-semibold leading-tight text-white md:text-6xl"
+              style={{ textShadow: "0 2px 16px rgba(0,0,0,0.5)" }}
             >
               {vendor.name}
             </h1>

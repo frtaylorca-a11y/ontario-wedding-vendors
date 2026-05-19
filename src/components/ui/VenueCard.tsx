@@ -6,6 +6,7 @@ import {
   formatCapacity,
   formatRating,
   getEstimatedCapacity,
+  normalizeRegionDisplay,
   scoreTier,
   SCORE_TIER_LABEL,
 } from "@/lib/utils";
@@ -57,12 +58,7 @@ function formatMonthYear(d: Date | string | null): string | null {
   return date.toLocaleDateString("en-CA", { year: "numeric", month: "long" });
 }
 
-function regionLabel(slug: string): string {
-  return slug
-    .split("-")
-    .map((s) => (s[0] ? s[0].toUpperCase() + s.slice(1) : s))
-    .join(" ");
-}
+const regionLabel = (slug: string): string => normalizeRegionDisplay(slug);
 
 /** Normalize a free-form string for switch comparison. */
 function norm(s: string | null | undefined): string {

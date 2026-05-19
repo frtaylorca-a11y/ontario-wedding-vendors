@@ -94,6 +94,42 @@ function normalizeVenueTypeKey(venueType: string | null | undefined): string | n
  * range — callers should only show it when actual capacity is unknown.
  */
 /**
+ * Display label for a region slug — fixes title-case ("Gta" → "GTA"),
+ * expands abbreviations (pec → Prince Edward County), and applies the
+ * canonical multi-word names used in the planner ("hamilton" → "Hamilton
+ * & Burlington"). Unknown slugs fall back to first-letter capitalization
+ * with hyphens converted to spaces. Pass null/undefined → "Ontario".
+ */
+const REGION_DISPLAY: Record<string, string> = {
+  gta:                "GTA",
+  niagara:            "Niagara",
+  hamilton:           "Hamilton & Burlington",
+  "golden-horseshoe": "Hamilton & Burlington",
+  muskoka:            "Muskoka & Cottage Country",
+  "cottage-country":  "Muskoka & Cottage Country",
+  waterloo:           "Waterloo Region",
+  "waterloo-region":  "Waterloo Region",
+  eastern:            "Eastern Ontario",
+  ottawa:             "Ottawa",
+  southwestern:       "Southwestern Ontario",
+  pec:                "Prince Edward County",
+  "prince-edward-county": "Prince Edward County",
+};
+
+export function normalizeRegionDisplay(region: string | null | undefined): string {
+  if (!region) return "Ontario";
+  const key = region.toLowerCase().trim();
+  const mapped = REGION_DISPLAY[key];
+  if (mapped) return mapped;
+  /* Fallback: capitalize each hyphen-separated word */
+  return key
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((w) => (w.length === 0 ? w : w[0].toUpperCase() + w.slice(1)))
+    .join(" ");
+}
+
+/**
  * Resolve a vendor's hero image URL via the photo pipeline priority:
  *   1. hero_image_custom (R2 URL, permanent, Stage 2 + AI-validated) — best
  *   2. hero_image (Google photo_reference, Stage 1 bootstrap) — fallback
