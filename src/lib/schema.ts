@@ -139,7 +139,18 @@ export const vendors = pgTable(
     pinnedNote: text("pinned_note"),
 
     /* Promotional fields — drives the Variant A photo card + sort-to-top behavior */
-    heroImage: varchar("hero_image", { length: 500 }),
+    heroImage: varchar("hero_image", { length: 500 }), /* Google photo_reference (fallback) */
+    /* Photo pipeline:
+     *   heroImageCustom = R2 URL (best, permanent) — set by upgrade-vendor-photos.ts
+     *   heroImage       = Google photo_reference   — set by backfill-vendor-photos.ts
+     *   heroImageSource: 'google' | 'website' | 'upload'
+     *   heroImageRefreshedAt: when the source last refreshed (Google URLs rotate)
+     *   heroImageValidated: Claude Vision approved (only set true after AI check)
+     */
+    heroImageCustom: varchar("hero_image_custom", { length: 500 }),
+    heroImageSource: varchar("hero_image_source", { length: 20 }),
+    heroImageRefreshedAt: timestamp("hero_image_refreshed_at"),
+    heroImageValidated: boolean("hero_image_validated").default(false),
     isFeatured: boolean("is_featured").default(false),
     featuredUntil: timestamp("featured_until"),
 

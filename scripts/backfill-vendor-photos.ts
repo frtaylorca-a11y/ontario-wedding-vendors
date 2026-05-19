@@ -1,5 +1,9 @@
 /**
- * Backfill vendors.hero_image with Google Places photo_reference strings.
+ * STAGE 1 of the vendor photo pipeline.
+ *
+ * Bootstraps vendors.hero_image with Google Places photo_reference strings.
+ * Stage 2 (scripts/upgrade-vendor-photos.ts) later replaces "good enough"
+ * Google photos with curated website images stored permanently in R2.
  *
  * Filter (matches the user's spec):
  *   hero_image IS NULL
@@ -9,14 +13,17 @@
  *   AND place_id NOT LIKE 'web-%'       — venue-website mention
  *   AND place_id NOT LIKE 'ww-%'        — WeddingWire scrape
  *
- * For each matched vendor:
- *   1. GET https://maps.googleapis.com/maps/api/place/details/json
- *        ?place_id=...&fields=photos&key=...
- *   2. If photos returned, store the first photo_reference verbatim as
- *      vendor.hero_image. The render-time helper constructs the full URL.
+ * For each matched vendor, GET
+ *   https://maps.googleapis.com/maps/api/place/details/json
+ *     ?place_id=...&fields=photos&key=...
+ * and on photos[0].photo_reference present, UPDATE:
+ *   hero_image              = <photo_reference>
+ *   hero_image_source       = 'google'
+ *   hero_image_refreshed_at = NOW()
+ *   updated_at              = NOW()
  *
- * Batched 50-per-chunk with a small delay between chunks to be polite to
- * the Places API and to make cost growth easy to monitor.
+ * Pacing: 50 candidates per batch, 200ms sleep between every request
+ * (serial-within-batch) — polite to the API and easy to monitor.
  *
  * Reports updated / skipped (no photos / closed / bad status) / failed
  * (network / non-OK HTTP / parse error) tallies.
@@ -25,7 +32,7 @@
  *
  * Usage:
  *   npx tsx scripts/backfill-vendor-photos.ts                  # all matched
- *   npx tsx scripts/backfill-vendor-photos.ts --limit 100      # first 100
+ *   npx tsx scripts/backfill-vendor-photos.ts --limit 10       # smoke test
  *   npx tsx scripts/backfill-vendor-photos.ts --dry-run        # no DB writes
  *   npx tsx scripts/backfill-vendor-photos.ts --limit 100 --dry-run
  */
@@ -35,7 +42,7 @@ import { db } from "../src/lib/db";
 import { vendors } from "../src/lib/schema";
 
 const BATCH_SIZE = 50;
-const DELAY_BETWEEN_BATCHES_MS = 1_000;
+const DELAY_BETWEEN_REQUESTS_MS = 200; /* per spec — polite to the Places API */
 const COST_PER_CALL_USD = 0.017;
 
 type Args = {
@@ -173,21 +180,21 @@ async function main() {
     const batchNum = Math.floor(i / BATCH_SIZE) + 1;
     const totalBatches = Math.ceil(candidates.length / BATCH_SIZE);
 
-    /* Parallel within the batch — Places quota is generous and the Neon HTTP
-     * driver doesn't pool, so serial-within-batch would just be slower. */
-    const results = await Promise.all(
-      batch.map((c) => fetchPhotoReference(c.placeId, apiKey)),
-    );
+    /* Serial within a batch with a 200ms gap between requests (per spec —
+     * keeps QPS modest and makes the call stream easy to monitor). */
+    for (const c of batch) {
+      const r = await fetchPhotoReference(c.placeId, apiKey);
 
-    /* Apply DB writes sequentially per batch (one UPDATE per ok result) */
-    for (let j = 0; j < batch.length; j++) {
-      const c = batch[j];
-      const r = results[j];
       if (r.kind === "ok") {
         if (!dryRun) {
           await db
             .update(vendors)
-            .set({ heroImage: r.photoRef, updatedAt: new Date() })
+            .set({
+              heroImage: r.photoRef,
+              heroImageSource: "google",
+              heroImageRefreshedAt: new Date(),
+              updatedAt: new Date(),
+            })
             .where(eq(vendors.id, c.id));
         }
         updated++;
@@ -200,6 +207,8 @@ async function main() {
         failed++;
         failures.push({ slug: c.slug, reason: r.message });
       }
+
+      await sleep(DELAY_BETWEEN_REQUESTS_MS);
     }
 
     console.log(
@@ -207,10 +216,6 @@ async function main() {
         `updated=${updated} skip:no-photos=${skippedNoPhotos} ` +
         `skip:bad-status=${skippedBadStatus} failed=${failed}`,
     );
-
-    if (i + BATCH_SIZE < candidates.length) {
-      await sleep(DELAY_BETWEEN_BATCHES_MS);
-    }
   }
 
   console.log("\n=== Summary ===");
