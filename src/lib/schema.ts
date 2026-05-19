@@ -7,6 +7,8 @@ import {
   numeric,
   boolean,
   timestamp,
+  date,
+  jsonb,
   index,
 } from "drizzle-orm/pg-core";
 
@@ -180,9 +182,76 @@ export const vendorRelationships = pgTable(
   }),
 );
 
+/**
+ * Anonymous wedding plans — keyed by sessionId (UUID cookie), no login required.
+ * Plan state lives in localStorage AND mirrors here for cross-device access later.
+ */
+export const weddingPlans = pgTable(
+  "wedding_plans",
+  {
+    id:                 serial("id").primaryKey(),
+    sessionId:          varchar("session_id", { length: 64 }).unique().notNull(),
+    weddingDate:        date("wedding_date"),
+    totalBudget:        integer("total_budget"),
+    guestCount:         integer("guest_count"),
+    region:             varchar("region", { length: 100 }),
+    venueId:            integer("venue_id"),
+    style:              varchar("style", { length: 50 }),
+    bookedVendors:      jsonb("booked_vendors"),
+    suggestedVendors:   jsonb("suggested_vendors"),
+    stagAndDoe:         jsonb("stag_and_doe"),
+    notes:              text("notes"),
+    createdAt:          timestamp("created_at").defaultNow(),
+    updatedAt:          timestamp("updated_at").defaultNow(),
+  },
+  (t) => ({
+    sessionIdx:         index("plans_session_idx").on(t.sessionId),
+  }),
+);
+
+/**
+ * Vendors suggested by couples via the planner's "Add a vendor not in our list"
+ * flow. Holds discovery candidates for admin review; promoted to vendors table
+ * with status = "added" once verified.
+ */
+export const userSuggestedVendors = pgTable(
+  "user_suggested_vendors",
+  {
+    id:                  serial("id").primaryKey(),
+    name:                varchar("name", { length: 255 }).notNull(),
+    normalizedName:      varchar("normalized_name", { length: 255 }).notNull(),
+    category:            varchar("category", { length: 50 }).notNull(),
+    website:             varchar("website", { length: 500 }),
+    instagram:           varchar("instagram", { length: 100 }),
+    phone:               varchar("phone", { length: 50 }),
+    city:                varchar("city", { length: 100 }).notNull(),
+    region:              varchar("region", { length: 100 }).notNull(),
+    notes:               text("notes"),
+    submittedBySession:  varchar("submitted_by_session", { length: 64 }),
+    mentionCount:        integer("mention_count").notNull().default(1),
+    /** "pending" | "reviewed" | "added" | "rejected" */
+    status:              varchar("status", { length: 20 }).notNull().default("pending"),
+    matchedVendorId:     integer("matched_vendor_id"),
+    contactedAt:         timestamp("contacted_at"),
+    claimedAt:           timestamp("claimed_at"),
+    createdAt:           timestamp("created_at").defaultNow(),
+    updatedAt:           timestamp("updated_at").defaultNow(),
+  },
+  (t) => ({
+    normalizedNameIdx: index("usv_normalized_name_idx").on(t.normalizedName),
+    categoryIdx:       index("usv_category_idx").on(t.category),
+    statusIdx:         index("usv_status_idx").on(t.status),
+    mentionCountIdx:   index("usv_mention_count_idx").on(t.mentionCount),
+  }),
+);
+
 export type Venue = typeof venues.$inferSelect;
 export type NewVenue = typeof venues.$inferInsert;
 export type Vendor = typeof vendors.$inferSelect;
 export type NewVendor = typeof vendors.$inferInsert;
 export type VendorRelationship = typeof vendorRelationships.$inferSelect;
 export type NewVendorRelationship = typeof vendorRelationships.$inferInsert;
+export type WeddingPlan = typeof weddingPlans.$inferSelect;
+export type NewWeddingPlan = typeof weddingPlans.$inferInsert;
+export type UserSuggestedVendor = typeof userSuggestedVendors.$inferSelect;
+export type NewUserSuggestedVendor = typeof userSuggestedVendors.$inferInsert;

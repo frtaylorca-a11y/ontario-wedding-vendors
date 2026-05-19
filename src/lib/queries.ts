@@ -6,6 +6,7 @@ import type { Venue, Vendor } from "./schema";
 export type VenueListParams = {
   region?: string;
   city?: string;
+  q?: string;
   type?: string;
   indoor?: "indoor" | "outdoor" | "both";
   catering?: "in-house" | "open" | "both";
@@ -30,6 +31,10 @@ export async function listVenues(
 
   if (params.region) conditions.push(eq(venues.region, params.region));
   if (params.city) conditions.push(ilike(venues.city, `%${params.city}%`));
+  if (params.q) {
+    /* Name search for the planner venue-search input */
+    conditions.push(ilike(venues.name, `%${params.q}%`));
+  }
   if (params.type) {
     // DB stores "golf club" / "banquet hall"; URLs use "golf-club" / "banquet-hall"
     const normalized = params.type.replace(/-/g, " ").toLowerCase();

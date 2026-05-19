@@ -7,6 +7,7 @@ export const dynamic = "force-dynamic";
 const querySchema = z.object({
   region: z.string().max(100).optional(),
   city: z.string().max(100).optional(),
+  q: z.string().max(200).optional(),
   type: z.string().max(100).optional(),
   indoor: z.enum(["indoor", "outdoor", "both"]).optional(),
   catering: z.enum(["in-house", "open", "both"]).optional(),

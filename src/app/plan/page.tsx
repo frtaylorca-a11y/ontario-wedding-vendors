@@ -1,19 +1,88 @@
-export const metadata = {
-  title: "Wedding budget planner",
-  description: "AI-assisted budget planning for Ontario weddings.",
+import Link from "next/link";
+import type { Route } from "next";
+import type { Metadata } from "next";
+import { eq } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { weddingPlans } from "@/lib/schema";
+import { readPlanSessionId } from "@/lib/session";
+import { PlannerDashboard } from "@/components/plan/PlannerDashboard";
+import type { PlanState } from "@/lib/plan-state";
+
+export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Wedding Planner | Ontario Wedding Vendors",
+  description:
+    "Free wedding budget calculator and vendor planner for Ontario couples. Pick your venue, set your budget, and your vendor list builds itself.",
+  alternates: { canonical: "/plan" },
+  robots: { index: true, follow: true },
 };
 
-export default function PlanPage() {
+export default async function PlanPage() {
+  /* Cookie is set by middleware before this renders — falls back to a
+   * placeholder UUID only if middleware somehow didn't run (shouldn't happen) */
+  const sessionId = (await readPlanSessionId()) ?? crypto.randomUUID();
+
+  /* Try loading any existing plan from DB. localStorage hydration happens on the client. */
+  let initialPlan: Partial<PlanState> | null = null;
+  try {
+    const [row] = await db
+      .select()
+      .from(weddingPlans)
+      .where(eq(weddingPlans.sessionId, sessionId))
+      .limit(1);
+    if (row) {
+      initialPlan = {
+        totalBudget: row.totalBudget ?? undefined,
+        guestCount:  row.guestCount ?? undefined,
+        region:      row.region ?? undefined,
+        weddingDate: row.weddingDate ?? null,
+        venueId:     row.venueId ?? null,
+        bookedVendors: (row.bookedVendors as PlanState["bookedVendors"]) ?? {},
+      };
+    }
+  } catch (err) {
+    console.error("[/plan] failed to load existing plan", err);
+  }
+
   return (
-    <main className="mx-auto max-w-3xl p-8">
-      <h1 className="text-5xl">Wedding budget planner</h1>
-      <p className="mt-4 text-lg text-[var(--owv-warm-grey)]">
-        Enter your budget, guest count, and style — Claude will help allocate it
-        across venue and vendors.
-      </p>
-      <p className="mt-8 text-xs text-[var(--owv-warm-grey)]">
-        UI components pending. Wires up to the Anthropic API on submit.
-      </p>
+    <main className="bg-bg-warm">
+      <div className="mx-auto max-w-[1180px] px-6 py-12 lg:py-16">
+        {/* Tabs — wedding planner active, Stag & Doe future */}
+        <nav aria-label="Planning tools" className="mb-8 flex flex-wrap gap-2 border-b border-border-light pb-4">
+          <Link
+            href={"/plan" as Route}
+            aria-current="page"
+            className="inline-flex items-center rounded-pill bg-rose px-5 py-2 text-sm font-bold text-white"
+          >
+            Wedding Planner
+          </Link>
+          <Link
+            href={"/plan/stag-and-doe" as Route}
+            className="inline-flex items-center rounded-pill border border-border bg-white px-5 py-2 text-sm font-medium text-text-mid transition-colors hover:border-rose hover:text-rose focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
+          >
+            Stag &amp; Doe
+            <span className="ml-2 rounded-pill bg-amber-100 px-1.5 py-0.5 text-[0.6rem] font-bold uppercase tracking-[0.08em] text-amber-700">
+              New
+            </span>
+          </Link>
+        </nav>
+
+        <header className="mb-10">
+          <div className="text-xs font-bold uppercase tracking-[0.14em] text-rose">
+            Planner
+          </div>
+          <h1 className="mt-2 font-display text-4xl font-semibold leading-tight text-charcoal md:text-5xl">
+            Plan your <em className="italic text-rose">Ontario wedding</em>
+          </h1>
+          <p className="mt-3 max-w-[640px] text-text-mid">
+            Set your budget, pick your venue, and unlock a vendor list matched to
+            your region. No login required — your plan is saved automatically.
+          </p>
+        </header>
+
+        <PlannerDashboard sessionId={sessionId} initialPlan={initialPlan} />
+      </div>
     </main>
   );
 }

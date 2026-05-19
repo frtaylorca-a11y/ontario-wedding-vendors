@@ -309,9 +309,14 @@ export default async function VendorsIndexPage() {
                   <Link
                     key={c.slug}
                     href={`/vendors/${urlSlug(c.slug)}` as Route}
-                    className="group flex flex-col gap-3 rounded-card border-[1.5px] border-border bg-white p-6 transition-all duration-200 hover:-translate-y-1 hover:border-rose hover:shadow-[var(--shadow-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
+                    className="group relative flex flex-col gap-3 overflow-hidden rounded-card border-[1.5px] border-border bg-white p-6 pt-7 transition-all duration-200 hover:-translate-y-1 hover:border-transparent hover:shadow-[0_12px_32px_rgba(185,100,118,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
                   >
-                    <span className="flex h-12 w-12 items-center justify-center rounded-pill bg-rose-pale text-rose transition-colors group-hover:bg-rose group-hover:text-white">
+                    {/* Rose top border — appears on hover only */}
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute inset-x-0 top-0 h-[3px] origin-left scale-x-0 bg-rose transition-transform duration-200 group-hover:scale-x-100"
+                    />
+                    <span className="flex h-12 w-12 items-center justify-center rounded-pill bg-rose-pale text-rose transition-colors duration-200 group-hover:bg-rose group-hover:text-white">
                       {c.icon}
                     </span>
                     <div>
