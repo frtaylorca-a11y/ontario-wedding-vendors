@@ -65,9 +65,9 @@ function cateringLabel(c: string | null | undefined): string | null {
   const v = clean(c);
   if (!v) return null;
   const lc = v.toLowerCase();
-  if (lc.includes("in-house") || lc.includes("inhouse")) return "In-house catering";
-  if (lc.includes("open")) return "Open catering (outside caterers welcome)";
-  if (lc.includes("both")) return "In-house or open";
+  if (lc.includes("both"))                                  return "In-house or external catering";
+  if (lc.includes("in-house") || lc.includes("inhouse"))    return "In-house catering";
+  if (lc.includes("external") || lc.includes("open"))       return "External caterers welcome";
   return v;
 }
 
@@ -176,6 +176,9 @@ export default async function VenuePage({ params }: { params: Params }) {
   const accommodationsText = clean(venue.accommodations);
   const coordinatorName = clean(venue.coordinatorName);
   const coordinatorPhone = clean(venue.coordinatorPhone);
+  const coordinatorEmail = clean(venue.coordinatorEmail);
+  const hasCoordinatorContact = Boolean(coordinatorName || coordinatorPhone || coordinatorEmail);
+  const instagramHandle = venue.instagramHandle ? venue.instagramHandle.replace(/^@+/, "") : null;
 
   const verifiedDate = venue.lastVerified ?? venue.lastGoogleSync;
   const verified = formatMonthYear(verifiedDate);
@@ -511,45 +514,69 @@ export default async function VenuePage({ params }: { params: Params }) {
                     Venue details
                   </h2>
 
-                  <dl className="mt-5 space-y-4 text-sm">
-                    {/* Capacity — always renders; falls back to contact */}
-                    <DetailRow
-                      label="Capacity"
-                      value={capacity ?? <span className="text-text-muted italic">Contact venue for capacity</span>}
-                    />
-                    {/* Catering — always renders; falls back to contact */}
-                    <DetailRow
-                      label="Catering"
-                      value={cateringText ?? <span className="text-text-muted italic">Contact venue for catering policy</span>}
-                    />
-                    {indoorText && <DetailRow label="Spaces" value={indoorText} />}
-                    {accommodationsText && <DetailRow label="Accommodations" value={accommodationsText} />}
-                  </dl>
-
-                  {/* Coordinator block — prominent if present */}
-                  {coordinatorName && (
-                    <div className="mt-5 rounded-card border border-rose-pale bg-rose-pale p-4">
+                  {/* Coordinator block — prominent when ANY contact info exists */}
+                  {hasCoordinatorContact && (
+                    <div className="mt-5 rounded-card border-[1.5px] border-rose bg-rose-pale p-4">
                       <div className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-rose">
                         Wedding coordinator
                       </div>
-                      <div className="mt-1 font-display text-base font-semibold text-charcoal">
-                        {coordinatorName}
-                      </div>
-                      {coordinatorPhone && (
-                        <a
-                          href={`tel:${coordinatorPhone}`}
-                          className="mt-1 inline-block text-sm font-medium text-rose hover:underline"
-                        >
-                          {coordinatorPhone}
-                        </a>
+                      {coordinatorName && (
+                        <div className="mt-1 font-display text-lg font-semibold text-charcoal">
+                          {coordinatorName}
+                        </div>
                       )}
+                      <ul className="mt-2 space-y-1.5 text-sm">
+                        {coordinatorPhone && (
+                          <li className="flex items-center gap-2">
+                            <IconPhone />
+                            <a
+                              href={`tel:${coordinatorPhone}`}
+                              className="font-medium text-rose hover:underline"
+                            >
+                              {coordinatorPhone}
+                            </a>
+                          </li>
+                        )}
+                        {coordinatorEmail && (
+                          <li className="flex items-center gap-2">
+                            <IconMail />
+                            <a
+                              href={`mailto:${coordinatorEmail}`}
+                              className="break-all font-medium text-rose hover:underline"
+                            >
+                              {coordinatorEmail}
+                            </a>
+                          </li>
+                        )}
+                      </ul>
                     </div>
                   )}
 
-                  {/* Quick-link rows */}
+                  {/* Stat rows with icons */}
                   <dl className="mt-5 space-y-4 text-sm">
+                    <DetailRow
+                      icon={<IconUsers />}
+                      label="Capacity"
+                      value={capacity ?? <span className="italic text-text-muted">Contact venue for capacity</span>}
+                    />
+                    <DetailRow
+                      icon={<IconUtensils />}
+                      label="Catering"
+                      value={cateringText ?? <span className="italic text-text-muted">Contact venue for catering policy</span>}
+                    />
+                    {indoorText && (
+                      <DetailRow icon={<IconBuilding />} label="Spaces" value={indoorText} />
+                    )}
+                    {accommodationsText && (
+                      <DetailRow icon={<IconBed />} label="Accommodations" value={accommodationsText} />
+                    )}
+                  </dl>
+
+                  {/* Quick-link rows */}
+                  <dl className="mt-5 space-y-4 border-t border-border-light pt-5 text-sm">
                     {venue.website && (
                       <DetailRow
+                        icon={<IconLink />}
                         label="Website"
                         value={
                           <a
@@ -563,22 +590,20 @@ export default async function VenuePage({ params }: { params: Params }) {
                         }
                       />
                     )}
-                    {venue.instagramHandle && (
+                    {instagramHandle && (
                       <DetailRow
+                        icon={<IconInstagram />}
                         label="Instagram"
-                        value={(() => {
-                          const handle = venue.instagramHandle.replace(/^@+/, "");
-                          return (
-                            <a
-                              href={`https://instagram.com/${handle}`}
-                              target="_blank"
-                              rel="noopener"
-                              className="text-rose hover:underline"
-                            >
-                              @{handle}
-                            </a>
-                          );
-                        })()}
+                        value={
+                          <a
+                            href={`https://instagram.com/${instagramHandle}`}
+                            target="_blank"
+                            rel="noopener"
+                            className="text-rose hover:underline"
+                          >
+                            @{instagramHandle}
+                          </a>
+                        }
                       />
                     )}
                   </dl>
@@ -602,17 +627,26 @@ export default async function VenuePage({ params }: { params: Params }) {
                   )}
                 </div>
 
-                {/* Claim this listing — only for unclaimed venues */}
+                {/* Claim this listing — prominent rose-pale card with primary button styling */}
                 {!venue.claimed && (
-                  <div className="rounded-card border border-dashed border-border bg-bg-soft p-4">
-                    <p className="text-xs text-text-mid">
-                      Are you the venue owner?
+                  <div className="rounded-card border-[1.5px] border-rose bg-rose-pale p-5">
+                    <div className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-rose">
+                      For venue owners
+                    </div>
+                    <p className="mt-1 font-display text-base font-semibold text-charcoal">
+                      Own {venue.name}?
+                    </p>
+                    <p className="mt-1 text-xs leading-snug text-text-mid">
+                      {hasCoordinatorContact
+                        ? "Verify your listing to manage your profile and respond to enquiries."
+                        : "Add coordinator details, photos, and packages — free."}
                     </p>
                     <Link
                       href={`/claim-listing?venue=${venue.slug}` as Route}
-                      className="mt-1 inline-block text-sm font-bold text-rose hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2 focus-visible:rounded-sm"
+                      className="mt-3 inline-flex items-center gap-1.5 rounded-pill bg-rose px-4 py-2 text-sm font-bold text-white shadow-[0_4px_14px_rgba(185,100,118,0.3)] transition-colors hover:bg-rose-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
                     >
-                      Claim this listing →
+                      Claim this listing
+                      <span aria-hidden>→</span>
                     </Link>
                   </div>
                 )}
@@ -625,13 +659,101 @@ export default async function VenuePage({ params }: { params: Params }) {
   );
 }
 
-function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
+function DetailRow({
+  icon,
+  label,
+  value,
+}: {
+  icon?: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+}) {
   return (
-    <div>
-      <dt className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-text-muted">
-        {label}
-      </dt>
-      <dd className="mt-1 text-charcoal">{value}</dd>
+    <div className="flex items-start gap-3">
+      {icon && (
+        <span className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-pill bg-rose-pale text-rose">
+          {icon}
+        </span>
+      )}
+      <div className="min-w-0 flex-1">
+        <dt className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-text-muted">
+          {label}
+        </dt>
+        <dd className="mt-0.5 text-charcoal">{value}</dd>
+      </div>
     </div>
+  );
+}
+
+const ICON_PROPS = {
+  viewBox: "0 0 24 24",
+  fill: "none",
+  strokeWidth: 1.75,
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+  className: "h-3.5 w-3.5 stroke-current",
+};
+
+function IconPhone() {
+  return (
+    <svg aria-hidden {...ICON_PROPS}>
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+    </svg>
+  );
+}
+function IconMail() {
+  return (
+    <svg aria-hidden {...ICON_PROPS}>
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <polyline points="22 6 12 13 2 6" />
+    </svg>
+  );
+}
+function IconUsers() {
+  return (
+    <svg aria-hidden {...ICON_PROPS}>
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
+function IconUtensils() {
+  return (
+    <svg aria-hidden {...ICON_PROPS}>
+      <path d="M3 2v7c0 1.1.9 2 2 2h0a2 2 0 0 0 2-2V2M5 11v11" />
+      <path d="M21 15V2c-2.21 0-4 3.13-4 7s1.79 7 4 7v6" />
+    </svg>
+  );
+}
+function IconBuilding() {
+  return (
+    <svg aria-hidden {...ICON_PROPS}>
+      <rect x="4" y="2" width="16" height="20" rx="2" />
+      <path d="M9 22v-4h6v4M8 6h.01M16 6h.01M12 6h.01M8 10h.01M16 10h.01M12 10h.01M8 14h.01M16 14h.01M12 14h.01" />
+    </svg>
+  );
+}
+function IconBed() {
+  return (
+    <svg aria-hidden {...ICON_PROPS}>
+      <path d="M2 4v16M22 4v16M2 12h20M5 12V9a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v3" />
+    </svg>
+  );
+}
+function IconLink() {
+  return (
+    <svg aria-hidden {...ICON_PROPS}>
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+    </svg>
+  );
+}
+function IconInstagram() {
+  return (
+    <svg aria-hidden {...ICON_PROPS}>
+      <rect x="2" y="2" width="20" height="20" rx="5" />
+      <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37zM17.5 6.5h.01" />
+    </svg>
   );
 }
