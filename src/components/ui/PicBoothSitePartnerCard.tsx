@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { Route } from "next";
 
@@ -27,6 +28,17 @@ export function PicBoothSitePartnerCard() {
         <span className="text-[0.7rem] font-bold uppercase tracking-[0.14em] text-white">
           Site Partner
         </span>
+      </div>
+
+      {/* Hero image */}
+      <div className="relative aspect-[21/9] w-full overflow-hidden bg-bg-soft">
+        <Image
+          src="/images/pic-booth-hero.png"
+          alt="Pic Booth open-air sailcloth setup at a wedding reception"
+          fill
+          sizes="(max-width: 1024px) 100vw, 800px"
+          className="object-cover"
+        />
       </div>
 
       <div className="grid gap-6 p-6 md:grid-cols-[1fr_auto] md:items-start md:p-7">

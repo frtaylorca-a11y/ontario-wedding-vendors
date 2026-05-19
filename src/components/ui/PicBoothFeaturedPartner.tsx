@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { Route } from "next";
 
@@ -43,6 +44,17 @@ export function PicBoothFeaturedPartner({ contextLabel, contextSlug, source }: P
         <span className="text-[0.7rem] font-bold uppercase tracking-[0.14em] text-white">
           Featured Partner
         </span>
+      </div>
+
+      {/* Hero image */}
+      <div className="relative aspect-[16/9] w-full overflow-hidden bg-bg-soft">
+        <Image
+          src="/images/pic-booth-hero.png"
+          alt="Pic Booth setup at a Niagara wedding"
+          fill
+          sizes="(max-width: 768px) 100vw, 50vw"
+          className="object-cover"
+        />
       </div>
 
       <div className="p-6 md:p-7">

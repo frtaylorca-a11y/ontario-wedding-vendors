@@ -109,22 +109,14 @@ export default function AboutPage() {
 
           <Section
             eyebrow="Discovery"
-            title="How venues end up on this site"
+            title="How we find venues"
           >
             <p>
-              Every venue starts as a candidate identified through the Google
-              Places API — searches across all Ontario municipalities for
-              terms like &ldquo;wedding venue,&rdquo; &ldquo;banquet
-              hall,&rdquo; &ldquo;winery wedding&rdquo; and 30+ related
-              queries. We pull the canonical Google listing for each result
-              (name, address, phone, website, rating, reviews).
-            </p>
-            <p>
-              From that raw candidate set, we manually review each venue: is
-              the website live, does it actually serve weddings (not just
-              corporate events), is the capacity plausible, is the venue
-              actively operating. Venues that fail any of these are excluded.
-              About 40&ndash;55% of raw Google results survive curation.
+              Our team researches and verifies wedding venues across Ontario
+              through a combination of direct outreach, venue websites, and
+              Google business data. Every listing is individually reviewed to
+              confirm the venue actively serves weddings before it appears in
+              our directory.
             </p>
           </Section>
 

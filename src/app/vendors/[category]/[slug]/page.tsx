@@ -48,20 +48,20 @@ const CATEGORY_PLURAL: Record<VendorCategory, string> = {
   wedding_planner: "Wedding Planners",
 };
 
-/* Vendor categories don't have dedicated hero images yet — map to closest venue image */
+/* Dedicated per-category hero images uploaded to /public/images/ */
 const CATEGORY_HERO_IMAGE: Record<VendorCategory, string> = {
-  photographer:    "/images/venue-outdoor.png",
-  videographer:    "/images/venue-outdoor.png",
-  dj:              "/images/venue-hotel.png",
-  florist:         "/images/venue-outdoor.png",
-  photo_booth:     "/images/venue-hotel.png",
-  catering:        "/images/venue-hotel.png",
-  cake:            "/images/venue-outdoor.png",
-  hair_makeup:     "/images/venue-estate.png",
-  officiant:       "/images/venue-estate.png",
-  limo:            "/images/venue-estate.png",
-  lighting_decor:  "/images/venue-hotel.png",
-  wedding_planner: "/images/venue-estate.png",
+  photographer:    "/images/vendor-photographer.png",
+  videographer:    "/images/vendor-videographer.png",
+  dj:              "/images/vendor-dj.png",
+  florist:         "/images/vendor-florist.png",
+  photo_booth:     "/images/vendor-photo-booth.png",
+  catering:        "/images/vendor-catering.png",
+  cake:            "/images/vendor-cake.png",
+  hair_makeup:     "/images/vendor-hair-makeup.png",
+  officiant:       "/images/vendor-officiant.png",
+  limo:            "/images/vendor-limo.png",
+  lighting_decor:  "/images/vendor-lighting-decor.png",
+  wedding_planner: "/images/vendor-wedding-planner.png",
 };
 
 const PRICE_TIER_LABEL: Record<string, string> = {

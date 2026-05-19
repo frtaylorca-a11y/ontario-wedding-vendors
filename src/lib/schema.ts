@@ -72,6 +72,7 @@ export const venues = pgTable(
     lastGoogleSync: timestamp("last_google_sync"),
     lastWebsiteCheck: timestamp("last_website_check"),
     lastVerified: timestamp("last_verified"),
+    enrichedAt: timestamp("enriched_at"),
 
     source: varchar("source", { length: 100 }),
     createdAt: timestamp("created_at").defaultNow(),
