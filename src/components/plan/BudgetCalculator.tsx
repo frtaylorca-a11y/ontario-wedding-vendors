@@ -30,8 +30,9 @@ import {
   PLANNER_REGIONS,
   PROTECTED_KEY,
   bookedBudgetCategories,
-  calculateBudgetWithState,
+  calculateBudgetWithUnallocated,
   defaultBudgetCategoryStates,
+  distributeUnallocated,
   getBudgetHealth,
   getVenueBundleType,
   getVenuePricingRange,
@@ -111,7 +112,14 @@ export function BudgetCalculator({
   onChange,
 }: Props) {
   const states = budgetCategoryStates ?? defaultBudgetCategoryStates();
-  const rows = useMemo(() => calculateBudgetWithState(totalBudget, states), [totalBudget, states]);
+  const { rows, unallocated } = useMemo(
+    () => calculateBudgetWithUnallocated(totalBudget, states),
+    [totalBudget, states],
+  );
+
+  function handleDistributeEvenly() {
+    onChange({ budgetCategoryStates: distributeUnallocated(states, totalBudget) });
+  }
   const bookedSet = useMemo(
     () => bookedBudgetCategories(bookedVendors ?? {}),
     [bookedVendors],
@@ -423,22 +431,44 @@ export function BudgetCalculator({
             <div className="h-[280px] w-[280px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie
-                    data={activeRows.filter((r) => r.amount > 0)}
-                    dataKey="amount"
-                    nameKey="label"
-                    innerRadius={80}
-                    outerRadius={120}
-                    paddingAngle={2}
-                    stroke="white"
-                    strokeWidth={2}
-                    label={false}
-                    labelLine={false}
-                  >
-                    {activeRows.filter((r) => r.amount > 0).map((r) => (
-                      <Cell key={r.key} fill={SEGMENT_COLORS_BY_KEY[r.key]} />
-                    ))}
-                  </Pie>
+                  {(() => {
+                    const segments: { key: string; label: string; amount: number; fill: string }[] = [
+                      ...activeRows
+                        .filter((r) => r.amount > 0)
+                        .map((r) => ({
+                          key:    r.key,
+                          label:  r.label,
+                          amount: r.amount,
+                          fill:   SEGMENT_COLORS_BY_KEY[r.key],
+                        })),
+                    ];
+                    if (unallocated > 0) {
+                      segments.push({
+                        key:    "__unallocated",
+                        label:  "Unallocated · Available buffer",
+                        amount: unallocated,
+                        fill:   "#D1D5DB",
+                      });
+                    }
+                    return (
+                      <Pie
+                        data={segments}
+                        dataKey="amount"
+                        nameKey="label"
+                        innerRadius={80}
+                        outerRadius={120}
+                        paddingAngle={2}
+                        stroke="white"
+                        strokeWidth={2}
+                        label={false}
+                        labelLine={false}
+                      >
+                        {segments.map((s) => (
+                          <Cell key={s.key} fill={s.fill} />
+                        ))}
+                      </Pie>
+                    );
+                  })()}
                   <Tooltip
                     formatter={(value, name) => [formatMoney(Number(value)), String(name)]}
                     contentStyle={{
@@ -493,6 +523,40 @@ export function BudgetCalculator({
                 </ul>
               </SortableContext>
             </ActiveDropZone>
+
+            {/* Unallocated buffer — appears below the active list when categories
+             * have been moved to the drawer (or the user hasn't allocated everything). */}
+            {unallocated > 0 && (
+              <div className="mt-3 rounded-card border-2 border-dashed border-gray-300 bg-gray-50 px-3 py-3">
+                <div className="flex items-center gap-2">
+                  <span aria-hidden className="h-3 w-3 flex-shrink-0 rounded-sm bg-gray-300" />
+                  <span className="flex-1 truncate text-sm font-medium text-charcoal">
+                    Unallocated · Contingency
+                  </span>
+                  <span className="rounded-pill bg-white px-2 py-0.5 text-sm font-medium text-charcoal">
+                    {formatMoney(unallocated)}
+                  </span>
+                  <span className="rounded-pill bg-white px-2 py-0.5 text-[0.65rem] font-bold text-text-mid">
+                    {Math.round((unallocated / Math.max(totalBudget, 1)) * 100)}%
+                  </span>
+                </div>
+                <p className="mt-1.5 text-[0.7rem] italic text-text-muted">
+                  Available for upgrades or unexpected costs.
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleDistributeEvenly}
+                    className="rounded-pill border border-rose bg-white px-3 py-1 text-[0.7rem] font-bold text-rose transition-colors hover:bg-rose hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
+                  >
+                    Distribute evenly
+                  </button>
+                  <span className="rounded-pill bg-emerald-100 px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-[0.08em] text-emerald-700">
+                    Recommended · Keep as buffer
+                  </span>
+                </div>
+              </div>
+            )}
 
             <button
               type="button"

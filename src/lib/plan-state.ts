@@ -36,35 +36,34 @@ export type BudgetCategory = {
 
 /**
  * Ontario research-backed pcts (RBC My Money Matters + WeddingWire Canada
- * Global Wedding Report + WealthNorth regional data). Note: the raw research
- * percentages sum to 1.09 — calculateBudgetWithState redistributes
- * proportionally via unlockedPctSum so the dollar allocation is correct;
- * each row's pill displays the research-backed pct.
+ * Global Wedding Report + WealthNorth regional data) normalized to sum
+ * to exactly 1.0 (raw research values summed to 1.09; each is divided by
+ * 1.09 here so allocations sum cleanly without redistribution math).
  *
  * Keys preserved from the prior schema so existing user budgetCategoryStates
  * blobs remain valid (no migration needed).
  */
 export const BUDGET_CATEGORIES: BudgetCategory[] = [
-  { key: "venue_rental",     label: "Venue Rental",                pct: 0.27, vendorCategory: null }, /* handled by Step 2 venue search */
-  { key: "catering_bar",     label: "Catering & Bar",              pct: 0.25, vendorCategory: "catering" },
-  { key: "photo_video",      label: "Photography & Videography",   pct: 0.11, vendorCategory: "photographer" },
-  { key: "music_dj",         label: "Music / DJ",                  pct: 0.05, vendorCategory: "dj" },
-  { key: "flowers_decor",    label: "Flowers & Decorations",       pct: 0.09, vendorCategory: "florist" },
-  { key: "cake",             label: "Wedding Cake",                pct: 0.02, vendorCategory: "cake" },
-  { key: "hair_makeup",      label: "Hair & Makeup",               pct: 0.03, vendorCategory: "hair_makeup" },
-  { key: "officiant",        label: "Officiant",                   pct: 0.01, vendorCategory: "officiant" },
-  { key: "stationery",       label: "Invitations & Stationery",    pct: 0.02, vendorCategory: null },
-  { key: "transportation",   label: "Transportation",              pct: 0.02, vendorCategory: "limo" },
-  { key: "attire_bride",     label: "Wedding Attire (Bride)",      pct: 0.04, vendorCategory: null },
-  { key: "attire_groom",     label: "Wedding Attire (Groom)",      pct: 0.02, vendorCategory: null },
-  { key: "lighting_sound",   label: "Lighting & Sound",            pct: 0.03, vendorCategory: "lighting_decor" },
-  { key: "photo_booth",      label: "Photo Booth",                 pct: 0.01, vendorCategory: "photo_booth" },
-  { key: "wedding_rings",    label: "Wedding Rings",               pct: 0.03, vendorCategory: null },
-  { key: "favors_gifts",     label: "Favors & Gifts",              pct: 0.02, vendorCategory: null },
-  { key: "accommodation",    label: "Accommodation",               pct: 0.02, vendorCategory: null },
-  { key: "rentals",          label: "Rentals (Tents/Chairs/Tables)", pct: 0.01, vendorCategory: null },
-  { key: "wedding_planner",  label: "Wedding Planner",             pct: 0.01, vendorCategory: "wedding_planner" },
-  { key: "miscellaneous",    label: "Miscellaneous",               pct: 0.03, vendorCategory: null },
+  { key: "venue_rental",     label: "Venue Rental",                pct: 0.2477, vendorCategory: null }, /* handled by Step 2 venue search */
+  { key: "catering_bar",     label: "Catering & Bar",              pct: 0.2294, vendorCategory: "catering" },
+  { key: "photo_video",      label: "Photography & Videography",   pct: 0.1009, vendorCategory: "photographer" },
+  { key: "music_dj",         label: "Music / DJ",                  pct: 0.0459, vendorCategory: "dj" },
+  { key: "flowers_decor",    label: "Flowers & Decorations",       pct: 0.0826, vendorCategory: "florist" },
+  { key: "cake",             label: "Wedding Cake",                pct: 0.0183, vendorCategory: "cake" },
+  { key: "hair_makeup",      label: "Hair & Makeup",               pct: 0.0275, vendorCategory: "hair_makeup" },
+  { key: "officiant",        label: "Officiant",                   pct: 0.0092, vendorCategory: "officiant" },
+  { key: "stationery",       label: "Invitations & Stationery",    pct: 0.0183, vendorCategory: null },
+  { key: "transportation",   label: "Transportation",              pct: 0.0183, vendorCategory: "limo" },
+  { key: "attire_bride",     label: "Wedding Attire (Bride)",      pct: 0.0367, vendorCategory: null },
+  { key: "attire_groom",     label: "Wedding Attire (Groom)",      pct: 0.0183, vendorCategory: null },
+  { key: "lighting_sound",   label: "Lighting & Sound",            pct: 0.0275, vendorCategory: "lighting_decor" },
+  { key: "photo_booth",      label: "Photo Booth",                 pct: 0.0092, vendorCategory: "photo_booth" },
+  { key: "wedding_rings",    label: "Wedding Rings",               pct: 0.0275, vendorCategory: null },
+  { key: "favors_gifts",     label: "Favors & Gifts",              pct: 0.0183, vendorCategory: null },
+  { key: "accommodation",    label: "Accommodation",               pct: 0.0183, vendorCategory: null },
+  { key: "rentals",          label: "Rentals (Tents/Chairs/Tables)", pct: 0.0092, vendorCategory: null },
+  { key: "wedding_planner",  label: "Wedding Planner",             pct: 0.0092, vendorCategory: "wedding_planner" },
+  { key: "miscellaneous",    label: "Miscellaneous",               pct: 0.0275, vendorCategory: null },
 ];
 
 /** Region options for the calculator dropdown — fewer than REGIONS, matching the planner spec */
@@ -302,6 +301,12 @@ export type BudgetCategoryToggle = {
   enabled: boolean;
   /** Locked dollar override; null = follow proportional allocation */
   lockedAmount: number | null;
+  /** Current pct of total when enabled+unlocked. Defaults to the canonical
+   *  research pct (BUDGET_CATEGORIES[k].pct). Modified by "Distribute evenly"
+   *  to widen pcts and absorb the Unallocated pool into active categories.
+   *  Preserved across enable/disable so the user's distribute choice survives
+   *  moving categories to the drawer and back. */
+  pct?: number;
 };
 
 export type BudgetCategoryStates = {
@@ -435,10 +440,17 @@ export function defaultBudgetCategoryStates(): BudgetCategoryStates {
     toggles: Object.fromEntries(
       BUDGET_CATEGORIES.map((c) => [
         c.key,
-        { enabled: activeSet.has(c.key), lockedAmount: null },
+        { enabled: activeSet.has(c.key), lockedAmount: null, pct: c.pct },
       ]),
     ) as Record<VendorCategoryKey, BudgetCategoryToggle>,
   };
+}
+
+/** Resolve a toggle's pct, falling back to the canonical research pct for
+ *  rows persisted before the pct field was introduced. */
+function togglePct(t: BudgetCategoryToggle | undefined, key: VendorCategoryKey): number {
+  if (t?.pct != null) return t.pct;
+  return BUDGET_CATEGORIES.find((c) => c.key === key)?.pct ?? 0;
 }
 
 /* ─── Venue-aware pricing ────────────────────────────────────────────────
@@ -631,61 +643,117 @@ export type BudgetRow = {
 };
 
 /**
- * Allocate budget across the 20 categories given user state.
- *   - Disabled categories: amount = 0
- *   - Enabled + locked:    amount = locked value (does not move with total)
- *   - Enabled + unlocked:  proportional share of (total - locked sum) by original pct
- * If locked sum exceeds total, unlocked enabled categories collapse to $0.
+ * Allocate budget across the 20 categories using each toggle's stored pct.
+ *   - Disabled categories: amount = 0 (their dollars flow to the Unallocated pool)
+ *   - Enabled + locked:    amount = lockedAmount (immutable to slider movement)
+ *   - Enabled + unlocked:  amount = togglePct × totalBudget
+ * If locked + unlocked targets exceed totalBudget, unlocked categories are
+ * proportionally scaled down so the sum fits — Unallocated becomes 0.
+ * Otherwise, leftover = totalBudget − sum(enabled) is the Unallocated buffer.
  */
 export function calculateBudgetWithState(
   totalBudget: number,
   states: BudgetCategoryStates,
 ): BudgetRow[] {
+  return calculateBudgetWithUnallocated(totalBudget, states).rows;
+}
+
+export type BudgetCalculation = {
+  rows: BudgetRow[];
+  /** Dollars NOT assigned to any enabled category — the contingency buffer. */
+  unallocated: number;
+};
+
+export function calculateBudgetWithUnallocated(
+  totalBudget: number,
+  states: BudgetCategoryStates,
+): BudgetCalculation {
   const byKey = new Map(BUDGET_CATEGORIES.map((c) => [c.key, c]));
 
-  const lockedTotal = BUDGET_CATEGORIES.reduce((sum, c) => {
-    const t = states.toggles[c.key];
-    return t?.enabled && t.lockedAmount != null ? sum + t.lockedAmount : sum;
-  }, 0);
-
-  const unlockedPctSum = BUDGET_CATEGORIES.reduce((sum, c) => {
-    const t = states.toggles[c.key];
-    return t?.enabled && t.lockedAmount == null ? sum + c.pct : sum;
-  }, 0);
-
-  const remaining = Math.max(0, totalBudget - lockedTotal);
-
-  /* Build rows in user-selected order. Unknown keys (shouldn't happen) get filtered. */
+  /* Build rows in user-selected order (then append any missing for forward-compat). */
   const ordered = states.order
     .map((k) => byKey.get(k))
     .filter((c): c is BudgetCategory => c != null);
-
-  /* Append any categories missing from order (forward-compat for new keys added in code) */
   for (const c of BUDGET_CATEGORIES) {
     if (!ordered.find((o) => o.key === c.key)) ordered.push(c);
   }
 
-  return ordered.map((c) => {
-    const t = states.toggles[c.key] ?? { enabled: true, lockedAmount: null };
-    const minFloor = MIN_FLOORS[c.key];
+  const rows: BudgetRow[] = ordered.map((c) => {
+    const t = states.toggles[c.key];
+    const pct = togglePct(t, c.key);
+    const enabled = t?.enabled ?? false;
+    const lockedAmount = t?.lockedAmount ?? null;
     let amount = 0;
-    if (t.enabled) {
-      if (t.lockedAmount != null) {
-        amount = t.lockedAmount;
-      } else if (unlockedPctSum > 0) {
-        amount = Math.round((c.pct / unlockedPctSum) * remaining);
-      }
+    if (enabled) {
+      amount = lockedAmount != null ? lockedAmount : Math.round(pct * totalBudget);
     }
     return {
       key: c.key,
       label: c.label,
-      pct: c.pct,
+      pct,
       amount,
-      enabled: t.enabled,
-      locked: t.enabled && t.lockedAmount != null,
-      lockedAmount: t.lockedAmount,
-      belowFloor: t.enabled && t.lockedAmount != null && t.lockedAmount < minFloor,
-      minFloor,
+      enabled,
+      locked: enabled && lockedAmount != null,
+      lockedAmount,
+      belowFloor: false, /* set below — based on the resolved amount */
+      minFloor: MIN_FLOORS[c.key],
     };
   });
+
+  /* Sum enabled amounts. If we're over budget (typically because of locks),
+   * scale the unlocked rows down so the sum fits. Otherwise the leftover
+   * becomes the Unallocated pool. */
+  const sumEnabled = rows.reduce((s, r) => s + r.amount, 0);
+  let unallocated = totalBudget - sumEnabled;
+
+  if (unallocated < 0) {
+    const unlocked = rows.filter((r) => r.enabled && !r.locked);
+    const unlockedSum = unlocked.reduce((s, r) => s + r.amount, 0);
+    const shortfall = -unallocated; /* positive */
+    if (unlockedSum > 0) {
+      const scale = Math.max(0, (unlockedSum - shortfall) / unlockedSum);
+      for (const r of unlocked) r.amount = Math.round(r.amount * scale);
+    }
+    unallocated = 0;
+  }
+
+  /* Below-floor warning: only meaningful for rows actually receiving money.
+   * Includes both locked rows below their MIN_FLOOR and unlocked rows that
+   * landed below their floor after the (rare) scale-down. */
+  for (const r of rows) {
+    if (r.enabled && r.amount < r.minFloor) {
+      r.belowFloor = true;
+    }
+  }
+
+  return { rows, unallocated: Math.max(0, Math.round(unallocated)) };
+}
+
+/**
+ * "Distribute evenly" — absorb the entire Unallocated pool into enabled +
+ * unlocked categories, in proportion to each category's current pct. After
+ * this runs, the new Unallocated is 0 and every active row's pct has grown.
+ * Locked categories are untouched.
+ */
+export function distributeUnallocated(
+  states: BudgetCategoryStates,
+  totalBudget: number,
+): BudgetCategoryStates {
+  const { rows, unallocated } = calculateBudgetWithUnallocated(totalBudget, states);
+  if (unallocated <= 0 || totalBudget <= 0) return states;
+
+  const unlocked = rows.filter((r) => r.enabled && !r.locked);
+  const pctSum = unlocked.reduce((s, r) => s + r.pct, 0);
+  if (pctSum <= 0) return states;
+
+  const nextToggles = { ...states.toggles };
+  for (const r of unlocked) {
+    const sharePct = (r.pct / pctSum) * (unallocated / totalBudget);
+    const newPct = r.pct + sharePct;
+    nextToggles[r.key] = {
+      ...nextToggles[r.key],
+      pct: newPct,
+    };
+  }
+  return { ...states, toggles: nextToggles };
 }

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { Route } from "next";
 import type { Metadata } from "next";
@@ -14,6 +15,22 @@ import { BreadcrumbSchema, ItemListSchema } from "@/components/seo/SchemaInjecto
 import { Pagination } from "@/components/venues/Pagination";
 import { categoryColourVars, getCategoryColour } from "@/lib/vendor-colours";
 import type { CSSProperties } from "react";
+
+/** Per-category hero photograph rendered behind the listing page's title band. */
+const CATEGORY_HERO_IMAGE: Record<VendorCategory, string> = {
+  photographer:    "/images/vendor-photographer.png",
+  videographer:    "/images/vendor-videographer.png",
+  dj:              "/images/vendor-dj.png",
+  florist:         "/images/vendor-florist.png",
+  photo_booth:     "/images/vendor-photo-booth.png",
+  catering:        "/images/vendor-catering.png",
+  cake:            "/images/vendor-cake.png",
+  hair_makeup:     "/images/vendor-hair-makeup.png",
+  officiant:       "/images/vendor-officiant.png",
+  limo:            "/images/vendor-limo.png",
+  lighting_decor:  "/images/vendor-lighting-decor.png",
+  wedding_planner: "/images/vendor-wedding-planner.png",
+};
 
 const PAGE_SIZE = 24;
 
@@ -126,12 +143,16 @@ export default async function VendorCategoryPage({
 
   const showSitePartner = categorySlug === "photo_booth";
 
+  /* Pic Booth now flows through the regular query so the isPinned sort lifts
+   * it to the top of the grid with the rose "Recommended Partner" border.
+   * The compact Site Partner card above the grid is the editorial brand
+   * surface — both can render together. */
   const useProximity = venueLat != null && venueLng != null && radiusKm !== "all";
   const { vendors, total } = await listVendors({
     category: categorySlug,
     region,
     priceTier,
-    excludePicBooth: showSitePartner,
+    excludePicBooth: false,
     lat: useProximity ? venueLat! : undefined,
     lng: useProximity ? venueLng! : undefined,
     radiusKm: useProximity ? (radiusKm as number) : undefined,
@@ -144,11 +165,12 @@ export default async function VendorCategoryPage({
   if (region)    baseParams.set("region", region);
   if (priceTier) baseParams.set("priceTier", priceTier);
 
-  /* Site-partner card counts as 1 in display total when present on page 1 */
-  const displayTotal = total + (showSitePartner ? 1 : 0);
-  const sitePartnerCounted = showSitePartner && page === 1 ? 1 : 0;
-  const showingFrom = displayTotal === 0 ? 0 : offset + (sitePartnerCounted ? 1 : 1);
-  const showingTo = Math.min(offset + vendors.length, total) + sitePartnerCounted;
+  /* Pic Booth is now counted in `total` (no longer excluded from the grid),
+   * so displayTotal === total. The Site Partner editorial card above the
+   * grid is a brand surface, not a separate listing. */
+  const displayTotal = total;
+  const showingFrom = displayTotal === 0 ? 0 : offset + 1;
+  const showingTo = Math.min(offset + vendors.length, total);
 
   const breadcrumbItems = [
     { name: "Home",    url: "/" },
@@ -157,12 +179,6 @@ export default async function VendorCategoryPage({
   ];
 
   const itemListEntries: { name: string; url: string }[] = [];
-  if (showSitePartner && page === 1) {
-    itemListEntries.push({
-      name: "Pic Booth",
-      url: "/vendors/photo-booth/pic-booth-st-catharines",
-    });
-  }
   vendors.forEach((v) => {
     itemListEntries.push({ name: v.name, url: `/vendors/${rawSlug}/${v.slug}` });
   });
@@ -179,10 +195,29 @@ export default async function VendorCategoryPage({
         style={categoryColourVars(categorySlug) as CSSProperties}
         className="bg-bg-warm"
       >
-        {/* Hero band — category signature colour, ghost text behind H1 */}
+        {/* Hero band — category photograph behind a tinted overlay; falls back
+         * to the signature colour if no image is mapped for the category. */}
         <section
           className="relative overflow-hidden bg-[var(--cat-primary)] text-white"
         >
+          {CATEGORY_HERO_IMAGE[categorySlug] && (
+            <>
+              <Image
+                src={CATEGORY_HERO_IMAGE[categorySlug]}
+                alt=""
+                fill
+                priority
+                sizes="100vw"
+                className="object-cover opacity-50"
+              />
+              {/* Gradient overlay — keeps the headline readable while letting the photo through */}
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[var(--cat-primary)]/85 via-[var(--cat-primary)]/55 to-[var(--cat-primary)]/25"
+              />
+            </>
+          )}
+
           {/* Ghost text decoration */}
           <span
             aria-hidden
