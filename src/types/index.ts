@@ -38,5 +38,7 @@ export const VENDOR_CATEGORIES = [
   "hair_makeup",
   "officiant",
   "limo",
+  "lighting_decor",
+  "wedding_planner",
 ] as const;
 export type VendorCategory = (typeof VENDOR_CATEGORIES)[number];

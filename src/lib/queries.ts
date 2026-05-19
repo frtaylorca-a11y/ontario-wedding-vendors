@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, gte, ilike, ne, or, sql } from "drizzle-orm";
 import { db } from "./db";
-import { venues, vendors } from "./schema";
+import { venues, vendors, vendorRelationships } from "./schema";
 import type { Venue, Vendor } from "./schema";
 
 export type VenueListParams = {
@@ -199,6 +199,115 @@ export async function listVendors(
     total: totalRow[0]?.count ?? 0,
     page: Math.floor(offset / limit) + 1,
   };
+}
+
+/** Find vendors in same category + region, excluding this one. Sort by readiness, then rating. */
+export async function getSimilarVendors(opts: {
+  category: string;
+  region: string | null;
+  excludeId: number;
+  limit?: number;
+}): Promise<Vendor[]> {
+  const limit = Math.min(Math.max(opts.limit ?? 3, 1), 12);
+
+  const conditions = [
+    eq(vendors.category, opts.category),
+    ne(vendors.id, opts.excludeId),
+    or(eq(vendors.googleClosed, "no"), sql`${vendors.googleClosed} is null`)!,
+  ];
+  if (opts.region) conditions.push(eq(vendors.region, opts.region));
+
+  return db
+    .select()
+    .from(vendors)
+    .where(and(...conditions))
+    .orderBy(
+      desc(vendors.vendorReadinessScore),
+      desc(vendors.googleRating),
+      desc(vendors.reviewCount),
+    )
+    .limit(limit);
+}
+
+/** Venues that recommend this vendor (Pass-2 preferred-vendor edges). */
+export async function getVenuesRecommendingVendor(
+  vendorId: number,
+  limit = 6,
+): Promise<Venue[]> {
+  const rows = await db
+    .selectDistinct({
+      id: venues.id,
+      placeId: venues.placeId,
+      slug: venues.slug,
+      name: venues.name,
+      address: venues.address,
+      city: venues.city,
+      region: venues.region,
+      province: venues.province,
+      postalCode: venues.postalCode,
+      phone: venues.phone,
+      website: venues.website,
+      email: venues.email,
+      category: venues.category,
+      venueType: venues.venueType,
+      capacityMin: venues.capacityMin,
+      capacityMax: venues.capacityMax,
+      coordinatorName: venues.coordinatorName,
+      coordinatorEmail: venues.coordinatorEmail,
+      coordinatorPhone: venues.coordinatorPhone,
+      catering: venues.catering,
+      accommodations: venues.accommodations,
+      indoorOutdoor: venues.indoorOutdoor,
+      hasWeddingsPage: venues.hasWeddingsPage,
+      weddingsPageUrl: venues.weddingsPageUrl,
+      hasPackages: venues.hasPackages,
+      packages: venues.packages,
+      hasPricing: venues.hasPricing,
+      hasTestimonials: venues.hasTestimonials,
+      bookingPlatform: venues.bookingPlatform,
+      instagramHandle: venues.instagramHandle,
+      googleRating: venues.googleRating,
+      reviewCount: venues.reviewCount,
+      googleClosed: venues.googleClosed,
+      weddingReadinessScore: venues.weddingReadinessScore,
+      scoreReasoning: venues.scoreReasoning,
+      description: venues.description,
+      lat: venues.lat,
+      lng: venues.lng,
+      tier: venues.tier,
+      claimed: venues.claimed,
+      verified: venues.verified,
+      featured: venues.featured,
+      websiteStatus: venues.websiteStatus,
+      lastGoogleSync: venues.lastGoogleSync,
+      lastWebsiteCheck: venues.lastWebsiteCheck,
+      lastVerified: venues.lastVerified,
+      source: venues.source,
+      createdAt: venues.createdAt,
+      updatedAt: venues.updatedAt,
+    })
+    .from(vendorRelationships)
+    .innerJoin(venues, eq(venues.id, vendorRelationships.sourceVenueId))
+    .where(eq(vendorRelationships.recommendedVendorId, vendorId))
+    .limit(limit);
+
+  return rows as Venue[];
+}
+
+/** Aggregate vendor count per category (excludes Google-closed listings). */
+export async function getVendorCountsByCategory(): Promise<Record<string, number>> {
+  const rows = await db
+    .select({
+      category: vendors.category,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(vendors)
+    .where(or(eq(vendors.googleClosed, "no"), sql`${vendors.googleClosed} is null`)!)
+    .groupBy(vendors.category);
+
+  const out: Record<string, number> = {};
+  for (const r of rows) if (r.category) out[r.category] = r.count;
+  return out;
 }
 
 export async function getVendorBySlug(slug: string): Promise<Vendor | null> {

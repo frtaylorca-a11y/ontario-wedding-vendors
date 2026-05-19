@@ -33,6 +33,25 @@ const DEFAULT_DIR =
 const SCORE_MIN = 50;
 const PIC_BOOTH_SLUG = "pic-booth-st-catharines";
 
+/**
+ * Normalize scraper category names to canonical singular form.
+ * The scraper emits both dj.json and djs.json (etc.) — same vendors, different filenames.
+ * Without normalization, half the data ends up under "photographers" and half under "photographer".
+ */
+const CATEGORY_NORMALIZE: Record<string, string> = {
+  djs:               "dj",
+  florists:          "florist",
+  officiants:        "officiant",
+  videographers:     "videographer",
+  photographers:     "photographer",
+  wedding_planners:  "wedding_planner",
+};
+
+function normalizeCategoryName(c: string | null | undefined): string {
+  if (!c) return "unknown";
+  return CATEGORY_NORMALIZE[c] ?? c;
+}
+
 /* Raw row shape coming out of the scraper JSON */
 type ScrapedVendor = {
   place_id?: string | null;
@@ -68,6 +87,7 @@ type Stats = {
   skippedLowScore: number;
   skippedNoPlaceId: number;
   skippedUnknownCategory: number;
+  skippedPicBoothDup: number;
   errors: number;
 };
 type PerCategory = Record<string, Stats>;
@@ -76,6 +96,7 @@ function newStats(): Stats {
   return {
     inserted: 0, updated: 0,
     skippedLowScore: 0, skippedNoPlaceId: 0, skippedUnknownCategory: 0,
+    skippedPicBoothDup: 0,
     errors: 0,
   };
 }
@@ -116,7 +137,7 @@ function toRow(raw: ScrapedVendor): NewVendor | null {
     placeId:               raw.place_id,
     slug,
     name,
-    category:              raw.category ?? "unknown",
+    category:              normalizeCategoryName(raw.category),
     address:               cleanString(raw.address),
     city:                  cleanString(raw.city),
     province:              raw.province ?? "ON",
@@ -205,6 +226,11 @@ async function main() {
   const perCategory: PerCategory = {};
   const total = newStats();
 
+  /* Pic Booth dedup: only one row with the canonical slug should exist. The
+   * scraper sometimes emits multiple Pic-Booth-named entries (Google has
+   * duplicate listings). After the first one inserts/updates, skip subsequent. */
+  let picBoothProcessed = false;
+
   for (const filename of files) {
     const filepath = join(sourceDir, filename);
     const fileStats = newStats();
@@ -222,7 +248,7 @@ async function main() {
     }
 
     for (const raw of rows) {
-      const cat = raw.category ?? "unknown";
+      const cat = normalizeCategoryName(raw.category);
       if (!perCategory[cat]) perCategory[cat] = newStats();
       const catStats = perCategory[cat];
 
@@ -232,6 +258,12 @@ async function main() {
       }
       if ((raw.vendor_readiness_score ?? 0) < SCORE_MIN) {
         fileStats.skippedLowScore++; catStats.skippedLowScore++; total.skippedLowScore++;
+        continue;
+      }
+
+      /* Skip Pic Booth duplicates after the first one is processed */
+      if (raw.name && isPicBoothName(raw.name) && picBoothProcessed) {
+        fileStats.skippedPicBoothDup++; catStats.skippedPicBoothDup++; total.skippedPicBoothDup++;
         continue;
       }
 
@@ -245,6 +277,8 @@ async function main() {
         const result = await upsertOne(row);
         if (result === "inserted") { fileStats.inserted++; catStats.inserted++; total.inserted++; }
         else                       { fileStats.updated++;  catStats.updated++;  total.updated++; }
+        /* Mark Pic Booth as processed only on a successful write */
+        if (isPicBoothName(row.name)) picBoothProcessed = true;
       } catch (err) {
         fileStats.errors++; catStats.errors++; total.errors++;
         console.error(`    ${row.name} (${row.placeId}): ${err instanceof Error ? err.message : err}`);
@@ -254,7 +288,7 @@ async function main() {
     console.log(
       `  ${basename(filename).padEnd(22)} ` +
       `ins=${fileStats.inserted}, upd=${fileStats.updated}, ` +
-      `skip(low=${fileStats.skippedLowScore}, noPid=${fileStats.skippedNoPlaceId}, unkCat=${fileStats.skippedUnknownCategory}), ` +
+      `skip(low=${fileStats.skippedLowScore}, noPid=${fileStats.skippedNoPlaceId}, unkCat=${fileStats.skippedUnknownCategory}, picDup=${fileStats.skippedPicBoothDup}), ` +
       `err=${fileStats.errors}`,
     );
   }
@@ -283,6 +317,7 @@ async function main() {
   console.log(`  Skipped (low score):    ${total.skippedLowScore}`);
   console.log(`  Skipped (no place_id):  ${total.skippedNoPlaceId}`);
   console.log(`  Skipped (unknown cat):  ${total.skippedUnknownCategory}`);
+  console.log(`  Skipped (Pic Booth dup):${total.skippedPicBoothDup}`);
   console.log(`  Errors:   ${total.errors}`);
 }
 

@@ -38,3 +38,16 @@ pnpm-debug.log*
 /data/*.csv
 /data/*.json
 !/data/.gitkeep
+
+# Python scripts (kept locally; pipeline lives in sibling ontario-venues-scraper repo)
+discover_web.py
+enrich_venues.py
+enrich_venues_v2.py
+mine_reviews.py
+vendor_search.py
+check*.py
+fix*.py
+*.py
+
+# dev server log
+dev.log

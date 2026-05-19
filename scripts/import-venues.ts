@@ -1,8 +1,8 @@
-/**
+﻿/**
  * Import venues from directory_ready.csv into Neon.
  *
  * Default source path (from CLAUDE.md):
- *   C:\Users\rtayl\OneDrive\Desktop\ontario-venues-omen\data\validated\directory_ready.csv
+ *   C:\Users\rtayl\OneDrive\Desktop\ontario-wedding-venues\\data\validated\directory_ready.csv
  *
  * Usage:
  *   npx tsx scripts/import-venues.ts
@@ -10,8 +10,8 @@
  *
  * Behaviour:
  *   - Generates slug from name + city
- *   - Maps city slug → region via REGION_MAP
- *   - Upserts on conflict (place_id) → update
+ *   - Maps city slug â†’ region via REGION_MAP
+ *   - Upserts on conflict (place_id) â†’ update
  *   - Reports: inserted, updated, skipped
  */
 import "dotenv/config";
@@ -24,7 +24,7 @@ import { cityToRegion } from "../src/lib/regions";
 import { generateSlug, citySlug } from "../src/lib/utils";
 
 const DEFAULT_CSV =
-  "C:\\Users\\rtayl\\OneDrive\\Desktop\\ontario-venues-omen\\data\\validated\\directory_ready.csv";
+  "C:\\Users\\rtayl\\OneDrive\\Desktop\\ontario-venues-scraper\\data\\validated\\directory_ready.csv";
 
 function splitCsvLine(line: string): string[] {
   const out: string[] = [];
@@ -240,7 +240,7 @@ async function main() {
       else updated++;
     } catch (err) {
       failed++;
-      console.error(`  ✗ ${v.slug}: ${(err as Error).message}`);
+      console.error(`  âœ— ${v.slug}: ${(err as Error).message}`);
     }
   }
 
@@ -254,3 +254,5 @@ main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
+
+

@@ -1,4 +1,4 @@
-import type { Venue } from "@/lib/schema";
+import type { Venue, Vendor } from "@/lib/schema";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://ontarioweddingvendors.com";
@@ -77,6 +77,70 @@ export function VenueSchema({
     "@graph": [node],
   };
 
+  return (
+    <script
+      type="application/ld+json"
+      // eslint-disable-next-line react/no-danger
+      dangerouslySetInnerHTML={{ __html: safeJson(payload) }}
+    />
+  );
+}
+
+export function VendorSchema({
+  vendor,
+  imageUrl,
+}: {
+  vendor: Vendor;
+  imageUrl: string;
+}) {
+  const id = `${SITE_URL}/vendors/${vendor.category.replace(/_/g, "-")}/${vendor.slug}#vendor`;
+  const url = `${SITE_URL}/vendors/${vendor.category.replace(/_/g, "-")}/${vendor.slug}`;
+
+  const rating = numOrUndef(vendor.googleRating);
+  const reviews = numOrUndef(vendor.reviewCount);
+  const lat = numOrUndef(vendor.lat);
+  const lng = numOrUndef(vendor.lng);
+
+  type SchemaNode = Record<string, unknown>;
+  const node: SchemaNode = {
+    "@type": "LocalBusiness",
+    "@id": id,
+    name: vendor.name,
+    url,
+    image: imageUrl.startsWith("http") ? imageUrl : `${SITE_URL}${imageUrl}`,
+  };
+
+  if (vendor.description) node.description = vendor.description;
+  if (vendor.phone) node.telephone = vendor.phone;
+  if (vendor.website) node.sameAs = [vendor.website];
+  if (vendor.priceTier) {
+    const map: Record<string, string> = { budget: "$", mid: "$$", premium: "$$$" };
+    node.priceRange = map[vendor.priceTier] ?? vendor.priceTier;
+  }
+
+  if (vendor.address || vendor.city) {
+    node.address = {
+      "@type": "PostalAddress",
+      ...(vendor.address ? { streetAddress: vendor.address } : {}),
+      ...(vendor.city ? { addressLocality: vendor.city } : {}),
+      addressRegion: vendor.province ?? "ON",
+      addressCountry: "CA",
+    };
+  }
+  if (lat != null && lng != null) {
+    node.geo = { "@type": "GeoCoordinates", latitude: lat, longitude: lng };
+  }
+  if (rating != null && reviews != null && reviews > 0) {
+    node.aggregateRating = {
+      "@type": "AggregateRating",
+      ratingValue: rating,
+      reviewCount: reviews,
+      bestRating: 5,
+      worstRating: 1,
+    };
+  }
+
+  const payload = { "@context": "https://schema.org", "@graph": [node] };
   return (
     <script
       type="application/ld+json"
