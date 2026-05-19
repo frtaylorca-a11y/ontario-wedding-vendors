@@ -256,6 +256,35 @@ export const userSuggestedVendors = pgTable(
   }),
 );
 
+/**
+ * Pricing data overlay for vendor categories. Two sources:
+ *   - "published" — static estimates from RBC / WeddingWire / WealthNorth
+ *   - "scraped"   — live data from the Ontario vendors scraper
+ * Lookup is (category, region, tier). When ≥5 samples of "scraped" exist
+ * for a (category, region, tier), the API prefers scraped over published.
+ */
+export const vendorPricingData = pgTable(
+  "vendor_pricing_data",
+  {
+    id:           serial("id").primaryKey(),
+    category:     varchar("category", { length: 100 }).notNull(),
+    region:       varchar("region",   { length: 100 }).notNull(),
+    tier:         varchar("tier",     { length: 20  }).notNull(), /* budget|mid|luxury */
+    rangeMin:     integer("range_min"),
+    rangeMax:     integer("range_max"),
+    median:       integer("median"),
+    sampleSize:   integer("sample_size").notNull().default(0),
+    lastUpdated:  timestamp("last_updated").defaultNow(),
+    source:       varchar("source", { length: 20 }).notNull().default("published"),
+  },
+  (t) => ({
+    lookupIdx: index("vpd_lookup_idx").on(t.category, t.region, t.tier),
+  }),
+);
+
+export type VendorPricingDataRow = typeof vendorPricingData.$inferSelect;
+export type NewVendorPricingDataRow = typeof vendorPricingData.$inferInsert;
+
 export type Venue = typeof venues.$inferSelect;
 export type NewVenue = typeof venues.$inferInsert;
 export type Vendor = typeof vendors.$inferSelect;

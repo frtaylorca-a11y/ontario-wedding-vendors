@@ -32,6 +32,8 @@ import {
   bookedBudgetCategories,
   calculateBudgetWithState,
   defaultBudgetCategoryStates,
+  getBudgetHealth,
+  getVenueBundleType,
   getVenuePricingRange,
   normalizeCateringType,
   type BookedVendor,
@@ -125,8 +127,42 @@ export function BudgetCalculator({
     return out;
   }, [bookedVendors]);
 
-  const activeRows = rows.filter((r) => r.enabled);
+  const bundleType = getVenueBundleType(venueCatering);
+  const venueBundleActive = bundleType === "in-house";
+
+  /* When bundleType === "in-house", the venue_rental row's display label +
+   * amount + pct absorb catering_bar's, and catering_bar renders greyed-out
+   * with a "Catering included" note. Keys remain stable so user state +
+   * drag logic still work. */
+  const cateringRow = rows.find((r) => r.key === "catering_bar");
+  const transformRow = (r: BudgetRow): BudgetRow & { greyedOut?: boolean; bundleNote?: string } => {
+    if (!venueBundleActive) return r;
+    if (r.key === "venue_rental") {
+      const cateringAmount = cateringRow?.amount ?? 0;
+      const cateringPct = cateringRow?.pct ?? 0;
+      return {
+        ...r,
+        label: `Venue + Catering · ${venueName ?? "your venue"}`,
+        amount: r.amount + cateringAmount,
+        pct: r.pct + cateringPct,
+      };
+    }
+    if (r.key === "catering_bar") {
+      return { ...r, greyedOut: true, bundleNote: "Catering included in your venue package" };
+    }
+    return r;
+  };
+
+  const activeRows = rows.filter((r) => r.enabled).map(transformRow);
   const drawerRows = rows.filter((r) => !r.enabled);
+
+  const health = getBudgetHealth(totalBudget, guestCount, region);
+  const healthBadge =
+    health.status === "comfortable"
+      ? { label: "🟢 Comfortable", className: "bg-emerald-100 text-emerald-700" }
+      : health.status === "tight"
+        ? { label: "🟡 Tight", className: "bg-amber-100 text-amber-700" }
+        : { label: "🔴 Very tight", className: "bg-red-100 text-red-700" };
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeId, setActiveId] = useState<VendorCategoryKey | null>(null);
@@ -272,6 +308,33 @@ export function BudgetCalculator({
         </div>
       )}
 
+      {/* Budget reality check — RBC / WeddingWire / WealthNorth envelope */}
+      <div className="mb-6 rounded-card border border-border bg-bg-soft p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-text-mid">
+            Ontario couples with{" "}
+            <strong className="font-semibold text-charcoal">{guestCount} guests</strong>{" "}
+            typically spend{" "}
+            <strong className="font-semibold text-charcoal">
+              {formatMoney(health.minTotal)}–{formatMoney(health.maxTotal)}
+            </strong>{" "}
+            (median {formatMoney(health.midTotal)} · {health.regionLabel}).
+          </p>
+          <span
+            className={`inline-flex shrink-0 items-center gap-1 rounded-pill px-3 py-1 text-[0.7rem] font-bold uppercase tracking-[0.08em] ${healthBadge.className}`}
+          >
+            {healthBadge.label}
+          </span>
+        </div>
+        {health.status === "very_tight" && (
+          <p className="mt-3 rounded-card border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+            Your budget of <strong className="font-semibold">{formatMoney(totalBudget)}</strong>{" "}
+            may be tight for {guestCount} guests in {health.regionLabel}. Ontario
+            couples typically spend {formatMoney(health.midTotal)} for this guest count.
+          </p>
+        )}
+      </div>
+
       <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
         <div className="lg:col-span-2">
           <label className="text-[0.7rem] font-bold uppercase tracking-[0.1em] text-text-muted">
@@ -407,15 +470,17 @@ export function BudgetCalculator({
                       row={row}
                       booked={bookedSet.has(row.key)}
                       perHeadHint={
-                        row.key === "catering_bar" && row.locked && cateringType && guestCount > 0
+                        row.key === "catering_bar" && row.locked && cateringType && guestCount > 0 && !venueBundleActive
                           ? `~${formatMoney(Math.round(row.amount / guestCount))}/guest · ${CATERING_TYPE_LABELS[cateringType]} · based on ${venueName ?? "your venue"}`
                           : null
                       }
                       cateringRangeHint={
-                        row.key === "catering_bar" && cateringRange
+                        row.key === "catering_bar" && cateringRange && !venueBundleActive
                           ? `Typically $${cateringRange.low}–$${cateringRange.high}/guest for ${CATERING_TYPE_LABELS[cateringType!]} in ${region}`
                           : null
                       }
+                      greyedOut={row.greyedOut}
+                      bundleNote={row.bundleNote}
                       onLock={(amount) => updateToggle(row.key, { lockedAmount: amount })}
                       onUnlock={() => updateToggle(row.key, { lockedAmount: null })}
                     />
@@ -476,9 +541,9 @@ export function BudgetCalculator({
             )}
 
             <p className="mt-4 text-[0.7rem] leading-relaxed text-text-muted">
-              Drag rows to reorder, between zones to move them, or use the
-              × button on a row. Photo Booth is featured — it can move to the
-              drawer but stays available as the #1 guest favourite at Ontario weddings.
+              Drag rows to reorder or between zones. Photo Booth is featured —
+              it can move to the drawer but stays available as the #1 guest
+              favourite at Ontario weddings.
             </p>
           </div>
         </div>
@@ -487,6 +552,11 @@ export function BudgetCalculator({
           {draggingRow ? <DragPreview row={draggingRow} /> : null}
         </DragOverlay>
       </DndContext>
+
+      <p className="mt-6 border-t border-border-light pt-4 text-[0.65rem] leading-relaxed text-text-muted">
+        Estimates based on RBC My Money Matters, WeddingWire Canada Global Wedding
+        Report, and WealthNorth Ontario regional data.
+      </p>
     </section>
   );
 }
@@ -546,6 +616,8 @@ function SortableRow({
   booked,
   perHeadHint,
   cateringRangeHint,
+  greyedOut,
+  bundleNote,
   onLock,
   onUnlock,
 }: {
@@ -553,6 +625,8 @@ function SortableRow({
   booked: boolean;
   perHeadHint: string | null;
   cateringRangeHint: string | null;
+  greyedOut?: boolean;
+  bundleNote?: string;
   onLock: (amount: number) => void;
   onUnlock: () => void;
 }) {
@@ -565,7 +639,7 @@ function SortableRow({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.3 : 1,
+    opacity: isDragging ? 0.3 : greyedOut ? 0.55 : 1,
   } as React.CSSProperties;
 
   function commitDraft() {
@@ -624,9 +698,14 @@ function SortableRow({
               Typical minimum for this category is {formatMoney(row.minFloor)}
             </span>
           )}
-          {perHeadHint && !row.belowFloor && (
+          {perHeadHint && !row.belowFloor && !bundleNote && (
             <span className="block text-[0.65rem] leading-tight text-text-muted">
               {perHeadHint}
+            </span>
+          )}
+          {bundleNote && (
+            <span className="block text-[0.65rem] leading-tight italic text-text-muted">
+              {bundleNote}
             </span>
           )}
         </div>
@@ -685,6 +764,12 @@ function SortableRow({
 
         <span className="rounded-pill bg-white px-2 py-0.5 text-[0.65rem] font-bold text-text-mid">
           {(row.pct * 100).toFixed(0)}%
+        </span>
+        <span
+          className="hidden rounded-pill bg-bg-soft px-2 py-0.5 text-[0.6rem] font-medium text-text-muted sm:inline"
+          title="Estimate based on Ontario industry averages"
+        >
+          Industry avg
         </span>
       </div>
 

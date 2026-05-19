@@ -35,30 +35,36 @@ export type BudgetCategory = {
 };
 
 /**
- * 20 budget categories matching the Excel template. Sums to exactly 100%.
- * Vendor-mapped categories link to /vendors/[category]; others are budget-only.
+ * Ontario research-backed pcts (RBC My Money Matters + WeddingWire Canada
+ * Global Wedding Report + WealthNorth regional data). Note: the raw research
+ * percentages sum to 1.09 — calculateBudgetWithState redistributes
+ * proportionally via unlockedPctSum so the dollar allocation is correct;
+ * each row's pill displays the research-backed pct.
+ *
+ * Keys preserved from the prior schema so existing user budgetCategoryStates
+ * blobs remain valid (no migration needed).
  */
 export const BUDGET_CATEGORIES: BudgetCategory[] = [
-  { key: "venue_rental",     label: "Venue Rental",                pct: 0.25, vendorCategory: null }, /* handled by Step 2 venue search */
-  { key: "catering_bar",     label: "Catering & Bar",              pct: 0.28, vendorCategory: "catering" },
-  { key: "photo_video",      label: "Photography & Videography",   pct: 0.09, vendorCategory: "photographer" },
-  { key: "music_dj",         label: "Music / DJ",                  pct: 0.03, vendorCategory: "dj" },
-  { key: "flowers_decor",    label: "Flowers & Decorations",       pct: 0.07, vendorCategory: "florist" },
+  { key: "venue_rental",     label: "Venue Rental",                pct: 0.27, vendorCategory: null }, /* handled by Step 2 venue search */
+  { key: "catering_bar",     label: "Catering & Bar",              pct: 0.25, vendorCategory: "catering" },
+  { key: "photo_video",      label: "Photography & Videography",   pct: 0.11, vendorCategory: "photographer" },
+  { key: "music_dj",         label: "Music / DJ",                  pct: 0.05, vendorCategory: "dj" },
+  { key: "flowers_decor",    label: "Flowers & Decorations",       pct: 0.09, vendorCategory: "florist" },
   { key: "cake",             label: "Wedding Cake",                pct: 0.02, vendorCategory: "cake" },
   { key: "hair_makeup",      label: "Hair & Makeup",               pct: 0.03, vendorCategory: "hair_makeup" },
   { key: "officiant",        label: "Officiant",                   pct: 0.01, vendorCategory: "officiant" },
   { key: "stationery",       label: "Invitations & Stationery",    pct: 0.02, vendorCategory: null },
   { key: "transportation",   label: "Transportation",              pct: 0.02, vendorCategory: "limo" },
-  { key: "attire_bride",     label: "Wedding Attire (Bride)",      pct: 0.03, vendorCategory: null },
-  { key: "attire_groom",     label: "Wedding Attire (Groom)",      pct: 0.01, vendorCategory: null },
-  { key: "lighting_sound",   label: "Lighting & Sound",            pct: 0.02, vendorCategory: "lighting_decor" },
+  { key: "attire_bride",     label: "Wedding Attire (Bride)",      pct: 0.04, vendorCategory: null },
+  { key: "attire_groom",     label: "Wedding Attire (Groom)",      pct: 0.02, vendorCategory: null },
+  { key: "lighting_sound",   label: "Lighting & Sound",            pct: 0.03, vendorCategory: "lighting_decor" },
   { key: "photo_booth",      label: "Photo Booth",                 pct: 0.01, vendorCategory: "photo_booth" },
   { key: "wedding_rings",    label: "Wedding Rings",               pct: 0.03, vendorCategory: null },
   { key: "favors_gifts",     label: "Favors & Gifts",              pct: 0.02, vendorCategory: null },
   { key: "accommodation",    label: "Accommodation",               pct: 0.02, vendorCategory: null },
-  { key: "rentals",          label: "Rentals (Tents/Chairs/Tables)", pct: 0.02, vendorCategory: null },
+  { key: "rentals",          label: "Rentals (Tents/Chairs/Tables)", pct: 0.01, vendorCategory: null },
   { key: "wedding_planner",  label: "Wedding Planner",             pct: 0.01, vendorCategory: "wedding_planner" },
-  { key: "miscellaneous",    label: "Miscellaneous",               pct: 0.01, vendorCategory: null },
+  { key: "miscellaneous",    label: "Miscellaneous",               pct: 0.03, vendorCategory: null },
 ];
 
 /** Region options for the calculator dropdown — fewer than REGIONS, matching the planner spec */
@@ -297,29 +303,104 @@ export type BudgetCategoryStates = {
   toggles: Record<VendorCategoryKey, BudgetCategoryToggle>;
 };
 
-/** Typical Ontario floor per category — drives the amber "below minimum" warning */
+/** Ontario research-backed floors per category — drives the amber "below minimum" warning */
 export const MIN_FLOORS: Record<VendorCategoryKey, number> = {
   venue_rental:    3000,
-  catering_bar:    3000,
+  catering_bar:    4500,
   photo_video:     2000,
-  music_dj:        1200,
-  flowers_decor:   1500,
+  music_dj:         800,
+  flowers_decor:    800,
   cake:             400,
-  hair_makeup:      600,
+  hair_makeup:      500,
   officiant:        300,
   stationery:       200,
-  transportation:   500,
-  attire_bride:     500,
-  attire_groom:     200,
-  lighting_sound:   300,
+  transportation:   300,
+  attire_bride:     800,
+  attire_groom:     300,
+  lighting_sound:   500,
   photo_booth:      800,
   wedding_rings:   1000,
   favors_gifts:     150,
   accommodation:    200,
   rentals:          200,
-  wedding_planner: 1000,
+  wedding_planner:  500,
   miscellaneous:    200,
 };
+
+/** Regional cost-per-guest envelopes (RBC + WeddingWire Canada + WealthNorth) */
+export type CostPerGuestEnvelope = { min: number; mid: number; max: number };
+
+export const ONTARIO_COST_PER_GUEST: Record<string, CostPerGuestEnvelope> = {
+  gta:               { min: 325, mid: 455, max: 650 },
+  niagara:           { min: 225, mid: 310, max: 420 },
+  hamilton:          { min: 225, mid: 310, max: 420 },
+  "golden-horseshoe":{ min: 225, mid: 310, max: 420 }, /* alias for hamilton/burlington */
+  ottawa:            { min: 200, mid: 285, max: 390 },
+  eastern:           { min: 185, mid: 260, max: 350 },
+  waterloo:          { min: 195, mid: 275, max: 375 },
+  "waterloo-region": { min: 195, mid: 275, max: 375 },
+  muskoka:           { min: 250, mid: 340, max: 480 },
+  "cottage-country": { min: 250, mid: 340, max: 480 },
+  default:           { min: 220, mid: 300, max: 410 },
+};
+
+export function getCostEnvelope(region: string | null | undefined): CostPerGuestEnvelope {
+  if (!region) return ONTARIO_COST_PER_GUEST.default;
+  return ONTARIO_COST_PER_GUEST[region.toLowerCase()] ?? ONTARIO_COST_PER_GUEST.default;
+}
+
+export type BudgetHealth = "comfortable" | "tight" | "very_tight";
+
+export type BudgetHealthEstimate = {
+  envelope: CostPerGuestEnvelope;
+  minTotal: number;   /* envelope.min × guestCount */
+  midTotal: number;
+  maxTotal: number;
+  status: BudgetHealth;
+  /** Region label that matched, falls back to "Ontario" for the default envelope. */
+  regionLabel: string;
+};
+
+/**
+ * Compute a per-couple budget reality check from regional cost-per-guest data.
+ * Returns dollar envelopes + health bucket (comfortable / tight / very_tight).
+ */
+export function getBudgetHealth(
+  totalBudget: number,
+  guestCount: number,
+  region: string | null | undefined,
+): BudgetHealthEstimate {
+  const envelope = getCostEnvelope(region);
+  const guests = Math.max(1, guestCount);
+  const minTotal = envelope.min * guests;
+  const midTotal = envelope.mid * guests;
+  const maxTotal = envelope.max * guests;
+  const status: BudgetHealth =
+    totalBudget >= midTotal ? "comfortable" :
+    totalBudget >= minTotal ? "tight" :
+    "very_tight";
+
+  /* Friendly label for the matched envelope */
+  const regionLabel = (() => {
+    if (!region) return "Ontario";
+    const key = region.toLowerCase();
+    switch (key) {
+      case "gta":               return "GTA";
+      case "niagara":           return "Niagara";
+      case "hamilton":
+      case "golden-horseshoe":  return "Hamilton & Burlington";
+      case "ottawa":            return "Ottawa";
+      case "eastern":           return "Eastern Ontario";
+      case "waterloo":
+      case "waterloo-region":   return "Waterloo Region";
+      case "muskoka":
+      case "cottage-country":   return "Muskoka & Cottage Country";
+      default:                  return "Ontario";
+    }
+  })();
+
+  return { envelope, minTotal, midTotal, maxTotal, status, regionLabel };
+}
 
 /** Top-8 essentials enabled by default — others appear in the drawer */
 export const DEFAULT_ACTIVE_KEYS: VendorCategoryKey[] = [
@@ -403,6 +484,25 @@ export function normalizeCateringType(raw: string | null | undefined): CateringT
 
 export function cateringMidPerHead(range: CateringPricingRange): number {
   return Math.round((range.low + range.high) / 2);
+}
+
+/* ─── Venue catering bundle detection ──────────────────────────────────── */
+
+export type VenueBundleType = "in-house" | "external" | "both" | null;
+
+/**
+ * Detect whether the venue's catering is bundled with the venue rental.
+ * Drives the Step 1 row merge: "in-house" collapses venue_rental + catering_bar
+ * into a single "Venue + Catering" line.
+ */
+export function getVenueBundleType(catering: string | null | undefined): VenueBundleType {
+  if (!catering) return null;
+  const s = catering.toLowerCase();
+  if (s.includes("both")) return "both";
+  if (s.includes("in-house") || s.includes("in house") || s.includes("inhouse")) return "in-house";
+  if (s.includes("external") || s.includes("outside") || s.includes("off-site") || s.includes("offsite")) return "external";
+  if (s === "yes") return "in-house";
+  return null;
 }
 
 /* ─── Budget category → vendor slot mapping ───────────────────────────────

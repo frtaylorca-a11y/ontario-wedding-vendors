@@ -171,13 +171,13 @@ export const TASK_TEMPLATES: ChecklistTaskTemplate[] = [
     partner: ONEQR_PRINT,
   },
   {
-    key: "finalize-ceremony-program",
-    title: "Finalize your ceremony program",
+    key: "finalize-ceremony-program", /* preserved key so existing user state survives */
+    title: "Consider OneQR for ceremony programs",
     monthsBefore: 3,
     bucket: "3mo",
     vendorCategory: null,
     description:
-      "Consider using your OneQR code instead of printed programs — guests scan for the ceremony order, readings, and wedding party bios. Zero waste, always up to date.",
+      "Guests scan for ceremony order, readings, and wedding party bios. Zero waste, always up to date.",
     partner: ONEQR_PRINT,
   },
   /* 2 months */
@@ -192,8 +192,8 @@ export const TASK_TEMPLATES: ChecklistTaskTemplate[] = [
     partner: ONEQR_DEFAULT,
   },
   {
-    key: "confirm-print-quantities",
-    title: "Confirm print order quantities",
+    key: "confirm-print-quantities", /* preserved key so existing user state survives */
+    title: "Confirm print quantities match guest count",
     monthsBefore: 2,
     bucket: "2mo",
     vendorCategory: null,

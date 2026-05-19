@@ -11,6 +11,7 @@ import {
   cateringMidPerHead,
   calculateBudgetWithState,
   getActiveVendorSlots,
+  getVenueBundleType,
   getVenuePricingRange,
   normalizeCateringType,
   venueMidRange,
@@ -223,9 +224,15 @@ export function PlannerDashboard({ sessionId, initialPlan, totalVenueCount }: Pr
       {state.venueId ? (
         <VendorSlots
           region={state.region}
-          slots={getActiveVendorSlots(
-            calculateBudgetWithState(state.totalBudget, state.budgetCategoryStates),
-          )}
+          slots={(() => {
+            const rows = calculateBudgetWithState(state.totalBudget, state.budgetCategoryStates);
+            let slots = getActiveVendorSlots(rows);
+            /* In-house venue → catering is bundled with the venue rental; hide its Step 3 slot. */
+            if (getVenueBundleType(state.venueCatering) === "in-house") {
+              slots = slots.filter((s) => s.category !== "catering");
+            }
+            return slots;
+          })()}
           bookedVendors={state.bookedVendors}
           onAddVendor={(category) => setAddVendorCategory(category)}
           onRemoveBooking={handleRemoveBooking}
