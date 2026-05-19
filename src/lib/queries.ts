@@ -69,7 +69,14 @@ export async function listVenues(
     const normalized = params.type.replace(/-/g, " ").toLowerCase();
     conditions.push(eq(venues.venueType, normalized));
   }
-  if (params.capacity != null) conditions.push(gte(venues.capacityMax, params.capacity));
+  /* Capacity filter — include venues with unknown capacity so couples don't
+   * miss listings just because we haven't enriched the data yet. The card
+   * surfaces a "Capacity not listed — contact venue to confirm" note. */
+  if (params.capacity != null) {
+    conditions.push(
+      or(gte(venues.capacityMax, params.capacity), sql`${venues.capacityMax} IS NULL`)!,
+    );
+  }
 
   if (params.indoor && params.indoor !== "both") {
     conditions.push(ilike(venues.indoorOutdoor, `%${params.indoor}%`));

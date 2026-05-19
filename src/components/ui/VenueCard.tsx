@@ -205,13 +205,20 @@ export function VenueCard({ venue }: { venue: Venue }) {
           </div>
         )}
 
-        {/* Chips — each value individually checked for null / "unknown" */}
+        {/* Chips — each value individually checked for null / "unknown".
+         * When capacity is missing, surface the "contact venue" note so
+         * couples know to follow up rather than assume the venue is too small. */}
         {(capacity || cateringText || indoorText) && (
           <div className="mt-3 flex flex-wrap gap-1.5">
             {capacity && <Chip>{capacity}</Chip>}
             {cateringText && <Chip>{cateringText}</Chip>}
             {indoorText && <Chip>{indoorText}</Chip>}
           </div>
+        )}
+        {!capacity && (
+          <p className="mt-2 text-[0.7rem] italic text-text-muted">
+            Capacity not listed — contact venue to confirm
+          </p>
         )}
 
         <div className="mt-4 flex items-center justify-between border-t border-border-light pt-4">
