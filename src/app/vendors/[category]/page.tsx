@@ -195,8 +195,10 @@ export default async function VendorCategoryPage({
         style={categoryColourVars(categorySlug) as CSSProperties}
         className="bg-bg-warm"
       >
-        {/* Hero band — category photograph behind a tinted overlay; falls back
-         * to the signature colour if no image is mapped for the category. */}
+        {/* Hero band — category photograph behind a uniform black overlay.
+         * Image is desaturated and the overlay is pure black at 50% so the
+         * white headline reads crisp against any photo. No colour tint, no
+         * gradient, no ghost text decoration. */}
         <section
           className="relative overflow-hidden bg-[var(--cat-primary)] text-white"
         >
@@ -208,48 +210,64 @@ export default async function VendorCategoryPage({
                 fill
                 priority
                 sizes="100vw"
-                className="object-cover opacity-50"
+                className="object-cover"
+                style={{ filter: "saturate(0.7)" }}
               />
-              {/* Gradient overlay — keeps the headline readable while letting the photo through */}
+              {/* Uniform black overlay — pure rgba(0,0,0,0.5), no colour tint */}
               <span
                 aria-hidden
-                className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[var(--cat-primary)]/85 via-[var(--cat-primary)]/55 to-[var(--cat-primary)]/25"
+                className="pointer-events-none absolute inset-0"
+                style={{ background: "rgba(0,0,0,0.50)" }}
               />
             </>
           )}
 
-          {/* Ghost text decoration */}
-          <span
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 bottom-[-12px] select-none text-center font-display font-semibold leading-none text-white opacity-[0.08]"
-            style={{ fontSize: "clamp(60px, 11vw, 140px)" }}
-          >
-            {label.plural}
-          </span>
-
           <div className="relative mx-auto max-w-[1280px] px-6 pb-14 pt-10 lg:pb-16 lg:pt-12">
-            <nav aria-label="Breadcrumb" className="mb-6 text-xs font-medium text-white/65">
+            <nav
+              aria-label="Breadcrumb"
+              className="mb-6 text-xs font-medium"
+              style={{ color: "rgba(255,255,255,0.75)" }}
+            >
               <ol className="flex flex-wrap items-center gap-1">
                 <li><Link href={"/" as Route} className="hover:text-white">Home</Link></li>
                 <li aria-hidden>/</li>
                 <li><Link href={"/vendors" as Route} className="hover:text-white">Vendors</Link></li>
                 <li aria-hidden>/</li>
-                <li aria-current="page" className="text-white/90">{label.plural}</li>
+                <li aria-current="page" className="text-white">{label.plural}</li>
               </ol>
             </nav>
 
-            <div className="text-xs font-bold uppercase tracking-[0.14em] text-white/65">
+            <div
+              className="text-xs font-bold uppercase tracking-[0.14em]"
+              style={{ color: "rgba(255,255,255,0.75)" }}
+            >
               Vendor directory
             </div>
-            <h1 className="mt-2 font-display text-4xl font-semibold leading-tight text-white md:text-5xl">
+            <h1
+              className="mt-2 font-display text-4xl leading-tight text-white md:text-5xl"
+              style={{
+                fontWeight: 600,
+                textShadow: "0 1px 12px rgba(0,0,0,0.5)",
+              }}
+            >
               Ontario wedding {label.plural.toLowerCase()}
             </h1>
-            <p className="mt-3 max-w-[640px] text-white/85">
+            <p
+              className="mt-3 max-w-[640px] text-white"
+              style={{ textShadow: "0 1px 8px rgba(0,0,0,0.45)" }}
+            >
               {label.intro}
             </p>
 
-            {/* Count badge */}
-            <div className="mt-5 inline-flex items-center gap-2 rounded-pill bg-white/15 px-4 py-1.5 text-sm font-bold text-white backdrop-blur-sm">
+            {/* Count badge — translucent white with backdrop blur */}
+            <div
+              className="mt-5 inline-flex items-center gap-2 rounded-pill px-4 py-1.5 text-sm font-bold text-white"
+              style={{
+                background: "rgba(255,255,255,0.15)",
+                backdropFilter: "blur(8px)",
+                WebkitBackdropFilter: "blur(8px)",
+              }}
+            >
               <svg
                 aria-hidden
                 viewBox="0 0 24 24"
