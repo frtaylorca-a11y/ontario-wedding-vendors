@@ -4,6 +4,8 @@ import type { Metadata } from "next";
 import { getVendorCountsByCategory } from "@/lib/queries";
 import { VENDOR_CATEGORIES, type VendorCategory } from "@/types";
 import { BreadcrumbSchema } from "@/components/seo/SchemaInjector";
+import { categoryColourVars } from "@/lib/vendor-colours";
+import type { CSSProperties } from "react";
 
 export const metadata: Metadata = {
   title: "Wedding Vendors in Ontario | Browse 12 Vendor Categories",
@@ -305,25 +307,27 @@ export default async function VendorsIndexPage() {
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {CATEGORIES.map((c) => {
                 const count = counts[c.slug] ?? 0;
+                const cssVars = categoryColourVars(c.slug) as CSSProperties;
                 return (
                   <Link
                     key={c.slug}
                     href={`/vendors/${urlSlug(c.slug)}` as Route}
-                    className="group relative flex flex-col gap-3 overflow-hidden rounded-card border-[1.5px] border-border bg-white p-6 pt-7 transition-all duration-200 hover:-translate-y-1 hover:border-transparent hover:shadow-[0_12px_32px_rgba(185,100,118,0.12)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
+                    style={cssVars}
+                    className="group relative flex flex-col gap-3 overflow-hidden rounded-card border-[1.5px] border-border bg-white p-6 pt-7 transition-all duration-200 hover:-translate-y-1 hover:border-transparent hover:shadow-[0_12px_32px_rgba(var(--cat-rgb),0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cat-primary)] focus-visible:ring-offset-2"
                   >
-                    {/* Rose top border — appears on hover only */}
+                    {/* Category-coloured top border — appears on hover only */}
                     <span
                       aria-hidden
-                      className="pointer-events-none absolute inset-x-0 top-0 h-[3px] origin-left scale-x-0 bg-rose transition-transform duration-200 group-hover:scale-x-100"
+                      className="pointer-events-none absolute inset-x-0 top-0 h-[3px] origin-left scale-x-0 bg-[var(--cat-primary)] transition-transform duration-200 group-hover:scale-x-100"
                     />
-                    <span className="flex h-12 w-12 items-center justify-center rounded-pill bg-rose-pale text-rose transition-colors duration-200 group-hover:bg-rose group-hover:text-white">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-pill bg-[var(--cat-bg)] text-[var(--cat-primary)] transition-colors duration-200 group-hover:bg-[var(--cat-primary)] group-hover:text-white">
                       {c.icon}
                     </span>
                     <div>
                       <h3 className="font-display text-xl font-semibold leading-tight text-charcoal">
                         {c.label}
                       </h3>
-                      <p className="mt-0.5 text-xs font-medium text-rose">
+                      <p className="mt-0.5 text-xs font-medium text-[var(--cat-primary)]">
                         {count.toLocaleString()} vendor{count === 1 ? "" : "s"} in Ontario
                       </p>
                     </div>
@@ -332,7 +336,7 @@ export default async function VendorsIndexPage() {
                     </p>
                     <span
                       aria-hidden
-                      className="mt-auto inline-flex items-center gap-1 pt-2 text-xs font-bold tracking-[0.04em] text-rose"
+                      className="mt-auto inline-flex items-center gap-1 pt-2 text-xs font-bold tracking-[0.04em] text-[var(--cat-primary)]"
                     >
                       Browse {c.label.toLowerCase()}
                       <span className="transition-transform duration-200 group-hover:translate-x-0.5">

@@ -1,8 +1,9 @@
 import Link from "next/link";
 import type { Route } from "next";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import type { Vendor } from "@/lib/schema";
 import { formatRating } from "@/lib/utils";
+import { categoryColourVars } from "@/lib/vendor-colours";
 
 const CATEGORY_LABEL: Record<string, string> = {
   photographer:    "Photographer",
@@ -146,27 +147,32 @@ export function VendorCard({ vendor }: { vendor: Vendor }) {
 
   const href = `/vendors/${categoryUrlSlug(vendor.category)}/${vendor.slug}` as Route;
 
+  /* CSS vars from the category's signature colour drive every accent on the card */
+  const cssVars = categoryColourVars(vendor.category) as CSSProperties;
+
   return (
-    <article className="group relative overflow-hidden rounded-card border-[1.5px] border-border bg-white p-5 pt-6 transition-all duration-200 hover:-translate-y-[3px] hover:border-transparent hover:shadow-[0_12px_32px_rgba(185,100,118,0.12)]">
-      {/* 3px rose accent bar at the very top */}
+    <article
+      style={cssVars}
+      className="group relative overflow-hidden rounded-card border-[1.5px] border-border bg-white p-5 pt-6 transition-all duration-200 hover:-translate-y-[3px] hover:border-[var(--cat-primary)] hover:shadow-[0_12px_32px_rgba(var(--cat-rgb),0.16)]"
+    >
+      {/* 3px accent bar — category signature colour */}
       <span
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[3px] bg-rose"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[3px] bg-[var(--cat-primary)]"
       />
 
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          {/* Category pill — icon + text, rose-pale background, rose text */}
-          <span className="inline-flex items-center gap-1.5 rounded-pill bg-rose-pale px-2.5 py-1 text-[0.7rem] font-bold uppercase tracking-[0.1em] text-rose">
+          {/* Category pill — category bg + category text colour */}
+          <span className="inline-flex items-center gap-1.5 rounded-pill bg-[var(--cat-bg)] px-2.5 py-1 text-[0.7rem] font-bold uppercase tracking-[0.1em] text-[var(--cat-primary)]">
             <CategoryIcon category={vendor.category} />
             {categoryLabel}
           </span>
 
-          {/* Vendor name — Cormorant Garamond, slightly larger than before for prominence */}
           <h3 className="mt-2 font-display text-[1.35rem] font-semibold leading-tight text-charcoal">
             <Link
               href={href}
-              className="rounded-sm transition-colors after:absolute after:inset-0 after:content-[''] hover:text-rose focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
+              className="rounded-sm transition-colors after:absolute after:inset-0 after:content-[''] hover:text-[var(--cat-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
             >
               {vendor.name}
             </Link>
@@ -215,7 +221,7 @@ export function VendorCard({ vendor }: { vendor: Vendor }) {
             <span className="text-xs text-text-muted">No reviews yet</span>
           )}
         </div>
-        <span className="relative z-[1] text-xs font-bold tracking-[0.04em] text-rose">
+        <span className="relative z-[1] text-xs font-bold tracking-[0.04em] text-[var(--cat-primary)]">
           View →
         </span>
       </div>

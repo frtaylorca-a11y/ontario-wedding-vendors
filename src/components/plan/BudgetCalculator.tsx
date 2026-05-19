@@ -4,22 +4,28 @@ import { useMemo } from "react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { BUDGET_CATEGORIES, PLANNER_REGIONS, calculateBudget } from "@/lib/plan-state";
 
-/* 14 brand-aligned colors for donut segments — rose family + warm neutrals + gold/green accents */
+/* 20 brand-aligned colors for donut segments — rose family + warm neutrals + gold/green/blue accents */
 const SEGMENT_COLORS = [
-  "#B96476", // venue_rental (primary rose)
-  "#C9A96E", // catering_bar (gold)
-  "#8C7B6E", // photo_video (taupe)
-  "#D4899A", // music_dj (rose-mid)
-  "#4A7C59", // flowers_decor (green)
-  "#E8B5C0", // cake (rose-light)
-  "#A5536A", // hair_makeup (rose-hover)
-  "#B0A299", // officiant (warm-grey)
-  "#EFE0C0", // stationery (gold-light)
-  "#7CA0BC", // transportation (blue)
-  "#F7EEF1", // attire_bride (rose-pale)
-  "#6FA084", // attire_groom (green-light)
-  "#547C9C", // lighting_sound (blue-deep)
-  "#D97706", // photo_booth (amber)
+  "#B96476", // venue_rental    — primary rose
+  "#C9A96E", // catering_bar    — gold
+  "#8C7B6E", // photo_video     — taupe
+  "#D4899A", // music_dj        — rose-mid
+  "#4A7C59", // flowers_decor   — green
+  "#E8B5C0", // cake            — rose-light
+  "#A5536A", // hair_makeup     — rose-hover
+  "#B0A299", // officiant       — warm-grey
+  "#EFE0C0", // stationery      — gold-light
+  "#7CA0BC", // transportation  — blue
+  "#F7EEF1", // attire_bride    — rose-pale
+  "#6FA084", // attire_groom    — green-light
+  "#547C9C", // lighting_sound  — blue-deep
+  "#D97706", // photo_booth     — amber
+  "#9C5266", // wedding_rings   — rose-deep
+  "#E89B6A", // favors_gifts    — orange-warm
+  "#8FB098", // accommodation   — mint
+  "#B89B5E", // rentals         — gold-dark
+  "#5F4F45", // wedding_planner — brown-dark
+  "#6B6B6B", // miscellaneous   — warm-grey-dark
 ];
 
 function formatMoney(n: number): string {
@@ -156,9 +162,15 @@ export function BudgetCalculator({
                   nameKey="label"
                   innerRadius={80}
                   outerRadius={120}
-                  paddingAngle={1}
+                  paddingAngle={2}
                   stroke="white"
                   strokeWidth={2}
+                  /* No segment labels — the breakdown list on the right
+                   * carries all category names + amounts. Labels here would
+                   * overlap on the 1% slices (Officiant, Photo Booth, Misc).
+                   * Hover tooltip still names + formats the segment. */
+                  label={false}
+                  labelLine={false}
                 >
                   {rows.map((_, i) => (
                     <Cell key={i} fill={SEGMENT_COLORS[i % SEGMENT_COLORS.length]} />

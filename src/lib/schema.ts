@@ -129,6 +129,11 @@ export const vendors = pgTable(
     isPicBooth: boolean("is_pic_booth").default(false),
     isNiagaraPhotoBooth: boolean("is_niagara_photo_booth").default(false),
 
+    /* Promotional fields — drives the Variant A photo card + sort-to-top behavior */
+    heroImage: varchar("hero_image", { length: 500 }),
+    isFeatured: boolean("is_featured").default(false),
+    featuredUntil: timestamp("featured_until"),
+
     source: varchar("source", { length: 100 }),
     /* Wedding-readiness signal for vendors discovered through referrals + reviews */
     vendorReadinessScore: integer("vendor_readiness_score"),

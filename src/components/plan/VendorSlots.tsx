@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import type { Route } from "next";
-import type { ReactNode } from "react";
-import { VENDOR_SLOT_ORDER, getVendorBudget, type BookedVendor } from "@/lib/plan-state";
+import { useEffect, useState, type ReactNode } from "react";
+import { VENDOR_SLOT_ORDER, getVendorBudget, PLANNER_REGIONS, type BookedVendor } from "@/lib/plan-state";
 
 type Props = {
   totalBudget: number;
@@ -11,6 +11,26 @@ type Props = {
   bookedVendors: Record<string, BookedVendor>;
   onAddVendor: (category: string) => void;
   onRemoveBooking: (category: string) => void;
+};
+
+function regionDisplayLabel(slug: string): string {
+  const match = PLANNER_REGIONS.find((r) => r.slug === slug);
+  return match?.label ?? "Ontario";
+}
+
+const CATEGORY_PLURAL: Record<string, string> = {
+  photographer:    "photographers",
+  videographer:    "videographers",
+  dj:              "DJs",
+  florist:         "florists",
+  catering:        "caterers",
+  cake:            "cake designers",
+  hair_makeup:     "hair & makeup artists",
+  officiant:       "officiants",
+  limo:            "limo services",
+  lighting_decor:  "lighting & decor specialists",
+  photo_booth:     "photo booths",
+  wedding_planner: "wedding planners",
 };
 
 const CATEGORY_META: Record<string, { label: string; icon: ReactNode }> = {
@@ -148,6 +168,25 @@ export function VendorSlots({
   onAddVendor,
   onRemoveBooking,
 }: Props) {
+  /* Live counts for the "Find N in Region" labels — refetched on region change */
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/vendors/counts?region=${encodeURIComponent(region)}`)
+      .then((r) => (r.ok ? r.json() : { counts: {} }))
+      .then((data) => {
+        if (!cancelled) setCounts(data.counts ?? {});
+      })
+      .catch(() => {
+        /* fall back to no count — link still works */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [region]);
+
+  const regionLabel = regionDisplayLabel(region);
+
   return (
     <section className="rounded-card border-[1.5px] border-border bg-white p-6 lg:p-8">
       <header className="mb-6">
@@ -252,12 +291,34 @@ export function VendorSlots({
                   </div>
                 ) : (
                   <div className="mt-4 space-y-2">
-                    <Link
-                      href={findHref}
-                      className="block w-full rounded-pill border border-rose bg-white px-4 py-2 text-center text-sm font-bold text-rose transition-colors hover:bg-rose hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
-                    >
-                      Find vendors →
-                    </Link>
+                    {(() => {
+                      const count = counts[cat];
+                      const plural = CATEGORY_PLURAL[cat] ?? "vendors";
+                      const label =
+                        count == null
+                          ? `Find ${plural} →`
+                          : count === 0
+                            ? `No ${plural} in ${regionLabel} yet`
+                            : `Find ${count} ${plural} in ${regionLabel} →`;
+                      const disabled = count === 0;
+                      return disabled ? (
+                        <span className="block w-full cursor-not-allowed rounded-pill border border-border bg-bg-soft px-4 py-2 text-center text-sm font-medium text-text-muted">
+                          {label}
+                        </span>
+                      ) : (
+                        <Link
+                          href={findHref}
+                          className="block w-full rounded-pill border border-rose bg-white px-4 py-2 text-center text-sm font-bold text-rose transition-colors hover:bg-rose hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
+                        >
+                          {label}
+                        </Link>
+                      );
+                    })()}
+                    {cat === "photo_booth" && (
+                      <p className="text-[0.65rem] text-text-muted">
+                        Pic Booth shown first as Site Partner
+                      </p>
+                    )}
                     <button
                       type="button"
                       onClick={() => onAddVendor(cat)}

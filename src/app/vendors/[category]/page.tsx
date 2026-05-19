@@ -9,6 +9,8 @@ import { PicBoothSitePartnerCard } from "@/components/ui/PicBoothSitePartnerCard
 import { VendorFilterSidebar } from "@/components/vendors/VendorFilterSidebar";
 import { BreadcrumbSchema, ItemListSchema } from "@/components/seo/SchemaInjector";
 import { Pagination } from "@/components/venues/Pagination";
+import { categoryColourVars, getCategoryColour } from "@/lib/vendor-colours";
+import type { CSSProperties } from "react";
 
 const PAGE_SIZE = 24;
 
@@ -136,31 +138,62 @@ export default async function VendorCategoryPage({
         items={itemListEntries}
       />
 
-      <main className="bg-bg-warm">
-        <div className="mx-auto max-w-[1280px] px-6 py-12 lg:py-16">
-          {/* Page header */}
-          <header className="mb-10">
-            <nav aria-label="Breadcrumb" className="mb-4 text-xs font-medium text-text-muted">
+      <main
+        style={categoryColourVars(categorySlug) as CSSProperties}
+        className="bg-bg-warm"
+      >
+        {/* Hero band — category signature colour, ghost text behind H1 */}
+        <section
+          className="relative overflow-hidden bg-[var(--cat-primary)] text-white"
+        >
+          {/* Ghost text decoration */}
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 bottom-[-12px] select-none text-center font-display font-semibold leading-none text-white opacity-[0.08]"
+            style={{ fontSize: "clamp(60px, 11vw, 140px)" }}
+          >
+            {label.plural}
+          </span>
+
+          <div className="relative mx-auto max-w-[1280px] px-6 pb-14 pt-10 lg:pb-16 lg:pt-12">
+            <nav aria-label="Breadcrumb" className="mb-6 text-xs font-medium text-white/65">
               <ol className="flex flex-wrap items-center gap-1">
-                <li><Link href={"/" as Route} className="hover:text-rose">Home</Link></li>
+                <li><Link href={"/" as Route} className="hover:text-white">Home</Link></li>
                 <li aria-hidden>/</li>
-                <li><Link href={"/vendors" as Route} className="hover:text-rose">Vendors</Link></li>
+                <li><Link href={"/vendors" as Route} className="hover:text-white">Vendors</Link></li>
                 <li aria-hidden>/</li>
-                <li aria-current="page" className="text-charcoal">{label.plural}</li>
+                <li aria-current="page" className="text-white/90">{label.plural}</li>
               </ol>
             </nav>
 
-            <div className="text-xs font-bold uppercase tracking-[0.14em] text-rose">
+            <div className="text-xs font-bold uppercase tracking-[0.14em] text-white/65">
               Vendor directory
             </div>
-            <h1 className="mt-2 font-display text-4xl font-semibold leading-tight text-charcoal md:text-5xl">
-              Ontario wedding{" "}
-              <em className="italic text-rose">{label.plural.toLowerCase()}</em>
+            <h1 className="mt-2 font-display text-4xl font-semibold leading-tight text-white md:text-5xl">
+              Ontario wedding {label.plural.toLowerCase()}
             </h1>
-            <p className="mt-3 max-w-[640px] text-text-mid">
-              {label.intro} {displayTotal.toLocaleString()} listed.
+            <p className="mt-3 max-w-[640px] text-white/85">
+              {label.intro}
             </p>
-          </header>
+
+            {/* Count badge */}
+            <div className="mt-5 inline-flex items-center gap-2 rounded-pill bg-white/15 px-4 py-1.5 text-sm font-bold text-white backdrop-blur-sm">
+              <svg
+                aria-hidden
+                viewBox="0 0 24 24"
+                className="h-3.5 w-3.5 fill-none stroke-current"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M3 6h18M3 12h18M3 18h18" />
+              </svg>
+              {displayTotal.toLocaleString()} listed
+            </div>
+          </div>
+        </section>
+
+        <div className="mx-auto max-w-[1280px] px-6 py-10 lg:py-14">
 
           {/* Sidebar + grid */}
           <div className="grid gap-8 lg:grid-cols-[280px_1fr] lg:gap-10">

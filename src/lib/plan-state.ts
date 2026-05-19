@@ -18,31 +18,47 @@ export type VendorCategoryKey =
   | "attire_bride"
   | "attire_groom"
   | "lighting_sound"
-  | "photo_booth";
+  | "photo_booth"
+  | "wedding_rings"
+  | "favors_gifts"
+  | "accommodation"
+  | "rentals"
+  | "wedding_planner"
+  | "miscellaneous";
 
 export type BudgetCategory = {
   key: VendorCategoryKey;
   label: string;
   pct: number;
-  /** Vendor-directory category for the "Find vendors" link. Null = not a vendor category (e.g. attire, venue) */
+  /** Vendor-directory category for the "Find vendors" link. Null = no vendor match (budget tracking only). */
   vendorCategory: string | null;
 };
 
+/**
+ * 20 budget categories matching the Excel template. Sums to exactly 100%.
+ * Vendor-mapped categories link to /vendors/[category]; others are budget-only.
+ */
 export const BUDGET_CATEGORIES: BudgetCategory[] = [
-  { key: "venue_rental",    label: "Venue Rental",                pct: 0.28, vendorCategory: null }, /* venue lives in step 2 */
-  { key: "catering_bar",    label: "Catering & Bar",              pct: 0.32, vendorCategory: "catering" },
-  { key: "photo_video",     label: "Photography & Videography",   pct: 0.10, vendorCategory: "photographer" },
-  { key: "music_dj",        label: "Music / DJ",                  pct: 0.04, vendorCategory: "dj" },
-  { key: "flowers_decor",   label: "Flowers & Decorations",       pct: 0.08, vendorCategory: "florist" },
-  { key: "cake",            label: "Wedding Cake",                pct: 0.02, vendorCategory: "cake" },
-  { key: "hair_makeup",     label: "Hair & Makeup",               pct: 0.03, vendorCategory: "hair_makeup" },
-  { key: "officiant",       label: "Officiant",                   pct: 0.01, vendorCategory: "officiant" },
-  { key: "stationery",      label: "Invitations & Stationery",    pct: 0.02, vendorCategory: null },
-  { key: "transportation",  label: "Transportation",              pct: 0.02, vendorCategory: "limo" },
-  { key: "attire_bride",    label: "Wedding Attire (Bride)",      pct: 0.04, vendorCategory: null },
-  { key: "attire_groom",    label: "Wedding Attire (Groom)",      pct: 0.01, vendorCategory: null },
-  { key: "lighting_sound",  label: "Lighting & Sound",            pct: 0.02, vendorCategory: "lighting_decor" },
-  { key: "photo_booth",     label: "Photo Booth",                 pct: 0.01, vendorCategory: "photo_booth" },
+  { key: "venue_rental",     label: "Venue Rental",                pct: 0.25, vendorCategory: null }, /* handled by Step 2 venue search */
+  { key: "catering_bar",     label: "Catering & Bar",              pct: 0.28, vendorCategory: "catering" },
+  { key: "photo_video",      label: "Photography & Videography",   pct: 0.09, vendorCategory: "photographer" },
+  { key: "music_dj",         label: "Music / DJ",                  pct: 0.03, vendorCategory: "dj" },
+  { key: "flowers_decor",    label: "Flowers & Decorations",       pct: 0.07, vendorCategory: "florist" },
+  { key: "cake",             label: "Wedding Cake",                pct: 0.02, vendorCategory: "cake" },
+  { key: "hair_makeup",      label: "Hair & Makeup",               pct: 0.03, vendorCategory: "hair_makeup" },
+  { key: "officiant",        label: "Officiant",                   pct: 0.01, vendorCategory: "officiant" },
+  { key: "stationery",       label: "Invitations & Stationery",    pct: 0.02, vendorCategory: null },
+  { key: "transportation",   label: "Transportation",              pct: 0.02, vendorCategory: "limo" },
+  { key: "attire_bride",     label: "Wedding Attire (Bride)",      pct: 0.03, vendorCategory: null },
+  { key: "attire_groom",     label: "Wedding Attire (Groom)",      pct: 0.01, vendorCategory: null },
+  { key: "lighting_sound",   label: "Lighting & Sound",            pct: 0.02, vendorCategory: "lighting_decor" },
+  { key: "photo_booth",      label: "Photo Booth",                 pct: 0.01, vendorCategory: "photo_booth" },
+  { key: "wedding_rings",    label: "Wedding Rings",               pct: 0.03, vendorCategory: null },
+  { key: "favors_gifts",     label: "Favors & Gifts",              pct: 0.02, vendorCategory: null },
+  { key: "accommodation",    label: "Accommodation",               pct: 0.02, vendorCategory: null },
+  { key: "rentals",          label: "Rentals (Tents/Chairs/Tables)", pct: 0.02, vendorCategory: null },
+  { key: "wedding_planner",  label: "Wedding Planner",             pct: 0.01, vendorCategory: "wedding_planner" },
+  { key: "miscellaneous",    label: "Miscellaneous",               pct: 0.01, vendorCategory: null },
 ];
 
 /** Region options for the calculator dropdown — fewer than REGIONS, matching the planner spec */
@@ -70,23 +86,23 @@ export type BookedVendor = {
 };
 
 /**
- * Per-vendor-category budget percentages.
- * Splits Photography & Videography (10% combined) into 6%/4% per spec norms.
- * wedding_planner is null — Ontario averages don't include it as a fixed line.
+ * Per-vendor-category budget percentages — derived from BUDGET_CATEGORIES.
+ * Photography & Videography (9%) splits 6%/3% photographer/videographer.
+ * Sum across all 12 = 59%; remainder (41%) covers venue + non-vendor categories.
  */
 export const VENDOR_CATEGORY_BUDGET_PCT: Record<string, number | null> = {
   photographer:    0.06,
-  videographer:    0.04,
-  dj:              0.04,
-  florist:         0.08,
-  catering:        0.32,
+  videographer:    0.03,
+  dj:              0.03,
+  florist:         0.07,
+  catering:        0.28,
   cake:            0.02,
   hair_makeup:     0.03,
   officiant:       0.01,
   limo:            0.02,
   lighting_decor:  0.02,
   photo_booth:     0.01,
-  wedding_planner: null,
+  wedding_planner: 0.01,
 };
 
 /** Order in which the 12 vendor slots appear — high-budget first */
