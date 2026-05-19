@@ -405,6 +405,96 @@ export function cateringMidPerHead(range: CateringPricingRange): number {
   return Math.round((range.low + range.high) / 2);
 }
 
+/* ─── Budget category → vendor slot mapping ───────────────────────────────
+ * Step 3 slots derive from the active budget rows in Step 1. Categories
+ * with an empty slot array (Wedding Rings, Accommodation, etc.) never get
+ * a Step 3 slot even when active. The photo_video row spawns two slots
+ * (photographer + videographer), split by VENDOR_CATEGORY_BUDGET_PCT. */
+export const BUDGET_TO_VENDOR_SLOTS: Record<VendorCategoryKey, string[]> = {
+  venue_rental:    [], /* venue is Step 2 */
+  catering_bar:    ["catering"],
+  photo_video:     ["photographer", "videographer"],
+  music_dj:        ["dj"],
+  flowers_decor:   ["florist"],
+  cake:            ["cake"],
+  hair_makeup:     ["hair_makeup"],
+  officiant:       ["officiant"],
+  stationery:      [],
+  transportation:  ["limo"],
+  attire_bride:    [],
+  attire_groom:    [],
+  lighting_sound:  ["lighting_decor"],
+  photo_booth:     ["photo_booth"],
+  wedding_rings:   [],
+  favors_gifts:    [],
+  accommodation:   [],
+  rentals:         [],
+  wedding_planner: ["wedding_planner"],
+  miscellaneous:   [],
+};
+
+export type VendorSlot = {
+  /** Vendor-directory category (matches /vendors/[category] route slug after `_`→`-`) */
+  category: string;
+  /** Dollar budget for this slot, derived from the parent budget row */
+  budget: number;
+  /** The parent budget category that drives this slot — drives the two-way sync */
+  budgetCategoryKey: VendorCategoryKey;
+};
+
+/**
+ * Order Step 3 slots to match Step 1's active rows.
+ * For multi-slot budget rows (photo_video), splits the parent amount by
+ * the VENDOR_CATEGORY_BUDGET_PCT proportions so photographer/videographer
+ * each show a sensible per-slot budget.
+ */
+export function getActiveVendorSlots(rows: BudgetRow[]): VendorSlot[] {
+  const slots: VendorSlot[] = [];
+  for (const row of rows) {
+    if (!row.enabled) continue;
+    const vendorCats = BUDGET_TO_VENDOR_SLOTS[row.key];
+    if (!vendorCats || vendorCats.length === 0) continue;
+
+    if (vendorCats.length === 1) {
+      slots.push({
+        category:          vendorCats[0],
+        budget:            row.amount,
+        budgetCategoryKey: row.key,
+      });
+    } else {
+      /* Split the parent row by the per-slot pct so a $3,000 photo_video
+       * row becomes ~$2,000 photographer + ~$1,000 videographer. */
+      const pcts = vendorCats.map((c) => VENDOR_CATEGORY_BUDGET_PCT[c] ?? 1);
+      const total = pcts.reduce((a, b) => a + (b ?? 0), 0) || 1;
+      vendorCats.forEach((c, i) => {
+        slots.push({
+          category:          c,
+          budget:            Math.round(((pcts[i] ?? 0) / total) * row.amount),
+          budgetCategoryKey: row.key,
+        });
+      });
+    }
+  }
+  return slots;
+}
+
+/**
+ * Which budget category keys currently have any booked vendor?
+ * Used to render the "Booked" badge on Step 1's row when its
+ * corresponding Step 3 slot has been filled.
+ */
+export function bookedBudgetCategories(
+  bookedVendors: Record<string, BookedVendor>,
+): Set<VendorCategoryKey> {
+  const set = new Set<VendorCategoryKey>();
+  for (const [bcKey, vendorCats] of Object.entries(BUDGET_TO_VENDOR_SLOTS) as [VendorCategoryKey, string[]][]) {
+    if (vendorCats.some((vc) => bookedVendors[vc])) {
+      set.add(bcKey);
+    }
+  }
+  return set;
+}
+
 /** Look up a venue rental range — falls back to outdoor/default for unknown combinations */
 export function getVenuePricingRange(
   venueType: string | null | undefined,

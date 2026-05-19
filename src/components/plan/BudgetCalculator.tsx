@@ -24,14 +24,17 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import {
   BUDGET_CATEGORIES,
+  BUDGET_TO_VENDOR_SLOTS,
   CATERING_PER_GUEST,
   CATERING_TYPE_LABELS,
   PLANNER_REGIONS,
   PROTECTED_KEY,
+  bookedBudgetCategories,
   calculateBudgetWithState,
   defaultBudgetCategoryStates,
   getVenuePricingRange,
   normalizeCateringType,
+  type BookedVendor,
   type BudgetCategoryStates,
   type BudgetCategoryToggle,
   type BudgetRow,
@@ -82,6 +85,7 @@ type Props = {
   venueCapacityMax?: number | null;
   venueCatering?: string | null;
   budgetCategoryStates?: BudgetCategoryStates;
+  bookedVendors?: Record<string, BookedVendor>;
   onChange: (next: {
     totalBudget?: number;
     guestCount?: number;
@@ -101,10 +105,25 @@ export function BudgetCalculator({
   venueCapacityMax,
   venueCatering,
   budgetCategoryStates,
+  bookedVendors,
   onChange,
 }: Props) {
   const states = budgetCategoryStates ?? defaultBudgetCategoryStates();
   const rows = useMemo(() => calculateBudgetWithState(totalBudget, states), [totalBudget, states]);
+  const bookedSet = useMemo(
+    () => bookedBudgetCategories(bookedVendors ?? {}),
+    [bookedVendors],
+  );
+  const bookedNamesByBudgetKey = useMemo(() => {
+    const out: Partial<Record<VendorCategoryKey, string[]>> = {};
+    for (const [bcKey, vendorCats] of Object.entries(BUDGET_TO_VENDOR_SLOTS) as [VendorCategoryKey, string[]][]) {
+      const names = vendorCats
+        .map((vc) => bookedVendors?.[vc]?.name)
+        .filter((n): n is string => Boolean(n));
+      if (names.length > 0) out[bcKey] = names;
+    }
+    return out;
+  }, [bookedVendors]);
 
   const activeRows = rows.filter((r) => r.enabled);
   const drawerRows = rows.filter((r) => !r.enabled);
@@ -125,7 +144,19 @@ export function BudgetCalculator({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
+  /** Returns false when the user cancels the booking-removal confirm. */
+  function confirmDisableIfBooked(key: VendorCategoryKey): boolean {
+    if (!bookedSet.has(key)) return true;
+    const names = bookedNamesByBudgetKey[key] ?? [];
+    const cat = BUDGET_CATEGORIES.find((c) => c.key === key)?.label ?? key;
+    const namesStr = names.join(" and ");
+    return window.confirm(
+      `Removing ${cat} will unbook ${namesStr}. Continue?`,
+    );
+  }
+
   function updateToggle(key: VendorCategoryKey, patch: Partial<BudgetCategoryToggle>) {
+    if (patch.enabled === false && !confirmDisableIfBooked(key)) return;
     const next: BudgetCategoryStates = {
       ...states,
       toggles: {
@@ -188,7 +219,8 @@ export function BudgetCalculator({
       nextActive = activeKeys;
       nextDrawer = arrayMove(drawerKeys, oldIdx, dropIndex);
     } else if (dragFromActive && !dropIntoActive) {
-      /* active → drawer */
+      /* active → drawer: confirm if this would unbook anything */
+      if (!confirmDisableIfBooked(dragKey)) return;
       nextToggles[dragKey] = { ...nextToggles[dragKey], enabled: false };
       nextActive = activeKeys.filter((k) => k !== dragKey);
       nextDrawer = [...drawerKeys];
@@ -373,6 +405,7 @@ export function BudgetCalculator({
                     <SortableRow
                       key={row.key}
                       row={row}
+                      booked={bookedSet.has(row.key)}
                       perHeadHint={
                         row.key === "catering_bar" && row.locked && cateringType && guestCount > 0
                           ? `~${formatMoney(Math.round(row.amount / guestCount))}/guest · ${CATERING_TYPE_LABELS[cateringType]} · based on ${venueName ?? "your venue"}`
@@ -510,12 +543,14 @@ function DragPreview({ row }: { row: BudgetRow }) {
 
 function SortableRow({
   row,
+  booked,
   perHeadHint,
   cateringRangeHint,
   onLock,
   onUnlock,
 }: {
   row: BudgetRow;
+  booked: boolean;
   perHeadHint: string | null;
   cateringRangeHint: string | null;
   onLock: (amount: number) => void;
@@ -573,7 +608,17 @@ function SortableRow({
         />
 
         <div className="flex-1 min-w-0">
-          <span className="block truncate text-sm text-charcoal">{row.label}</span>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            <span className="truncate text-sm text-charcoal">{row.label}</span>
+            {booked && (
+              <span className="inline-flex items-center gap-1 rounded-pill bg-emerald-100 px-1.5 py-0.5 text-[0.6rem] font-bold uppercase tracking-[0.06em] text-emerald-700">
+                <svg aria-hidden viewBox="0 0 24 24" className="h-2.5 w-2.5 fill-none stroke-current" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                Booked
+              </span>
+            )}
+          </div>
           {row.belowFloor && (
             <span className="block text-[0.65rem] leading-tight text-amber-700">
               Typical minimum for this category is {formatMoney(row.minFloor)}

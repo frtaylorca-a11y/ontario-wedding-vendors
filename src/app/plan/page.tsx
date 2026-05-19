@@ -3,6 +3,7 @@ import type { Route } from "next";
 import type { Metadata } from "next";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { getSiteStats } from "@/lib/queries";
 import { venues, weddingPlans } from "@/lib/schema";
 import { readPlanSessionId } from "@/lib/session";
 import { PlannerDashboard } from "@/components/plan/PlannerDashboard";
@@ -111,7 +112,11 @@ export default async function PlanPage() {
           </p>
         </header>
 
-        <PlannerDashboard sessionId={sessionId} initialPlan={initialPlan} />
+        <PlannerDashboard
+          sessionId={sessionId}
+          initialPlan={initialPlan}
+          totalVenueCount={(await getSiteStats().catch(() => null))?.venueCount}
+        />
       </div>
     </main>
   );

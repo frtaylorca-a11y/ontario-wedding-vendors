@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Cormorant_Garamond, Inter } from "next/font/google";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { getSiteStats } from "@/lib/queries";
 import "./globals.css";
 
 const display = Cormorant_Garamond({
@@ -21,20 +22,25 @@ const body = Inter({
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ontarioweddingvendors.com";
 
-export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
-  title: {
-    default: "Ontario Wedding Venues & Vendors | Find Your Perfect Wedding Venue",
-    template: "%s | Ontario Wedding Vendors",
-  },
-  description:
-    "Browse 1,280+ verified Ontario wedding venues and vendors. AI-powered planning tool matches vendors to your venue, budget and location. Niagara, Toronto, Muskoka and beyond.",
-  openGraph: {
-    type: "website",
-    url: siteUrl,
-    siteName: "Ontario Wedding Vendors",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const stats = await getSiteStats().catch(() => null);
+  const venueLabel  = stats ? stats.venueCount.toLocaleString()  : "hundreds of";
+  const vendorLabel = stats ? stats.vendorCount.toLocaleString() : "hundreds of";
+
+  return {
+    metadataBase: new URL(siteUrl),
+    title: {
+      default: "Ontario Wedding Venues & Vendors | Find Your Perfect Wedding Venue",
+      template: "%s | Ontario Wedding Vendors",
+    },
+    description: `Browse ${venueLabel} verified Ontario wedding venues and ${vendorLabel} vendors. AI-powered planning tool matches vendors to your venue, budget and location. Niagara, Toronto, Muskoka and beyond.`,
+    openGraph: {
+      type: "website",
+      url: siteUrl,
+      siteName: "Ontario Wedding Vendors",
+    },
+  };
+}
 
 export default function RootLayout({
   children,

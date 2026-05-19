@@ -3,15 +3,19 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { useEffect, useState, type ReactNode } from "react";
-import { VENDOR_SLOT_ORDER, getVendorBudget, PLANNER_REGIONS, type BookedVendor } from "@/lib/plan-state";
+import { PLANNER_REGIONS, type BookedVendor, type VendorSlot } from "@/lib/plan-state";
 
 type Props = {
-  totalBudget: number;
   region: string;
+  slots: VendorSlot[];
   bookedVendors: Record<string, BookedVendor>;
   onAddVendor: (category: string) => void;
   onRemoveBooking: (category: string) => void;
 };
+
+const PIC_BOOTH_FEATURED_REGIONS = new Set(["niagara", "gta", "golden-horseshoe"]);
+const PIC_BOOTH_URL =
+  "https://picbooth.ca?utm_source=owv&utm_medium=vendor-slot&utm_campaign=photo-booth-featured";
 
 function regionDisplayLabel(slug: string): string {
   const match = PLANNER_REGIONS.find((r) => r.slug === slug);
@@ -162,8 +166,8 @@ function formatMoney(n: number): string {
 }
 
 export function VendorSlots({
-  totalBudget,
   region,
+  slots,
   bookedVendors,
   onAddVendor,
   onRemoveBooking,
@@ -186,6 +190,7 @@ export function VendorSlots({
   }, [region]);
 
   const regionLabel = regionDisplayLabel(region);
+  const picBoothFeatured = PIC_BOOTH_FEATURED_REGIONS.has(region);
 
   return (
     <section className="rounded-card border-[1.5px] border-border bg-white p-6 lg:p-8">
@@ -194,145 +199,216 @@ export function VendorSlots({
           Step 3 · Vendors
         </div>
         <h2 className="mt-2 font-display text-3xl font-semibold text-charcoal">
-          Your <em className="italic text-rose">12 vendor slots</em>
+          Your <em className="italic text-rose">vendor slots</em>{" "}
+          <span className="text-base text-text-muted">({slots.length})</span>
         </h2>
         <p className="mt-2 text-sm text-text-mid">
-          Budget allocated per category from your total. Browse vendors or add
-          someone outside our directory.
+          Synced to your active budget categories — toggle a row off in
+          Step 1 to hide its slot here. Budget per category updates live
+          as you move the total slider.
         </p>
       </header>
 
-      <ul className="grid gap-4 sm:grid-cols-2">
-        {VENDOR_SLOT_ORDER.map((cat) => {
-          const meta = CATEGORY_META[cat];
-          const booked = bookedVendors[cat];
-          const budget = getVendorBudget(cat, totalBudget);
-          const findHref =
-            (region && region !== "other"
-              ? `/vendors/${cat.replace(/_/g, "-")}?region=${region}`
-              : `/vendors/${cat.replace(/_/g, "-")}`) as Route;
+      {slots.length === 0 ? (
+        <div className="rounded-card border border-dashed border-border bg-bg-soft p-8 text-center text-sm text-text-muted">
+          No active budget categories with vendor matches yet. Toggle
+          Photography, Catering, Music or any other vendor-linked row on
+          in Step 1 to populate this list.
+        </div>
+      ) : (
+        <ul className="grid gap-4 sm:grid-cols-2">
+          {slots.map((slot) => {
+            const cat = slot.category;
+            const meta = CATEGORY_META[cat];
+            if (!meta) return null;
+            const booked = bookedVendors[cat];
+            const findHref =
+              (region && region !== "other"
+                ? `/vendors/${cat.replace(/_/g, "-")}?region=${region}`
+                : `/vendors/${cat.replace(/_/g, "-")}`) as Route;
+            const showPicBoothFeatured =
+              cat === "photo_booth" && picBoothFeatured && !booked;
 
-          return (
-            <li key={cat}>
-              <div
-                className={`relative h-full rounded-card border-[1.5px] bg-white p-5 transition-colors ${
-                  booked
-                    ? "border-rose"
-                    : "border-dashed border-border hover:border-rose"
-                }`}
+            return (
+              <li
+                key={cat}
+                className="motion-safe:animate-[slotIn_220ms_ease-out]"
+                style={{
+                  animationName: "slotIn",
+                  animationDuration: "220ms",
+                  animationTimingFunction: "ease-out",
+                }}
               >
-                {/* Header row */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-9 w-9 items-center justify-center rounded-pill bg-rose-pale text-rose">
-                      {meta.icon}
-                    </span>
-                    <div>
-                      <h3 className="font-display text-lg font-semibold text-charcoal">
-                        {meta.label}
-                      </h3>
-                      <div className="text-[0.7rem] font-medium text-text-muted">
-                        {budget != null ? formatMoney(budget) : "Set your own"}
+                <div
+                  className={`relative h-full rounded-card border-[1.5px] bg-white p-5 transition-colors ${
+                    booked
+                      ? "border-rose"
+                      : showPicBoothFeatured
+                        ? "border-rose"
+                        : "border-dashed border-border hover:border-rose"
+                  }`}
+                >
+                  {/* Header row */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-pill bg-rose-pale text-rose">
+                        {meta.icon}
+                      </span>
+                      <div>
+                        <h3 className="font-display text-lg font-semibold text-charcoal">
+                          {meta.label}
+                        </h3>
+                        <div className="text-[0.7rem] font-medium text-text-muted">
+                          Your budget: {formatMoney(slot.budget)}
+                        </div>
                       </div>
                     </div>
+                    {booked && (
+                      <span className="inline-flex items-center gap-1 rounded-pill bg-rose px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-[0.08em] text-white">
+                        <svg aria-hidden viewBox="0 0 24 24" className="h-2.5 w-2.5 fill-none stroke-current" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        Booked
+                      </span>
+                    )}
+                    {!booked && showPicBoothFeatured && (
+                      <span className="inline-flex items-center gap-1 rounded-pill bg-rose px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-[0.08em] text-white">
+                        <svg aria-hidden viewBox="0 0 24 24" className="h-2.5 w-2.5 fill-none stroke-current" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                        Featured
+                      </span>
+                    )}
                   </div>
-                  {booked && (
-                    <span className="inline-flex items-center gap-1 rounded-pill bg-rose px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-[0.08em] text-white">
-                      <svg aria-hidden viewBox="0 0 24 24" className="h-2.5 w-2.5 fill-none stroke-current" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                      Booked
-                    </span>
+
+                  {/* Body */}
+                  {booked ? (
+                    <div className="mt-3">
+                      <div className="flex items-center gap-2">
+                        <div className="font-display text-base font-semibold text-charcoal">
+                          {booked.name}
+                        </div>
+                        {booked.isUserSuggested && (
+                          <span className="inline-flex items-center rounded-pill bg-amber-100 px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-[0.08em] text-amber-800">
+                            Unverified
+                          </span>
+                        )}
+                        {booked.isPicBooth && (
+                          <span className="inline-flex items-center rounded-pill bg-gold-light px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-[0.08em] text-charcoal">
+                            Site Partner
+                          </span>
+                        )}
+                      </div>
+                      {booked.rating != null && (
+                        <div className="mt-1 flex items-center gap-1.5 text-xs text-text-mid">
+                          <span className="leading-none text-gold">
+                            {"★".repeat(Math.round(booked.rating))}
+                            <span className="text-border">{"★".repeat(5 - Math.round(booked.rating))}</span>
+                          </span>
+                          <span>{booked.rating.toFixed(1)}</span>
+                        </div>
+                      )}
+                      {booked.city && (
+                        <div className="mt-0.5 text-xs text-text-muted">{booked.city}</div>
+                      )}
+                      {booked.isUserSuggested && (
+                        <p className="mt-2 text-[0.7rem] text-text-muted">
+                          Added by you — not yet in our directory
+                        </p>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => onRemoveBooking(cat)}
+                        className="mt-3 text-xs font-medium text-text-muted underline-offset-2 hover:text-rose hover:underline"
+                      >
+                        Remove from plan
+                      </button>
+                    </div>
+                  ) : showPicBoothFeatured ? (
+                    /* Featured Pic Booth card for Niagara / GTA */
+                    <div className="mt-3 space-y-3">
+                      <div>
+                        <div className="font-display text-base font-semibold text-charcoal">
+                          Pic Booth
+                        </div>
+                        <div className="mt-1 inline-flex items-center gap-1.5 rounded-pill bg-gold-light px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-[0.08em] text-charcoal">
+                          <svg aria-hidden viewBox="0 0 24 24" className="h-2.5 w-2.5 fill-none stroke-current" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="8" r="6" />
+                            <path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11" />
+                          </svg>
+                          JUNO Awards photo booth provider
+                        </div>
+                        <p className="mt-2 text-xs leading-relaxed text-text-mid">
+                          St. Catharines-based, serving Niagara and the GTA. Open-air sailcloth
+                          booths and instant-print packages for weddings of every size.
+                        </p>
+                      </div>
+                      <a
+                        href={PIC_BOOTH_URL}
+                        target="_blank"
+                        rel="noopener"
+                        className="block w-full rounded-pill bg-rose px-4 py-2 text-center text-sm font-bold text-white shadow-[0_4px_14px_rgba(185,100,118,0.3)] transition-all hover:bg-rose-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
+                      >
+                        Get a quote →
+                      </a>
+                      <Link
+                        href={findHref}
+                        className="block w-full rounded-pill border border-border bg-white px-4 py-2 text-center text-xs font-medium text-text-mid transition-colors hover:border-rose hover:text-rose focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
+                      >
+                        Or compare other photo booths in {regionLabel} →
+                      </Link>
+                      <p className="text-[0.65rem] text-text-muted">
+                        Pic Booth is operated by the Ontario Wedding Vendors team.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="mt-4 space-y-2">
+                      {(() => {
+                        const count = counts[cat];
+                        const plural = CATEGORY_PLURAL[cat] ?? "vendors";
+                        const label =
+                          count == null
+                            ? `Find ${plural} →`
+                            : count === 0
+                              ? `No ${plural} in ${regionLabel} yet`
+                              : `Find ${count} ${plural} in ${regionLabel} →`;
+                        const disabled = count === 0;
+                        return disabled ? (
+                          <span className="block w-full cursor-not-allowed rounded-pill border border-border bg-bg-soft px-4 py-2 text-center text-sm font-medium text-text-muted">
+                            {label}
+                          </span>
+                        ) : (
+                          <Link
+                            href={findHref}
+                            className="block w-full rounded-pill border border-rose bg-white px-4 py-2 text-center text-sm font-bold text-rose transition-colors hover:bg-rose hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
+                          >
+                            {label}
+                          </Link>
+                        );
+                      })()}
+                      <button
+                        type="button"
+                        onClick={() => onAddVendor(cat)}
+                        className="block w-full text-center text-xs font-medium text-text-mid underline-offset-2 hover:text-rose hover:underline"
+                      >
+                        + Add vendor not in our list
+                      </button>
+                    </div>
                   )}
                 </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
 
-                {/* Body */}
-                {booked ? (
-                  <div className="mt-3">
-                    <div className="flex items-center gap-2">
-                      <div className="font-display text-base font-semibold text-charcoal">
-                        {booked.name}
-                      </div>
-                      {booked.isUserSuggested && (
-                        <span className="inline-flex items-center rounded-pill bg-amber-100 px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-[0.08em] text-amber-800">
-                          Unverified
-                        </span>
-                      )}
-                      {booked.isPicBooth && (
-                        <span className="inline-flex items-center rounded-pill bg-gold-light px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-[0.08em] text-charcoal">
-                          Site Partner
-                        </span>
-                      )}
-                    </div>
-                    {booked.rating != null && (
-                      <div className="mt-1 flex items-center gap-1.5 text-xs text-text-mid">
-                        <span className="leading-none text-gold">
-                          {"★".repeat(Math.round(booked.rating))}
-                          <span className="text-border">{"★".repeat(5 - Math.round(booked.rating))}</span>
-                        </span>
-                        <span>{booked.rating.toFixed(1)}</span>
-                      </div>
-                    )}
-                    {booked.city && (
-                      <div className="mt-0.5 text-xs text-text-muted">{booked.city}</div>
-                    )}
-                    {booked.isUserSuggested && (
-                      <p className="mt-2 text-[0.7rem] text-text-muted">
-                        Added by you — not yet in our directory
-                      </p>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => onRemoveBooking(cat)}
-                      className="mt-3 text-xs font-medium text-text-muted underline-offset-2 hover:text-rose hover:underline"
-                    >
-                      Remove from plan
-                    </button>
-                  </div>
-                ) : (
-                  <div className="mt-4 space-y-2">
-                    {(() => {
-                      const count = counts[cat];
-                      const plural = CATEGORY_PLURAL[cat] ?? "vendors";
-                      const label =
-                        count == null
-                          ? `Find ${plural} →`
-                          : count === 0
-                            ? `No ${plural} in ${regionLabel} yet`
-                            : `Find ${count} ${plural} in ${regionLabel} →`;
-                      const disabled = count === 0;
-                      return disabled ? (
-                        <span className="block w-full cursor-not-allowed rounded-pill border border-border bg-bg-soft px-4 py-2 text-center text-sm font-medium text-text-muted">
-                          {label}
-                        </span>
-                      ) : (
-                        <Link
-                          href={findHref}
-                          className="block w-full rounded-pill border border-rose bg-white px-4 py-2 text-center text-sm font-bold text-rose transition-colors hover:bg-rose hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
-                        >
-                          {label}
-                        </Link>
-                      );
-                    })()}
-                    {cat === "photo_booth" && (
-                      <p className="text-[0.65rem] text-text-muted">
-                        Pic Booth shown first as Site Partner
-                      </p>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => onAddVendor(cat)}
-                      className="block w-full text-center text-xs font-medium text-text-mid underline-offset-2 hover:text-rose hover:underline"
-                    >
-                      + Add vendor not in our list
-                    </button>
-                  </div>
-                )}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+      {/* Keyframes for slot fade-in on add — kept inline to colocate with the component */}
+      <style>{`
+        @keyframes slotIn {
+          from { opacity: 0; transform: translateY(-4px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </section>
   );
 }

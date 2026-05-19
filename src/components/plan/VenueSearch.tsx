@@ -9,6 +9,8 @@ type Props = {
   venueCity: string | null;
   /** Region from the calculator — used to bias initial search results */
   region: string;
+  /** Live venue count from getSiteStats — drives the hint text */
+  totalVenueCount?: number;
   onSelect: (
     venue:
       | {
@@ -29,7 +31,7 @@ function regionLabel(slug: string | null): string {
   return slug.split("-").map((s) => (s[0] ? s[0].toUpperCase() + s.slice(1) : s)).join(" ");
 }
 
-export function VenueSearch({ venueId, venueName, venueCity, region, onSelect }: Props) {
+export function VenueSearch({ venueId, venueName, venueCity, region, totalVenueCount, onSelect }: Props) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(false);
@@ -200,7 +202,7 @@ export function VenueSearch({ venueId, venueName, venueCity, region, onSelect }:
 
       {query.trim().length < 2 && (
         <p className="mt-3 text-xs text-text-muted">
-          Type at least 2 characters to search across 639 Ontario venues.
+          Type at least 2 characters to search across {totalVenueCount ? totalVenueCount.toLocaleString() : "all"} Ontario venues.
         </p>
       )}
     </section>

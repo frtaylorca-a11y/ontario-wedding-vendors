@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Route } from "next";
+import { getSiteStats } from "@/lib/queries";
 
 const NAV_LINKS: { label: string; href: Route }[] = [
   { label: "Venues",  href: "/venues" as Route },
@@ -9,14 +10,21 @@ const NAV_LINKS: { label: string; href: Route }[] = [
   { label: "About",   href: "/about" as Route },
 ];
 
-const TRUST_ITEMS = [
-  "1,280+ venues",
-  "76 premier listings",
-  "Google-verified",
-  "Updated every 60 days",
-];
+export async function Header() {
+  const stats = await getSiteStats().catch(() => null);
 
-export function Header() {
+  const trustItems = stats
+    ? [
+        `${stats.venueCount.toLocaleString()} venues`,
+        `${stats.vendorCount.toLocaleString()} verified vendors`,
+        `${stats.premierCount} premier listings`,
+        "Updated every 60 days",
+      ]
+    : [
+        "Google-verified Ontario wedding directory",
+        "Updated every 60 days",
+      ];
+
   return (
     <>
       <header
@@ -63,7 +71,7 @@ export function Header() {
 
       <div className="bg-charcoal">
         <div className="mx-auto flex max-w-[1280px] flex-wrap items-center justify-center gap-x-2 gap-y-1 px-6 py-2 text-center">
-          {TRUST_ITEMS.map((item, i) => (
+          {trustItems.map((item, i) => (
             <span key={item} className="flex items-center gap-2">
               {i > 0 && (
                 <span aria-hidden className="text-white/35">

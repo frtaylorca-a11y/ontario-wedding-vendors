@@ -2,16 +2,20 @@ import Link from "next/link";
 import type { Route } from "next";
 import type { Metadata } from "next";
 import { BreadcrumbSchema } from "@/components/seo/SchemaInjector";
+import { getSiteStats } from "@/lib/queries";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://ontarioweddingvendors.com";
 
-export const metadata: Metadata = {
-  title: "About Ontario Wedding Vendors | Our Methodology & Operators",
-  description:
-    "How we discover and score 1,280+ Ontario wedding venues, what the Verified badge means, how often the data refreshes, and who operates the site.",
-  alternates: { canonical: "/about" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const stats = await getSiteStats().catch(() => null);
+  const venueLabel = stats ? stats.venueCount.toLocaleString() : "hundreds of";
+  return {
+    title: "About Ontario Wedding Vendors | Our Methodology & Operators",
+    description: `How we discover and score ${venueLabel} Ontario wedding venues, what the Verified badge means, how often the data refreshes, and who operates the site.`,
+    alternates: { canonical: "/about" },
+  };
+}
 
 const ORGANIZATION_SCHEMA = {
   "@context": "https://schema.org",
@@ -63,7 +67,10 @@ function Section({
   );
 }
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const stats = await getSiteStats().catch(() => null);
+  const venueLabel = stats ? stats.venueCount.toLocaleString() : "hundreds of";
+
   const breadcrumbItems = [
     { name: "Home",  url: "/" },
     { name: "About", url: "/about" },
@@ -99,7 +106,7 @@ export default function AboutPage() {
               <em className="italic text-rose">wedding venue directory</em>
             </h1>
             <p className="mt-5 text-lg leading-relaxed text-text-mid">
-              Ontario Wedding Vendors is a directory of 1,280+ wedding venues
+              Ontario Wedding Vendors is a directory of {venueLabel} wedding venues
               across the province, sourced from Google Places, individually
               reviewed for wedding-readiness, and refreshed on a 60-day cycle.
               We don&rsquo;t take editorial money to rank venues higher. Here is

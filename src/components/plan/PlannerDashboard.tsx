@@ -9,6 +9,8 @@ import {
   DEFAULT_PLAN,
   CATERING_PER_GUEST,
   cateringMidPerHead,
+  calculateBudgetWithState,
+  getActiveVendorSlots,
   getVenuePricingRange,
   normalizeCateringType,
   venueMidRange,
@@ -22,9 +24,11 @@ const SAVE_DEBOUNCE_MS = 800;
 type Props = {
   sessionId: string;
   initialPlan: Partial<PlanState> | null;
+  /** Live venue count for the venue search hint */
+  totalVenueCount?: number;
 };
 
-export function PlannerDashboard({ sessionId, initialPlan }: Props) {
+export function PlannerDashboard({ sessionId, initialPlan, totalVenueCount }: Props) {
   const [state, setState] = useState<PlanState>(() => ({
     ...DEFAULT_PLAN,
     sessionId,
@@ -143,6 +147,7 @@ export function PlannerDashboard({ sessionId, initialPlan }: Props) {
         venueCapacityMax={state.venueCapacityMax}
         venueCatering={state.venueCatering}
         budgetCategoryStates={state.budgetCategoryStates}
+        bookedVendors={state.bookedVendors}
         onChange={(patch) => setState((s) => ({ ...s, ...patch }))}
       />
 
@@ -152,6 +157,7 @@ export function PlannerDashboard({ sessionId, initialPlan }: Props) {
         venueName={state.venueName}
         venueCity={state.venueCity}
         region={state.region}
+        totalVenueCount={totalVenueCount}
         onSelect={(venue) => {
           if (venue) {
             setState((s) => {
@@ -216,8 +222,10 @@ export function PlannerDashboard({ sessionId, initialPlan }: Props) {
       {/* Step 3 — Vendor slots (only after venue) */}
       {state.venueId ? (
         <VendorSlots
-          totalBudget={state.totalBudget}
           region={state.region}
+          slots={getActiveVendorSlots(
+            calculateBudgetWithState(state.totalBudget, state.budgetCategoryStates),
+          )}
           bookedVendors={state.bookedVendors}
           onAddVendor={(category) => setAddVendorCategory(category)}
           onRemoveBooking={handleRemoveBooking}

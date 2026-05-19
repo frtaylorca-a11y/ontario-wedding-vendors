@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { listVenues } from "@/lib/queries";
+import { getSiteStats, listVenues } from "@/lib/queries";
 import { VenueCard } from "@/components/ui/VenueCard";
 import { FilterBar } from "@/components/venues/FilterBar";
 import { SortControl } from "@/components/venues/SortControl";
@@ -21,11 +21,12 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const raw = await searchParams;
   const page = Math.max(1, parseInt(first(raw.page) ?? "1", 10) || 1);
+  const stats = await getSiteStats().catch(() => null);
+  const venueLabel = stats ? stats.venueCount.toLocaleString() : "hundreds of";
 
   return {
     title: "Wedding Venues in Ontario",
-    description:
-      "Browse 1,280+ Google-verified wedding venues across Ontario. Filter by region, venue type, capacity, catering and indoor/outdoor.",
+    description: `Browse ${venueLabel} Google-verified wedding venues across Ontario. Filter by region, venue type, capacity, catering and indoor/outdoor.`,
     /* Pages 2+ shouldn't compete with the canonical filtered listing for SEO */
     robots: page > 1 ? { index: false, follow: true } : undefined,
   };

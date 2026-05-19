@@ -1,18 +1,21 @@
 import Link from "next/link";
 import type { Route } from "next";
 import type { Metadata } from "next";
-import { getVendorCountsByCategory } from "@/lib/queries";
+import { getSiteStats, getVendorCountsByCategory } from "@/lib/queries";
 import { VENDOR_CATEGORIES, type VendorCategory } from "@/types";
 import { BreadcrumbSchema } from "@/components/seo/SchemaInjector";
 import { categoryColourVars } from "@/lib/vendor-colours";
 import type { CSSProperties } from "react";
 
-export const metadata: Metadata = {
-  title: "Wedding Vendors in Ontario | Browse 12 Vendor Categories",
-  description:
-    "Browse 500+ verified Ontario wedding vendors across 12 categories — photographers, videographers, DJs, florists, planners, photo booths and more.",
-  alternates: { canonical: "/vendors" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const stats = await getSiteStats().catch(() => null);
+  const vendorLabel = stats ? stats.vendorCount.toLocaleString() : "hundreds of";
+  return {
+    title: "Wedding Vendors in Ontario | Browse 12 Vendor Categories",
+    description: `Browse ${vendorLabel} verified Ontario wedding vendors across 12 categories — photographers, videographers, DJs, florists, planners, photo booths and more.`,
+    alternates: { canonical: "/vendors" },
+  };
+}
 
 const ICON_PROPS = {
   viewBox: "0 0 24 24",

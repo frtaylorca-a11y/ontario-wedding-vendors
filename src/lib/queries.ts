@@ -1,7 +1,36 @@
+import { cache } from "react";
 import { and, asc, desc, eq, gte, ilike, ne, or, sql } from "drizzle-orm";
 import { db } from "./db";
 import { venues, vendors, vendorRelationships } from "./schema";
 import type { Venue, Vendor } from "./schema";
+
+/**
+ * Site-wide live counts for trust bars, meta descriptions, and copy.
+ * React's `cache()` dedupes within a single render pass — so Header,
+ * generateMetadata, and any page reading these all share one round trip.
+ */
+export const getSiteStats = cache(async () => {
+  const closedClause = or(eq(vendors.googleClosed, "no"), sql`${vendors.googleClosed} is null`)!;
+  const venueClosedClause = or(eq(venues.googleClosed, "no"), sql`${venues.googleClosed} is null`)!;
+
+  const [vendorRows, venueRows, premierRows] = await Promise.all([
+    db.select({ count: sql<number>`count(*)::int` }).from(vendors).where(closedClause),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(venues)
+      .where(and(gte(venues.weddingReadinessScore, 50), venueClosedClause)),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(venues)
+      .where(and(gte(venues.weddingReadinessScore, 90), venueClosedClause)),
+  ]);
+
+  return {
+    vendorCount:  vendorRows[0]?.count  ?? 0,
+    venueCount:   venueRows[0]?.count   ?? 0,
+    premierCount: premierRows[0]?.count ?? 0,
+  };
+});
 
 export type VenueListParams = {
   region?: string;
