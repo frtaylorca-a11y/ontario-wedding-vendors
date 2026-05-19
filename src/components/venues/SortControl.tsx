@@ -1,5 +1,6 @@
 "use client";
 
+import type { Route } from "next";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 
 const SORT_OPTIONS = [
@@ -19,7 +20,7 @@ export function SortControl({ current }: { current: string }) {
     if (e.target.value === "score") next.delete("sort");
     else next.set("sort", e.target.value);
     next.delete("page");
-    router.push(`${pathname}?${next.toString()}`);
+    router.push(`${pathname}?${next.toString()}` as Route);
   }
 
   return (

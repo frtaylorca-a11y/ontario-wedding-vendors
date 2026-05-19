@@ -184,8 +184,10 @@ export default async function VenuePage({ params }: { params: Params }) {
 
   const zone = getZone(venue.region);
   const inPicBoothZone = zone === "niagara-gta";
-  /* Legacy CTA — only fires when picBoothCompatible is true (currently null on all venues) */
-  const showPicBoothCTA = inPicBoothZone && venue.picBoothCompatible === true;
+  /* Show legacy contextual CTA on every venue in the Pic Booth service zone.
+   * (Previously gated on picBoothCompatible flag — removed; column was never
+   * populated and the zone check alone is the right surface.) */
+  const showPicBoothCTA = inPicBoothZone;
 
   const cityLabel = venue.city ?? "Ontario";
   const regionLbl = regionLabel(venue.region);
