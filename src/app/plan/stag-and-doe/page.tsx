@@ -52,6 +52,12 @@ export default async function StagAndDoePage() {
           >
             Stag &amp; Doe
           </Link>
+          <Link
+            href={"/plan/checklist" as Route}
+            className="inline-flex items-center rounded-pill border border-border bg-white px-5 py-2 text-sm font-medium text-text-mid transition-colors hover:border-rose hover:text-rose focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
+          >
+            Checklist
+          </Link>
         </nav>
 
         <header className="mb-10">

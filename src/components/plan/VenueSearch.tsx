@@ -9,7 +9,19 @@ type Props = {
   venueCity: string | null;
   /** Region from the calculator — used to bias initial search results */
   region: string;
-  onSelect: (venue: { id: number; name: string; city: string | null; region: string | null } | null) => void;
+  onSelect: (
+    venue:
+      | {
+          id: number;
+          name: string;
+          city: string | null;
+          region: string | null;
+          venueType: string | null;
+          capacityMax: number | null;
+          catering: string | null;
+        }
+      | null,
+  ) => void;
 };
 
 function regionLabel(slug: string | null): string {
@@ -146,7 +158,15 @@ export function VenueSearch({ venueId, venueName, venueCity, region, onSelect }:
               <button
                 type="button"
                 onClick={() => {
-                  onSelect({ id: v.id, name: v.name, city: v.city, region: v.region });
+                  onSelect({
+                    id:          v.id,
+                    name:        v.name,
+                    city:        v.city,
+                    region:      v.region,
+                    venueType:   v.venueType,
+                    capacityMax: v.capacityMax,
+                    catering:    v.catering,
+                  });
                   setIsEditing(false);
                   setQuery("");
                   setResults([]);

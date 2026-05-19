@@ -244,9 +244,13 @@ export type PlanState = {
   venueId: number | null;
   venueName: string | null;
   venueCity: string | null;
+  /** Captured at venue selection — drives venue-aware budget pricing in Step 1 */
+  venueType: string | null;
+  venueCapacityMax: number | null;
+  venueCatering: string | null;
   bookedVendors: Record<string, BookedVendor>; /* keyed by vendor category */
   /** Toggle + lock + order overrides for the 20-category budget allocation.
-   *  Persists to localStorage immediately; DB sync is a follow-up. */
+   *  Persists to localStorage immediately; DB sync via budget_category_states column. */
   budgetCategoryStates: BudgetCategoryStates;
 };
 
@@ -258,6 +262,9 @@ export const DEFAULT_PLAN: Omit<PlanState, "sessionId"> = {
   venueId: null,
   venueName: null,
   venueCity: null,
+  venueType: null,
+  venueCapacityMax: null,
+  venueCatering: null,
   bookedVendors: {},
   get budgetCategoryStates() {
     return defaultBudgetCategoryStates();
@@ -314,13 +321,78 @@ export const MIN_FLOORS: Record<VendorCategoryKey, number> = {
   miscellaneous:    200,
 };
 
+/** Top-8 essentials enabled by default — others appear in the drawer */
+export const DEFAULT_ACTIVE_KEYS: VendorCategoryKey[] = [
+  "venue_rental",
+  "catering_bar",
+  "photo_video",
+  "music_dj",
+  "flowers_decor",
+  "hair_makeup",
+  "officiant",
+  "photo_booth",
+];
+
+/** Photo Booth is "featured" — cannot be fully removed, only moved to drawer */
+export const PROTECTED_KEY: VendorCategoryKey = "photo_booth";
+
 export function defaultBudgetCategoryStates(): BudgetCategoryStates {
+  const activeSet = new Set<VendorCategoryKey>(DEFAULT_ACTIVE_KEYS);
+  /* Order: top 8 first (in spec order), then everything else (drawer pool) */
+  const order: VendorCategoryKey[] = [
+    ...DEFAULT_ACTIVE_KEYS,
+    ...BUDGET_CATEGORIES.map((c) => c.key).filter((k) => !activeSet.has(k)),
+  ];
   return {
-    order: BUDGET_CATEGORIES.map((c) => c.key),
+    order,
     toggles: Object.fromEntries(
-      BUDGET_CATEGORIES.map((c) => [c.key, { enabled: true, lockedAmount: null }]),
+      BUDGET_CATEGORIES.map((c) => [
+        c.key,
+        { enabled: activeSet.has(c.key), lockedAmount: null },
+      ]),
     ) as Record<VendorCategoryKey, BudgetCategoryToggle>,
   };
+}
+
+/* ─── Venue-aware pricing ────────────────────────────────────────────────
+ * Mid-range estimate is used to auto-lock venue_rental when a venue is
+ * selected. The user can unlock at any time. */
+
+export type VenuePricingRange = { low: number; high: number };
+
+const VENUE_PRICING_MODEL: Record<string, Record<string, VenuePricingRange>> = {
+  winery:   { niagara: { low: 6000, high: 18000 } },
+  barn:     { niagara: { low: 3500, high: 10000 } },
+  estate:   { niagara: { low: 5000, high: 16000 } },
+  hotel:    {
+    niagara: { low: 4000, high: 15000 },
+    gta:     { low: 8000, high: 30000 },
+  },
+  outdoor:  { default: { low: 2000, high: 10000 } },
+};
+
+export type CateringPricingRange = VenuePricingRange & { perGuest: true };
+
+export const CATERING_PER_GUEST: Record<string, CateringPricingRange> = {
+  "in-house": { low: 85, high: 185, perGuest: true },
+  "external": { low: 65, high: 150, perGuest: true },
+};
+
+/** Look up a venue rental range — falls back to outdoor/default for unknown combinations */
+export function getVenuePricingRange(
+  venueType: string | null | undefined,
+  region: string | null | undefined,
+): VenuePricingRange | null {
+  if (!venueType) return null;
+  const key = venueType.toLowerCase();
+  const model = VENUE_PRICING_MODEL[key];
+  if (!model) return null;
+  const r = (region ?? "").toLowerCase();
+  return model[r] ?? model["default"] ?? Object.values(model)[0] ?? null;
+}
+
+export function venueMidRange(range: VenuePricingRange): number {
+  return Math.round((range.low + range.high) / 2);
 }
 
 export type BudgetRow = {

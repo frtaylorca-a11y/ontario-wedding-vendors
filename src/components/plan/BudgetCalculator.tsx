@@ -22,16 +22,17 @@ import { CSS } from "@dnd-kit/utilities";
 import {
   BUDGET_CATEGORIES,
   PLANNER_REGIONS,
+  PROTECTED_KEY,
   calculateBudgetWithState,
   defaultBudgetCategoryStates,
+  getVenuePricingRange,
   type BudgetCategoryStates,
   type BudgetCategoryToggle,
   type BudgetRow,
   type VendorCategoryKey,
 } from "@/lib/plan-state";
 
-/* 20 brand-aligned colors — order maps to BUDGET_CATEGORIES default order;
- * the row's color stays with its key as items reorder. */
+/* 20 brand-aligned colors — same color stays with each category as it moves */
 const SEGMENT_COLORS_BY_KEY: Record<VendorCategoryKey, string> = {
   venue_rental:    "#B96476",
   catering_bar:    "#C9A96E",
@@ -68,6 +69,9 @@ type Props = {
   guestCount: number;
   region: string;
   weddingDate: string | null;
+  venueName?: string | null;
+  venueType?: string | null;
+  venueCapacityMax?: number | null;
   budgetCategoryStates?: BudgetCategoryStates;
   onChange: (next: {
     totalBudget?: number;
@@ -83,14 +87,25 @@ export function BudgetCalculator({
   guestCount,
   region,
   weddingDate,
+  venueName,
+  venueType,
+  venueCapacityMax,
   budgetCategoryStates,
   onChange,
 }: Props) {
   const states = budgetCategoryStates ?? defaultBudgetCategoryStates();
   const rows = useMemo(() => calculateBudgetWithState(totalBudget, states), [totalBudget, states]);
 
-  const enabledRows = rows.filter((r) => r.enabled);
-  const excludedRows = rows.filter((r) => !r.enabled);
+  const activeRows = rows.filter((r) => r.enabled);
+  const drawerRows = rows.filter((r) => !r.enabled);
+
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const venueRange = getVenuePricingRange(venueType, region);
+  const capacityWarning =
+    venueCapacityMax != null && guestCount > venueCapacityMax
+      ? `${venueName ?? "Your venue"} fits up to ${venueCapacityMax} guests — you have ${guestCount}.`
+      : null;
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -111,37 +126,53 @@ export function BudgetCalculator({
   function handleDragEnd(e: DragEndEvent) {
     const { active, over } = e;
     if (!over || active.id === over.id) return;
-    const enabledKeys = enabledRows.map((r) => r.key);
-    const oldIdx = enabledKeys.indexOf(active.id as VendorCategoryKey);
-    const newIdx = enabledKeys.indexOf(over.id as VendorCategoryKey);
+    const activeKeys = activeRows.map((r) => r.key);
+    const oldIdx = activeKeys.indexOf(active.id as VendorCategoryKey);
+    const newIdx = activeKeys.indexOf(over.id as VendorCategoryKey);
     if (oldIdx === -1 || newIdx === -1) return;
 
-    const reorderedEnabled = arrayMove(enabledKeys, oldIdx, newIdx);
-    const excludedKeys = excludedRows.map((r) => r.key);
-    /* Final order: enabled (user-reordered) first, then excluded (preserved) */
-    const nextOrder: VendorCategoryKey[] = [...reorderedEnabled, ...excludedKeys];
-
+    const reorderedActive = arrayMove(activeKeys, oldIdx, newIdx);
+    const drawerKeys = drawerRows.map((r) => r.key);
+    const nextOrder: VendorCategoryKey[] = [...reorderedActive, ...drawerKeys];
     onChange({ budgetCategoryStates: { ...states, order: nextOrder } });
   }
 
   return (
     <section className="rounded-card border-[1.5px] border-border bg-white p-6 lg:p-8">
       <header className="mb-6">
-        <div className="text-xs font-bold uppercase tracking-[0.14em] text-rose">
-          Step 1 · Budget
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="text-xs font-bold uppercase tracking-[0.14em] text-rose">
+            Step 1 · Budget
+          </div>
+          {venueName && venueRange && (
+            <div className="inline-flex items-center gap-1.5 rounded-pill bg-rose-pale px-3 py-1 text-[0.7rem] font-bold text-rose">
+              <svg aria-hidden viewBox="0 0 24 24" className="h-3 w-3 fill-none stroke-current" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2l2.39 4.84 5.34.78-3.87 3.77.91 5.32L12 14.27 7.23 16.7l.91-5.32L4.27 7.62l5.34-.78L12 2z" />
+              </svg>
+              Budget calibrated for {venueName}
+            </div>
+          )}
         </div>
         <h2 className="mt-2 font-display text-3xl font-semibold text-charcoal">
           Your wedding budget
         </h2>
         <p className="mt-2 text-sm text-text-mid">
-          Drag categories to set priority. Toggle off anything you&rsquo;re not
-          paying for. Click the pencil to lock a category at a specific amount.
+          The eight essentials are active by default. Drag to set priority,
+          click the pencil to lock an amount, or open the drawer to add more
+          categories.
         </p>
       </header>
 
+      {/* Capacity warning */}
+      {capacityWarning && (
+        <div className="mb-6 rounded-card border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <strong className="font-semibold">Capacity check:</strong>{" "}
+          {capacityWarning}
+        </div>
+      )}
+
       {/* Inputs row */}
       <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-        {/* Total budget slider */}
         <div className="lg:col-span-2">
           <label className="text-[0.7rem] font-bold uppercase tracking-[0.1em] text-text-muted">
             Total budget
@@ -165,7 +196,6 @@ export function BudgetCalculator({
           </div>
         </div>
 
-        {/* Guest count slider */}
         <div>
           <label className="text-[0.7rem] font-bold uppercase tracking-[0.1em] text-text-muted">
             Guest count
@@ -189,7 +219,6 @@ export function BudgetCalculator({
           </div>
         </div>
 
-        {/* Region + date stacked */}
         <div className="space-y-4">
           <div>
             <label className="text-[0.7rem] font-bold uppercase tracking-[0.1em] text-text-muted">
@@ -219,15 +248,15 @@ export function BudgetCalculator({
         </div>
       </div>
 
-      {/* Donut + interactive breakdown */}
+      {/* Donut + active list */}
       <div className="mt-8 grid gap-8 lg:grid-cols-[320px_1fr]">
-        {/* Donut — enabled categories only */}
+        {/* Donut — active categories only */}
         <div className="relative flex items-center justify-center">
           <div className="h-[280px] w-[280px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={enabledRows.filter((r) => r.amount > 0)}
+                  data={activeRows.filter((r) => r.amount > 0)}
                   dataKey="amount"
                   nameKey="label"
                   innerRadius={80}
@@ -238,7 +267,7 @@ export function BudgetCalculator({
                   label={false}
                   labelLine={false}
                 >
-                  {enabledRows.filter((r) => r.amount > 0).map((r) => (
+                  {activeRows.filter((r) => r.amount > 0).map((r) => (
                     <Cell key={r.key} fill={SEGMENT_COLORS_BY_KEY[r.key]} />
                   ))}
                 </Pie>
@@ -270,16 +299,18 @@ export function BudgetCalculator({
           </div>
         </div>
 
-        {/* Sortable list of enabled categories */}
+        {/* Active sortable list */}
         <div>
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={enabledRows.map((r) => r.key)} strategy={verticalListSortingStrategy}>
+            <SortableContext items={activeRows.map((r) => r.key)} strategy={verticalListSortingStrategy}>
               <ul className="space-y-2">
-                {enabledRows.map((row) => (
+                {activeRows.map((row) => (
                   <SortableRow
                     key={row.key}
                     row={row}
-                    onToggle={(enabled) => updateToggle(row.key, { enabled })}
+                    onMoveToDrawer={() => {
+                      updateToggle(row.key, { enabled: false });
+                    }}
                     onLock={(amount) => updateToggle(row.key, { lockedAmount: amount })}
                     onUnlock={() => updateToggle(row.key, { lockedAmount: null })}
                   />
@@ -288,35 +319,56 @@ export function BudgetCalculator({
             </SortableContext>
           </DndContext>
 
-          {/* Excluded — collapsed "Not including" section */}
-          {excludedRows.length > 0 && (
-            <div className="mt-5 rounded-card border border-dashed border-border bg-bg-soft p-4">
+          {/* Drawer toggle */}
+          <button
+            type="button"
+            onClick={() => setDrawerOpen((v) => !v)}
+            className="mt-5 inline-flex items-center gap-2 rounded-pill border border-dashed border-rose bg-white px-4 py-2 text-sm font-bold text-rose hover:bg-rose-pale focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
+            aria-expanded={drawerOpen}
+          >
+            <svg
+              aria-hidden
+              viewBox="0 0 24 24"
+              className={`h-3.5 w-3.5 fill-none stroke-current transition-transform ${drawerOpen ? "rotate-45" : ""}`}
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="12" y1="5"  x2="12" y2="19" />
+              <line x1="5"  y1="12" x2="19" y2="12" />
+            </svg>
+            {drawerOpen
+              ? `Hide categories drawer (${drawerRows.length})`
+              : `Add more categories (${drawerRows.length} available)`}
+          </button>
+
+          {/* Drawer body */}
+          {drawerOpen && (
+            <div className="mt-3 rounded-card border border-dashed border-border bg-bg-soft p-4">
               <div className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-text-muted">
-                Not including
+                Tap a category to add it to your active list
               </div>
-              <ul className="mt-2 space-y-1">
-                {excludedRows.map((row) => (
-                  <li key={row.key} className="flex items-center justify-between gap-2">
-                    <span className="truncate text-[10px] text-text-muted line-through">
-                      {row.label}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => updateToggle(row.key, { enabled: true })}
-                      className="text-[10px] font-semibold text-rose hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2 focus-visible:rounded-sm"
-                    >
-                      + Add back
-                    </button>
-                  </li>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {drawerRows.length === 0 && (
+                  <p className="text-xs text-text-muted">
+                    All categories are in your active list. Remove items to see them here.
+                  </p>
+                )}
+                {drawerRows.map((row) => (
+                  <DrawerChip
+                    key={row.key}
+                    row={row}
+                    onAdd={() => updateToggle(row.key, { enabled: true })}
+                  />
                 ))}
-              </ul>
+              </div>
             </div>
           )}
 
           <p className="mt-4 text-[0.7rem] leading-relaxed text-text-muted">
             Drag rows to set priority — higher categories get vendor suggestions
-            first in Step 3. Toggle categories off if you&rsquo;re skipping them.
-            Lock any amount to keep it fixed while you adjust the total.
+            first in Step 3. Photo Booth is featured: it can move to the drawer
+            but stays available as the #1 guest favourite at Ontario weddings.
           </p>
         </div>
       </div>
@@ -324,16 +376,16 @@ export function BudgetCalculator({
   );
 }
 
-/* ─── Sortable row ────────────────────────────────────────────────────── */
+/* ─── Sortable active row ────────────────────────────────────────────── */
 
 function SortableRow({
   row,
-  onToggle,
+  onMoveToDrawer,
   onLock,
   onUnlock,
 }: {
   row: BudgetRow;
-  onToggle: (enabled: boolean) => void;
+  onMoveToDrawer: () => void;
   onLock: (amount: number) => void;
   onUnlock: () => void;
 }) {
@@ -363,7 +415,7 @@ function SortableRow({
       style={style}
       className="group flex items-center gap-2 rounded-card border border-border-light bg-bg-soft px-3 py-2"
     >
-      {/* Drag handle — 6-dot grid, appears stronger on hover */}
+      {/* Drag handle */}
       <button
         type="button"
         aria-label={`Reorder ${row.label}`}
@@ -371,36 +423,14 @@ function SortableRow({
         {...listeners}
         className="flex h-6 w-4 flex-shrink-0 cursor-grab items-center justify-center text-text-muted opacity-40 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2 focus-visible:rounded-sm group-hover:opacity-80 active:cursor-grabbing"
       >
-        <svg
-          aria-hidden
-          viewBox="0 0 12 16"
-          className="h-4 w-3 fill-current"
-        >
-          <circle cx="3" cy="3" r="1.2" />
-          <circle cx="9" cy="3" r="1.2" />
-          <circle cx="3" cy="8" r="1.2" />
-          <circle cx="9" cy="8" r="1.2" />
+        <svg aria-hidden viewBox="0 0 12 16" className="h-4 w-3 fill-current">
+          <circle cx="3" cy="3"  r="1.2" />
+          <circle cx="9" cy="3"  r="1.2" />
+          <circle cx="3" cy="8"  r="1.2" />
+          <circle cx="9" cy="8"  r="1.2" />
           <circle cx="3" cy="13" r="1.2" />
           <circle cx="9" cy="13" r="1.2" />
         </svg>
-      </button>
-
-      {/* Toggle — rose when ON, grey when OFF */}
-      <button
-        type="button"
-        role="switch"
-        aria-checked={row.enabled}
-        aria-label={`${row.enabled ? "Disable" : "Enable"} ${row.label}`}
-        onClick={() => onToggle(!row.enabled)}
-        className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2 ${
-          row.enabled ? "bg-rose" : "bg-gray-300"
-        }`}
-      >
-        <span
-          className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
-            row.enabled ? "translate-x-[18px]" : "translate-x-[2px]"
-          }`}
-        />
       </button>
 
       {/* Color swatch */}
@@ -420,7 +450,7 @@ function SortableRow({
         )}
       </div>
 
-      {/* Amount — view / edit / locked */}
+      {/* Amount — view or edit */}
       {editing ? (
         <input
           type="text"
@@ -447,28 +477,14 @@ function SortableRow({
           aria-label={`Edit amount for ${row.label}`}
         >
           {row.locked && (
-            <svg
-              aria-hidden
-              viewBox="0 0 24 24"
-              className="h-3 w-3 fill-none stroke-rose"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
+            <svg aria-hidden viewBox="0 0 24 24" className="h-3 w-3 fill-none stroke-rose" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="5" y="11" width="14" height="9" rx="2" />
               <path d="M8 11V7a4 4 0 0 1 8 0v4" />
             </svg>
           )}
           <span>{formatMoney(row.amount)}</span>
           {!row.locked && (
-            <svg
-              aria-hidden
-              viewBox="0 0 24 24"
-              className="h-3 w-3 fill-none stroke-text-muted opacity-0 transition-opacity group-hover:opacity-100"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
+            <svg aria-hidden viewBox="0 0 24 24" className="h-3 w-3 fill-none stroke-text-muted opacity-0 transition-opacity group-hover:opacity-100" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 20h9" />
               <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
             </svg>
@@ -476,7 +492,6 @@ function SortableRow({
         </button>
       )}
 
-      {/* Unlock button — only when locked */}
       {row.locked && !editing && (
         <button
           type="button"
@@ -488,10 +503,63 @@ function SortableRow({
         </button>
       )}
 
-      {/* Percent pill */}
       <span className="rounded-pill bg-white px-2 py-0.5 text-[0.65rem] font-bold text-text-mid">
         {(row.pct * 100).toFixed(0)}%
       </span>
+
+      {/* Move to drawer */}
+      <button
+        type="button"
+        onClick={onMoveToDrawer}
+        aria-label={`Move ${row.label} to drawer`}
+        title="Move to drawer"
+        className="ml-1 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-text-muted opacity-0 transition-opacity hover:bg-white hover:text-rose focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2 group-hover:opacity-100"
+      >
+        <svg aria-hidden viewBox="0 0 24 24" className="h-3 w-3 fill-none stroke-current" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="18" y1="6"  x2="6"  y2="18" />
+          <line x1="6"  y1="6"  x2="18" y2="18" />
+        </svg>
+      </button>
     </li>
+  );
+}
+
+/* ─── Drawer chip ────────────────────────────────────────────────────── */
+
+function DrawerChip({
+  row,
+  onAdd,
+}: {
+  row: BudgetRow;
+  onAdd: () => void;
+}) {
+  const isFeatured = row.key === PROTECTED_KEY;
+
+  return (
+    <button
+      type="button"
+      onClick={onAdd}
+      title={
+        isFeatured
+          ? "Photo booths are the #1 guest favourite at Ontario weddings"
+          : `Add ${row.label} to your active list`
+      }
+      className={`group inline-flex items-center gap-2 rounded-pill bg-white px-3 py-1.5 text-xs font-medium text-charcoal transition-all hover:-translate-y-0.5 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2 ${
+        isFeatured ? "border-[1.5px] border-rose" : "border border-border"
+      }`}
+    >
+      <span
+        className="h-2 w-2 rounded-sm"
+        style={{ background: SEGMENT_COLORS_BY_KEY[row.key] }}
+        aria-hidden
+      />
+      <span>{row.label}</span>
+      {isFeatured && (
+        <span className="rounded-pill bg-rose px-1.5 py-0.5 text-[0.6rem] font-bold uppercase tracking-[0.06em] text-white">
+          Featured
+        </span>
+      )}
+      <span className="text-rose opacity-60 transition-opacity group-hover:opacity-100" aria-hidden>+</span>
+    </button>
   );
 }

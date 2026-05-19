@@ -5,7 +5,13 @@ import { BudgetCalculator } from "./BudgetCalculator";
 import { VenueSearch } from "./VenueSearch";
 import { VendorSlots } from "./VendorSlots";
 import { AddVendorSlideOver } from "./AddVendorSlideOver";
-import { DEFAULT_PLAN, type PlanState, type BookedVendor } from "@/lib/plan-state";
+import {
+  DEFAULT_PLAN,
+  getVenuePricingRange,
+  venueMidRange,
+  type PlanState,
+  type BookedVendor,
+} from "@/lib/plan-state";
 
 const LOCAL_STORAGE_KEY = "owv_plan_state_v1";
 const SAVE_DEBOUNCE_MS = 800;
@@ -75,12 +81,13 @@ export function PlannerDashboard({ sessionId, initialPlan }: Props) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            totalBudget:   state.totalBudget,
-            guestCount:    state.guestCount,
-            region:        state.region,
-            weddingDate:   state.weddingDate,
-            venueId:       state.venueId,
-            bookedVendors: state.bookedVendors,
+            totalBudget:          state.totalBudget,
+            guestCount:           state.guestCount,
+            region:               state.region,
+            weddingDate:          state.weddingDate,
+            venueId:              state.venueId,
+            bookedVendors:        state.bookedVendors,
+            budgetCategoryStates: state.budgetCategoryStates,
           }),
         });
         setSaveStatus(res.ok ? "saved" : "error");
@@ -128,6 +135,9 @@ export function PlannerDashboard({ sessionId, initialPlan }: Props) {
         guestCount={state.guestCount}
         region={state.region}
         weddingDate={state.weddingDate}
+        venueName={state.venueName}
+        venueType={state.venueType}
+        venueCapacityMax={state.venueCapacityMax}
         budgetCategoryStates={state.budgetCategoryStates}
         onChange={(patch) => setState((s) => ({ ...s, ...patch }))}
       />
@@ -140,15 +150,48 @@ export function PlannerDashboard({ sessionId, initialPlan }: Props) {
         region={state.region}
         onSelect={(venue) => {
           if (venue) {
+            setState((s) => {
+              const nextRegion = venue.region ?? s.region;
+              /* Auto-lock venue_rental to mid-range of the venue type pricing
+               * model. User can unlock at any time. Skip if already locked. */
+              const range = getVenuePricingRange(venue.venueType, nextRegion);
+              const venueToggle = s.budgetCategoryStates.toggles.venue_rental;
+              const shouldAutoLock = range && venueToggle.lockedAmount == null;
+              const nextStates = shouldAutoLock
+                ? {
+                    ...s.budgetCategoryStates,
+                    toggles: {
+                      ...s.budgetCategoryStates.toggles,
+                      venue_rental: {
+                        ...venueToggle,
+                        enabled: true,
+                        lockedAmount: venueMidRange(range),
+                      },
+                    },
+                  }
+                : s.budgetCategoryStates;
+              return {
+                ...s,
+                venueId:           venue.id,
+                venueName:         venue.name,
+                venueCity:         venue.city,
+                venueType:         venue.venueType,
+                venueCapacityMax:  venue.capacityMax,
+                venueCatering:     venue.catering,
+                region:            nextRegion,
+                budgetCategoryStates: nextStates,
+              };
+            });
+          } else {
             setState((s) => ({
               ...s,
-              venueId:   venue.id,
-              venueName: venue.name,
-              venueCity: venue.city,
-              region:    venue.region ?? s.region,
+              venueId: null,
+              venueName: null,
+              venueCity: null,
+              venueType: null,
+              venueCapacityMax: null,
+              venueCatering: null,
             }));
-          } else {
-            setState((s) => ({ ...s, venueId: null, venueName: null, venueCity: null }));
           }
         }}
       />

@@ -3,10 +3,10 @@ import type { Route } from "next";
 import type { Metadata } from "next";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { weddingPlans } from "@/lib/schema";
+import { venues, weddingPlans } from "@/lib/schema";
 import { readPlanSessionId } from "@/lib/session";
 import { PlannerDashboard } from "@/components/plan/PlannerDashboard";
-import type { PlanState } from "@/lib/plan-state";
+import type { BudgetCategoryStates, PlanState } from "@/lib/plan-state";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +39,31 @@ export default async function PlanPage() {
         weddingDate: row.weddingDate ?? null,
         venueId:     row.venueId ?? null,
         bookedVendors: (row.bookedVendors as PlanState["bookedVendors"]) ?? {},
+        budgetCategoryStates:
+          (row.budgetCategoryStates as BudgetCategoryStates | null) ?? undefined,
       };
+
+      /* Pull venue metadata for venue-aware pricing in the calculator */
+      if (row.venueId != null) {
+        const [v] = await db
+          .select({
+            name:        venues.name,
+            city:        venues.city,
+            venueType:   venues.venueType,
+            capacityMax: venues.capacityMax,
+            catering:    venues.catering,
+          })
+          .from(venues)
+          .where(eq(venues.id, row.venueId))
+          .limit(1);
+        if (v) {
+          initialPlan.venueName        = v.name ?? null;
+          initialPlan.venueCity        = v.city ?? null;
+          initialPlan.venueType        = v.venueType ?? null;
+          initialPlan.venueCapacityMax = v.capacityMax ?? null;
+          initialPlan.venueCatering    = v.catering ?? null;
+        }
+      }
     }
   } catch (err) {
     console.error("[/plan] failed to load existing plan", err);
@@ -62,6 +86,12 @@ export default async function PlanPage() {
             className="inline-flex items-center rounded-pill border border-border bg-white px-5 py-2 text-sm font-medium text-text-mid transition-colors hover:border-rose hover:text-rose focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
           >
             Stag &amp; Doe
+          </Link>
+          <Link
+            href={"/plan/checklist" as Route}
+            className="inline-flex items-center rounded-pill border border-border bg-white px-5 py-2 text-sm font-medium text-text-mid transition-colors hover:border-rose hover:text-rose focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
+          >
+            Checklist
             <span className="ml-2 rounded-pill bg-amber-100 px-1.5 py-0.5 text-[0.6rem] font-bold uppercase tracking-[0.08em] text-amber-700">
               New
             </span>

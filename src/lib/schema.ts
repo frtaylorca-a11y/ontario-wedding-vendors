@@ -206,6 +206,8 @@ export const weddingPlans = pgTable(
     bookedVendors:      jsonb("booked_vendors"),
     suggestedVendors:   jsonb("suggested_vendors"),
     stagAndDoe:         jsonb("stag_and_doe"),
+    budgetCategoryStates: jsonb("budget_category_states"),
+    checklistTasks:     jsonb("checklist_tasks"),
     notes:              text("notes"),
     createdAt:          timestamp("created_at").defaultNow(),
     updatedAt:          timestamp("updated_at").defaultNow(),
