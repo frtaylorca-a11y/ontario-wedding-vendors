@@ -93,6 +93,35 @@ function normalizeVenueTypeKey(venueType: string | null | undefined): string | n
  * Return the estimated capacity range for a venue type. Always returns a
  * range — callers should only show it when actual capacity is unknown.
  */
+/**
+ * Resolve a vendor's hero image URL via the photo pipeline priority:
+ *   1. hero_image_custom (R2 URL, permanent, Stage 2 + AI-validated) — best
+ *   2. hero_image (Google photo_reference, Stage 1 bootstrap) — fallback
+ *   3. null → caller renders the category colour gradient
+ *
+ * The Google variant exposes the API key in the URL by design — Google's
+ * photo endpoint requires it and protects against abuse via referrer
+ * restrictions on the key. Set GOOGLE_PLACES_API_KEY in env.
+ */
+export function vendorHeroImageUrl(vendor: {
+  heroImage?: string | null;
+  heroImageCustom?: string | null;
+}, opts?: { maxwidth?: number }): string | null {
+  if (vendor.heroImageCustom) return vendor.heroImageCustom;
+  if (vendor.heroImage) {
+    const key = process.env.GOOGLE_PLACES_API_KEY ?? process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
+    if (!key) return null;
+    const w = opts?.maxwidth ?? 600;
+    return (
+      `https://maps.googleapis.com/maps/api/place/photo` +
+      `?maxwidth=${w}` +
+      `&photo_reference=${encodeURIComponent(vendor.heroImage)}` +
+      `&key=${key}`
+    );
+  }
+  return null;
+}
+
 export function getEstimatedCapacity(
   venueType: string | null | undefined,
 ): { min: number; max: number; label: string } {

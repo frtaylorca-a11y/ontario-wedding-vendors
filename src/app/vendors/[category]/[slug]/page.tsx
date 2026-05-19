@@ -8,7 +8,7 @@ import {
   getSimilarVendors,
   getVenuesRecommendingVendor,
 } from "@/lib/queries";
-import { getGoogleReviews } from "@/lib/google-reviews";
+import { getGoogleReviews, getGoogleVendorPhotos } from "@/lib/google-reviews";
 import { VENDOR_CATEGORIES, type VendorCategory } from "@/types";
 import { GoogleReviews } from "@/components/ui/GoogleReviews";
 import { VendorCard } from "@/components/ui/VendorCard";
@@ -122,8 +122,9 @@ export default async function VendorPage({ params }: { params: Params }) {
   const heroImage = CATEGORY_HERO_IMAGE[category];
   const cityRegion = [vendor.city, regionLabel(vendor.region)].filter(Boolean).join(" · ");
 
-  const [reviews, similar, recommendingVenues] = await Promise.all([
+  const [reviews, googlePhotos, similar, recommendingVenues] = await Promise.all([
     getGoogleReviews(vendor.placeId),
+    getGoogleVendorPhotos(vendor.placeId, 4),
     getSimilarVendors({
       category: vendor.category,
       region: vendor.region,
@@ -198,6 +199,44 @@ export default async function VendorPage({ params }: { params: Params }) {
           >
             <span aria-hidden>←</span> All Ontario {plural.toLowerCase()}
           </Link>
+
+          {/* Google Places photos strip — horizontal scroll, up to 4 thumbnails */}
+          {googlePhotos.length > 0 && (
+            <section className="mb-8" aria-label="Photos">
+              <div className="mb-3 flex items-baseline justify-between gap-3">
+                <h2 className="font-display text-lg font-semibold text-charcoal">
+                  Photos
+                </h2>
+                <span className="text-[0.7rem] text-text-muted">
+                  Powered by Google
+                </span>
+              </div>
+              <div className="flex gap-3 overflow-x-auto pb-2 [-webkit-overflow-scrolling:touch]">
+                {googlePhotos.map((photo, i) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={i}
+                    src={photo.url}
+                    alt=""
+                    loading="lazy"
+                    className="h-44 w-72 flex-shrink-0 rounded-card border border-border-light bg-bg-soft object-cover"
+                  />
+                ))}
+              </div>
+              {googlePhotos.some((p) => p.attributions.length > 0) && (
+                <p
+                  className="mt-1 text-[0.6rem] text-text-muted"
+                  // eslint-disable-next-line react/no-danger
+                  dangerouslySetInnerHTML={{
+                    __html: googlePhotos
+                      .flatMap((p) => p.attributions)
+                      .filter((a, idx, arr) => arr.indexOf(a) === idx)
+                      .join(" · "),
+                  }}
+                />
+              )}
+            </section>
+          )}
 
           <div className="grid gap-10 lg:grid-cols-3 lg:gap-12">
             {/* Main column */}
