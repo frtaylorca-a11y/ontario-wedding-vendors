@@ -22,17 +22,22 @@ export type WeddingTheme =
   | "garden"
   | "coastal"
   | "boho"
-  | "luxe";
+  | "luxe"
+  | "terracotta"
+  | "frosted";
 
-export const WEDDING_THEMES: { id: WeddingTheme; label: string; description: string }[] = [
-  { id: "romantic", label: "Romantic", description: "Dusty rose + blush, Cormorant italic display." },
-  { id: "classic",  label: "Classic",  description: "Navy + ivory, formal Cormorant and Inter." },
-  { id: "rustic",   label: "Rustic",   description: "Burgundy + cream, Playfair Display with Lato." },
-  { id: "modern",   label: "Modern",   description: "Pure black on white, bold Inter throughout." },
-  { id: "garden",   label: "Garden",   description: "Sage green + mint, Cormorant with airy Nunito." },
-  { id: "coastal",  label: "Coastal",  description: "Ocean blue + seafoam, Inter with friendly Nunito." },
-  { id: "boho",     label: "Boho",     description: "Terracotta + warm sand, expressive Fraunces serif." },
-  { id: "luxe",     label: "Luxe",     description: "Deep gold on charcoal — the dark theme, Cormorant + Inter." },
+export const WEDDING_THEMES: { id: WeddingTheme; label: string; description: string; isLayoutVariant?: boolean }[] = [
+  { id: "romantic",   label: "Romantic",      description: "Dusty rose + blush, Cormorant italic display." },
+  { id: "classic",    label: "Classic",       description: "Navy + ivory, formal Cormorant and Inter." },
+  { id: "rustic",     label: "Rustic",        description: "Burgundy + cream, Playfair Display with Lato." },
+  { id: "modern",     label: "Modern",        description: "Pure black on white, bold Inter throughout." },
+  { id: "garden",     label: "Garden",        description: "Sage green + mint, Cormorant with airy Nunito." },
+  { id: "coastal",    label: "Coastal",       description: "Ocean blue + seafoam, Inter with friendly Nunito." },
+  { id: "boho",       label: "Boho",          description: "Terracotta + warm sand, expressive Fraunces serif." },
+  { id: "luxe",       label: "Luxe",          description: "Deep gold on charcoal — the dark theme." },
+  /* — Distinct layout variants (own component, not just token swap) — */
+  { id: "terracotta", label: "Terracotta",    description: "Full-bleed weekend invite, terracotta colour bands, editorial 'Love Story' panel.", isLayoutVariant: true },
+  { id: "frosted",    label: "Frosted Glass", description: "Golden-hour photo hero with a frosted glass card + polaroid overlay.",               isLayoutVariant: true },
 ];
 
 /* ── Per-section visibility config ────────────────────────────────── */

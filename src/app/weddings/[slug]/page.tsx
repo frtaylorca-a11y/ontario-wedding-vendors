@@ -24,6 +24,9 @@ import { HeroBlock } from "@/components/weddings/HeroBlock";
 import { BotanicalDivider } from "@/components/weddings/BotanicalDivider";
 import { ScrollFadeIn } from "@/components/weddings/ScrollFadeIn";
 import { EventBand } from "@/components/weddings/EventBand";
+import { TerracottaLayout } from "@/components/weddings/layouts/TerracottaLayout";
+import { FrostedGlassLayout } from "@/components/weddings/layouts/FrostedGlassLayout";
+import type { CreditVendor, WeddingLayoutProps } from "@/components/weddings/layouts/types";
 
 export const dynamic = "force-dynamic";
 
@@ -202,7 +205,6 @@ export default async function WeddingSitePage({ params }: { params: Params }) {
   const bookedList = Object.values(booked).filter((b) => b && b.name);
 
   /* Hydrate vendor credits */
-  type CreditVendor = { name: string; category: string; slug: string | null; website: string | null };
   let credits: CreditVendor[] = [];
   if (config.vendorCredits && (plan.weddingSiteShowVendors ?? true) && bookedList.length > 0) {
     const ids = bookedList
@@ -276,6 +278,24 @@ export default async function WeddingSitePage({ params }: { params: Params }) {
     if (lc.includes("brunch") || lc.includes("breakfast") || lc.includes("lunch")) return "fork";
     if (lc.includes("dinner") || lc.includes("welcome") || lc.includes("cocktail")) return "champagne";
     return "rings";
+  }
+
+  /* Build the payload once — all layout components consume this shape. */
+  const layoutProps: WeddingLayoutProps = {
+    plan, venue, config, credits, coupleLabel,
+    weddingDateUpper, weddingDateLong, venueLine, generated,
+    party, registry, things, extraEvents, gallery, faqItems, storyPhoto,
+    siteUrl: SITE_URL,
+  };
+
+  /* Dispatch to the matching layout for distinct theme variants. The
+   * remaining 8 colour-only themes fall through to the default layout
+   * rendered inline below. */
+  switch (plan.weddingTheme) {
+    case "terracotta":
+      return <TerracottaLayout {...layoutProps} />;
+    case "frosted":
+      return <FrostedGlassLayout {...layoutProps} />;
   }
 
   return (

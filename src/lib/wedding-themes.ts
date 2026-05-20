@@ -189,15 +189,55 @@ const LUXE: ThemeTokens = {
   isDark:        true,
 };
 
+/* ── 9. Terracotta — Editorial weekend invite (layout variant) ───── */
+const TERRACOTTA: ThemeTokens = {
+  pageBg:        "#FAF6F1",
+  surface:       "#FFFFFF",
+  surfaceAlt:    "#F5EDE3",
+  border:        "#E0CFB4",
+  ink:           "#2C1810",
+  inkMuted:      "#6B5240",
+  accent:        "#C4632A",
+  accentInk:     "#FAF6F1",
+  accentSoft:    "#EAC9A8",
+  fontDisplay:   "var(--font-display), 'Cormorant Garamond', Georgia, serif",
+  fontBody:      "var(--font-body), 'Inter', system-ui, sans-serif",
+  displayItalic: "italic",
+  fontDisplayLabel: "Cormorant Garamond",
+  fontBodyLabel:    "Inter",
+  isDark:        false,
+};
+
+/* ── 10. Frosted Glass — Golden hour + blurred glass card (variant) ─ */
+const FROSTED: ThemeTokens = {
+  pageBg:        "#FBF7EE",
+  surface:       "#FFFFFF",
+  surfaceAlt:    "#F0EAD8",
+  border:        "#D6CFB6",
+  ink:           "#3D4A2E",
+  inkMuted:      "#5F6C4F",
+  accent:        "#7C9A7E",
+  accentInk:     "#FBF7EE",
+  accentSoft:    "#D4DCC4",
+  fontDisplay:   "var(--font-display), 'Cormorant Garamond', Georgia, serif",
+  fontBody:      "var(--font-nunito), 'Nunito', system-ui, sans-serif",
+  displayItalic: "italic",
+  fontDisplayLabel: "Cormorant Garamond",
+  fontBodyLabel:    "Nunito",
+  isDark:        false,
+};
+
 const THEME_TABLE: Record<WeddingTheme, ThemeTokens> = {
-  classic:  CLASSIC,
-  romantic: ROMANTIC,
-  rustic:   RUSTIC,
-  modern:   MODERN,
-  garden:   GARDEN,
-  coastal:  COASTAL,
-  boho:     BOHO,
-  luxe:     LUXE,
+  classic:    CLASSIC,
+  romantic:   ROMANTIC,
+  rustic:     RUSTIC,
+  modern:     MODERN,
+  garden:     GARDEN,
+  coastal:    COASTAL,
+  boho:       BOHO,
+  luxe:       LUXE,
+  terracotta: TERRACOTTA,
+  frosted:    FROSTED,
 };
 
 export function getThemeTokens(theme: WeddingTheme | string | null | undefined): ThemeTokens {
