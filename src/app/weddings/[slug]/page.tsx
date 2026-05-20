@@ -313,13 +313,17 @@ export default async function WeddingSitePage({ params }: { params: Params }) {
 
   /* Dispatch to the matching layout for distinct theme variants. The
    * remaining 8 colour-only themes fall through to the default layout
-   * rendered inline below. Premium variants are gated server-side —
-   * a free user whose theme was set on a previous premium subscription
-   * still gets the colour-only fallback. */
-  const isPremium = plan.tier === "premium";
-  if (isPremium && plan.weddingTheme === "terracotta") {
+   * rendered inline below.
+   *
+   * Tier gating: the site is currently free & open, so layout
+   * variants ship unconditionally. A future commit can wrap this
+   * branch in a `plan.tier === 'premium'` check once the paywall
+   * layer lands — until then, free couples get the real layout
+   * matching the screenshot they picked in the wizard. */
+  if (plan.weddingTheme === "terracotta") {
     return <TerracottaLayout {...layoutProps} />;
   }
+  const isPremium = plan.tier === "premium";
   if (isPremium && plan.weddingTheme === "frosted") {
     return <FrostedGlassLayout {...layoutProps} />;
   }

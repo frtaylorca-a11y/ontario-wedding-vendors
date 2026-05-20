@@ -189,17 +189,22 @@ const LUXE: ThemeTokens = {
   isDark:        true,
 };
 
-/* ── 9. Terracotta — Editorial weekend invite (layout variant) ───── */
+/* ── 9. Terracotta — Earthy, warm, rustic (layout variant) ───────
+ * Adobe walls, dried botanicals, golden hour. Not orange — warm
+ * terracotta clay with cream + sage accents. Tokens land here so
+ * the picker preview, custom typography, and the BotanicalDivider
+ * (which reads var(--wt-accent)) all stay consistent with the
+ * dedicated TerracottaLayout component. */
 const TERRACOTTA: ThemeTokens = {
-  pageBg:        "#FAF6F1",
+  pageBg:        "#FAF6F0",   /* warm cream */
   surface:       "#FFFFFF",
-  surfaceAlt:    "#F5EDE3",
-  border:        "#E0CFB4",
-  ink:           "#2C1810",
-  inkMuted:      "#6B5240",
-  accent:        "#C4632A",
-  accentInk:     "#FAF6F1",
-  accentSoft:    "#EAC9A8",
+  surfaceAlt:    "#F2EBE0",   /* soft linen */
+  border:        "#E8DDD0",   /* linen border */
+  ink:           "#3D2B1F",   /* dark espresso */
+  inkMuted:      "#7A6355",   /* warm grey-brown */
+  accent:        "#C17A56",   /* terracotta clay */
+  accentInk:     "#FAF6F0",
+  accentSoft:    "#E8C8B0",   /* lighter wash of terracotta */
   fontDisplay:   "var(--font-display), 'Cormorant Garamond', Georgia, serif",
   fontBody:      "var(--font-body), 'Inter', system-ui, sans-serif",
   displayItalic: "italic",
