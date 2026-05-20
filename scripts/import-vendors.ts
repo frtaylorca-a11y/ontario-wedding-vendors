@@ -56,6 +56,43 @@ function normalizeCategoryName(c: string | null | undefined): string {
   return CATEGORY_NORMALIZE[c] ?? c;
 }
 
+/**
+ * Derive a usable region from the city when the scraper's region field is
+ * missing, null-ish, or set to the catch-all "southwestern" bucket. Without
+ * this, ~30% of vendors end up tagged "southwestern" regardless of where
+ * they actually operate, which breaks region filters in the directory.
+ *
+ * Trust the upstream value when it's already a real region — only override
+ * "southwestern" / "None" / "" / null. Default to "gta" if nothing matches,
+ * since the directory is Ontario-wide and unknown-Ontario is closer to
+ * Toronto than to anywhere else by volume.
+ */
+function normalizeRegion(
+  region: string | null | undefined,
+  city:   string | null | undefined,
+): string {
+  const r = (region ?? "").trim();
+  if (r && r !== "southwestern" && r !== "None") return r;
+
+  const c = (city ?? "").toLowerCase();
+  if (c.includes("toronto") || c.includes("mississauga") ||
+      c.includes("brampton") || c.includes("vaughan") ||
+      c.includes("markham") || c.includes("oakville") ||
+      c.includes("scarborough") || c.includes("etobicoke")) return "gta";
+  if (c.includes("hamilton") || c.includes("burlington")) return "hamilton";
+  if (c.includes("niagara") || c.includes("st. catharines") ||
+      c.includes("welland") || c.includes("grimsby")) return "niagara";
+  if (c.includes("huntsville") || c.includes("bracebridge") ||
+      c.includes("gravenhurst") || c.includes("muskoka")) return "muskoka";
+  if (c.includes("kitchener") || c.includes("waterloo") ||
+      c.includes("guelph") || c.includes("cambridge")) return "waterloo";
+  if (c.includes("kingston") || c.includes("ottawa") ||
+      c.includes("peterborough") || c.includes("belleville")) return "eastern";
+  if (c.includes("picton") || c.includes("prince edward")) return "pec";
+
+  return r || "gta";
+}
+
 /* Raw row shape coming out of the scraper JSON */
 type ScrapedVendor = {
   place_id?: string | null;
@@ -156,7 +193,7 @@ function toRow(raw: ScrapedVendor): NewVendor | null {
     address:               cleanString(raw.address),
     city:                  cleanString(raw.city),
     province:              raw.province ?? "ON",
-    region:                cleanString(raw.region),
+    region:                normalizeRegion(cleanString(raw.region), cleanString(raw.city)),
     phone:                 cleanString(raw.phone),
     website:               cleanString(raw.website),
     email:                 cleanString(raw.email),
