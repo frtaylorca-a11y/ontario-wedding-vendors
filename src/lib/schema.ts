@@ -157,6 +157,16 @@ export const vendors = pgTable(
     source: varchar("source", { length: 100 }),
     /* Wedding-readiness signal for vendors discovered through referrals + reviews */
     vendorReadinessScore: integer("vendor_readiness_score"),
+    /* Bio enrichment — populated by scripts/enrich-vendor-bios.ts via
+     * Claude Vision over the vendor's own website. description column
+     * (already present above) gets overwritten with the AI-extracted
+     * 2-3-sentence narrative; these supplemental fields are stored
+     * alongside. bio_enriched_at gates re-enrichment. */
+    ownerName:        varchar("owner_name",       { length: 100 }),
+    yearsInBusiness:  integer("years_in_business"),
+    specialties:      jsonb("specialties"),
+    serviceAreas:     jsonb("service_areas"),
+    bioEnrichedAt:    timestamp("bio_enriched_at"),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
