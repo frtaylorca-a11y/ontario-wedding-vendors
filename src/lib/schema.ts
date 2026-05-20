@@ -347,6 +347,42 @@ export const vendorPricingData = pgTable(
 export type VendorPricingDataRow = typeof vendorPricingData.$inferSelect;
 export type NewVendorPricingDataRow = typeof vendorPricingData.$inferInsert;
 
+/**
+ * Inbound claim submissions from /claim-listing. Stored verbatim; an
+ * operator reviews and either links to vendors/venues by id (status →
+ * "verified") or marks "rejected".
+ */
+export const vendorClaims = pgTable(
+  "vendor_claims",
+  {
+    id:               serial("id").primaryKey(),
+    listingType:      varchar("listing_type",   { length: 20  }).notNull(), /* 'venue'|'vendor' */
+    category:         varchar("category",       { length: 50  }),           /* vendor category slug */
+    businessName:     varchar("business_name",  { length: 255 }).notNull(),
+    businessUrl:      varchar("business_url",   { length: 500 }),
+    vendorId:         integer("vendor_id"),  /* set by admin once verified */
+    venueId:          integer("venue_id"),   /* set by admin once verified */
+    claimantName:     varchar("claimant_name",  { length: 120 }).notNull(),
+    claimantEmail:    varchar("claimant_email", { length: 255 }).notNull(),
+    claimantPhone:    varchar("claimant_phone", { length: 50  }),
+    claimantRole:     varchar("claimant_role",  { length: 120 }),
+    message:          text("message"),
+    status:           varchar("status",         { length: 20  }).notNull().default("pending"),
+                                                                /* pending|verified|rejected */
+    ipAddress:        varchar("ip_address",     { length: 45  }),
+    userAgent:        text("user_agent"),
+    createdAt:        timestamp("created_at").defaultNow(),
+    updatedAt:        timestamp("updated_at").defaultNow(),
+  },
+  (t) => ({
+    statusIdx: index("vendor_claims_status_idx").on(t.status, t.createdAt),
+    emailIdx:  index("vendor_claims_email_idx").on(t.claimantEmail),
+  }),
+);
+
+export type VendorClaim = typeof vendorClaims.$inferSelect;
+export type NewVendorClaim = typeof vendorClaims.$inferInsert;
+
 export type Venue = typeof venues.$inferSelect;
 export type NewVenue = typeof venues.$inferInsert;
 export type Vendor = typeof vendors.$inferSelect;

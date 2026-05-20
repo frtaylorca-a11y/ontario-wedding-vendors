@@ -390,6 +390,26 @@ export default async function VendorPage({ params }: { params: Params }) {
                   )}
                 </dl>
               </div>
+
+              {/* Claim this listing — only when not yet claimed */}
+              {!vendor.claimed && (
+                <div className="mt-6 rounded-card border border-rose bg-rose-pale p-5">
+                  <h3 className="font-display text-lg font-semibold text-charcoal">
+                    Is this your business?
+                  </h3>
+                  <p className="mt-1 text-sm text-text-mid">
+                    Claim your free listing to manage your profile and receive
+                    quote requests from couples.
+                  </p>
+                  <Link
+                    href={`/claim-listing?business=${encodeURIComponent(vendor.name)}` as Route}
+                    className="mt-3 inline-flex items-center gap-1.5 rounded-pill bg-rose px-4 py-2 text-xs font-bold text-white shadow-[0_4px_14px_rgba(185,100,118,0.3)] transition-all hover:bg-rose-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
+                  >
+                    Claim this listing
+                    <span aria-hidden>→</span>
+                  </Link>
+                </div>
+              )}
             </aside>
           </div>
         </div>
