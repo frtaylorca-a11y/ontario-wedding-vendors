@@ -245,6 +245,14 @@ export const weddingPlans = pgTable(
     alertChannel:       varchar("alert_channel", { length: 10 }),
     /* Attribution / session capture — written once on INSERT, never updated.
      * Drives marketing analytics + first-visit cohort reporting. */
+    /* Wedding-website routing — subdomain on the regional apex domain.
+     *   {wedding_site_slug}.{wedding_site_regional_domain}
+     * e.g. "smith-and-jones.niagaraweddingvenues.com". Middleware in
+     * src/middleware.ts rewrites these to /wedding/[slug] internally. */
+    brideName:                  varchar("bride_name",                    { length: 100 }),
+    groomName:                  varchar("groom_name",                    { length: 100 }),
+    weddingSiteSlug:            varchar("wedding_site_slug",             { length: 60 }),
+    weddingSiteRegionalDomain:  varchar("wedding_site_regional_domain",  { length: 100 }),
     ipAddress:          varchar("ip_address",   { length: 45 }),
     userAgent:          text("user_agent"),
     referrer:           varchar("referrer",     { length: 500 }),

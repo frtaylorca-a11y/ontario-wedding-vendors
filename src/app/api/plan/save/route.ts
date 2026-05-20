@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { weddingPlans } from "@/lib/schema";
+import { venues, weddingPlans } from "@/lib/schema";
 import { readPlanSessionId } from "@/lib/session";
+import { buildWeddingSiteSlug, regionalDomainForVenue } from "@/lib/wedding-site";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,8 @@ const planSchema = z.object({
   region:         z.string().max(100).optional(),
   weddingDate:    z.string().nullable().optional(),
   venueId:        z.number().int().nullable().optional(),
+  brideName:      z.string().max(100).nullable().optional(),
+  groomName:      z.string().max(100).nullable().optional(),
   bookedVendors:  z.record(z.string(), bookedVendorSchema).optional(),
   savedVendors:   z.record(z.string(), z.array(z.string().max(255))).optional(),
   stagAndDoe:     z.unknown().optional(), /* validated client-side; arbitrary JSONB persisted */
@@ -73,6 +76,8 @@ export async function POST(request: Request) {
   if (data.region        !== undefined) { updateSet.region        = data.region;        insertValues.region        = data.region;        }
   if (data.weddingDate   !== undefined) { updateSet.weddingDate   = data.weddingDate;   insertValues.weddingDate   = data.weddingDate;   }
   if (data.venueId       !== undefined) { updateSet.venueId       = data.venueId;       insertValues.venueId       = data.venueId;       }
+  if (data.brideName     !== undefined) { updateSet.brideName     = data.brideName;     insertValues.brideName     = data.brideName;     }
+  if (data.groomName     !== undefined) { updateSet.groomName     = data.groomName;     insertValues.groomName     = data.groomName;     }
   if (data.bookedVendors !== undefined) { updateSet.bookedVendors = data.bookedVendors; insertValues.bookedVendors = data.bookedVendors; }
   if (data.savedVendors  !== undefined) { updateSet.savedVendors  = data.savedVendors;  insertValues.savedVendors  = data.savedVendors;  }
   if (data.stagAndDoe    !== undefined) { updateSet.stagAndDoe    = data.stagAndDoe;    insertValues.stagAndDoe    = data.stagAndDoe;    }
@@ -111,6 +116,63 @@ export async function POST(request: Request) {
     if (attribution.utmContent)     insertValues.utmContent  = attribution.utmContent.slice(0, 100);
     if (attribution.firstPage)      insertValues.firstPage   = attribution.firstPage.slice(0, 500);
     if (attribution.firstVisitedAt) insertValues.firstVisitedAt = new Date(attribution.firstVisitedAt);
+  }
+
+  /* Wedding-website provisioning — runs when venueId or brideName/groomName
+   * changes and the row doesn't already have a slug + regional domain. */
+  if (data.venueId != null || data.brideName != null || data.groomName != null) {
+    /* Load the current row to decide whether to provision */
+    const [existing] = await db
+      .select({
+        weddingSiteSlug:           weddingPlans.weddingSiteSlug,
+        weddingSiteRegionalDomain: weddingPlans.weddingSiteRegionalDomain,
+        brideName:                 weddingPlans.brideName,
+        groomName:                 weddingPlans.groomName,
+        venueId:                   weddingPlans.venueId,
+      })
+      .from(weddingPlans)
+      .where(eq(weddingPlans.sessionId, sessionId))
+      .limit(1);
+
+    const effectiveVenueId = data.venueId ?? existing?.venueId ?? null;
+    const effectiveBride   = data.brideName ?? existing?.brideName ?? null;
+    const effectiveGroom   = data.groomName ?? existing?.groomName ?? null;
+
+    /* Pick the regional domain when a venue is known and no domain set yet */
+    if (effectiveVenueId != null && !existing?.weddingSiteRegionalDomain) {
+      const [v] = await db
+        .select({ region: venues.region, city: venues.city })
+        .from(venues)
+        .where(eq(venues.id, effectiveVenueId))
+        .limit(1);
+      if (v) {
+        const domain = regionalDomainForVenue(v.region, v.city);
+        if (domain) {
+          updateSet.weddingSiteRegionalDomain = domain;
+          insertValues.weddingSiteRegionalDomain = domain;
+        }
+      }
+    }
+
+    /* Mint a slug — only when at least one identifier exists and slot is empty.
+     * Collisions resolved by appending the first 6 chars of session_id. */
+    if (!existing?.weddingSiteSlug && (effectiveBride || effectiveGroom || effectiveVenueId != null)) {
+      const preferred = buildWeddingSiteSlug(
+        effectiveBride,
+        effectiveGroom,
+        sessionId,
+      );
+      const [collide] = await db
+        .select({ id: weddingPlans.id })
+        .from(weddingPlans)
+        .where(and(eq(weddingPlans.weddingSiteSlug, preferred), ne(weddingPlans.sessionId, sessionId)))
+        .limit(1);
+      const finalSlug = collide
+        ? `${preferred}-${sessionId.slice(0, 6)}`.slice(0, 60)
+        : preferred;
+      updateSet.weddingSiteSlug = finalSlug;
+      insertValues.weddingSiteSlug = finalSlug;
+    }
   }
 
   try {
