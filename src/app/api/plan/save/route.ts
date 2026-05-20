@@ -40,6 +40,25 @@ const planSchema = z.object({
   alertPhone:     z.string().max(50).nullable().optional(),
   alertEmail:     z.string().max(255).nullable().optional(),
   alertChannel:   z.enum(["sms", "email", "both", "none"]).nullable().optional(),
+
+  /* Wedding-website fields (owned by /plan/website editor) */
+  weddingTheme:           z.enum(["classic", "romantic", "rustic", "modern", "garden"]).optional(),
+  weddingPublished:       z.boolean().optional(),
+  weddingHeroImage:       z.string().max(500).nullable().optional(),
+  weddingParty:           z.unknown().optional(),
+  weddingRegistry:        z.unknown().optional(),
+  weddingPageConfig:      z.unknown().optional(),
+  weddingPassword:        z.string().max(100).nullable().optional(),
+  weddingHashtag:         z.string().max(100).nullable().optional(),
+  weddingSiteShowVendors: z.boolean().optional(),
+  ourStory:               z.string().max(8000).nullable().optional(),
+  travelCopy:             z.string().max(4000).nullable().optional(),
+  dressCodeStyle:         z.string().max(50).nullable().optional(),
+  dressCodeDescription:   z.string().max(2000).nullable().optional(),
+  dressCodeImageUrl:      z.string().max(500).nullable().optional(),
+  thingsToDo:             z.unknown().optional(),
+  multipleEvents:         z.unknown().optional(),
+  photoGalleryUrls:       z.unknown().optional(),
 });
 
 export async function POST(request: Request) {
@@ -89,6 +108,25 @@ export async function POST(request: Request) {
   if (data.alertPhone   !== undefined) { updateSet.alertPhone   = data.alertPhone;   insertValues.alertPhone   = data.alertPhone;   }
   if (data.alertEmail   !== undefined) { updateSet.alertEmail   = data.alertEmail;   insertValues.alertEmail   = data.alertEmail;   }
   if (data.alertChannel !== undefined) { updateSet.alertChannel = data.alertChannel; insertValues.alertChannel = data.alertChannel; }
+
+  /* Wedding-website fields */
+  if (data.weddingTheme           !== undefined) { updateSet.weddingTheme           = data.weddingTheme;           insertValues.weddingTheme           = data.weddingTheme;           }
+  if (data.weddingPublished       !== undefined) { updateSet.weddingPublished       = data.weddingPublished;       insertValues.weddingPublished       = data.weddingPublished;       }
+  if (data.weddingHeroImage       !== undefined) { updateSet.weddingHeroImage       = data.weddingHeroImage;       insertValues.weddingHeroImage       = data.weddingHeroImage;       }
+  if (data.weddingParty           !== undefined) { updateSet.weddingParty           = data.weddingParty;           insertValues.weddingParty           = data.weddingParty;           }
+  if (data.weddingRegistry        !== undefined) { updateSet.weddingRegistry        = data.weddingRegistry;        insertValues.weddingRegistry        = data.weddingRegistry;        }
+  if (data.weddingPageConfig      !== undefined) { updateSet.weddingPageConfig      = data.weddingPageConfig;      insertValues.weddingPageConfig      = data.weddingPageConfig;      }
+  if (data.weddingPassword        !== undefined) { updateSet.weddingPassword        = data.weddingPassword;        insertValues.weddingPassword        = data.weddingPassword;        }
+  if (data.weddingHashtag         !== undefined) { updateSet.weddingHashtag         = data.weddingHashtag;         insertValues.weddingHashtag         = data.weddingHashtag;         }
+  if (data.weddingSiteShowVendors !== undefined) { updateSet.weddingSiteShowVendors = data.weddingSiteShowVendors; insertValues.weddingSiteShowVendors = data.weddingSiteShowVendors; }
+  if (data.ourStory               !== undefined) { updateSet.ourStory               = data.ourStory;               insertValues.ourStory               = data.ourStory;               }
+  if (data.travelCopy             !== undefined) { updateSet.travelCopy             = data.travelCopy;             insertValues.travelCopy             = data.travelCopy;             }
+  if (data.dressCodeStyle         !== undefined) { updateSet.dressCodeStyle         = data.dressCodeStyle;         insertValues.dressCodeStyle         = data.dressCodeStyle;         }
+  if (data.dressCodeDescription   !== undefined) { updateSet.dressCodeDescription   = data.dressCodeDescription;   insertValues.dressCodeDescription   = data.dressCodeDescription;   }
+  if (data.dressCodeImageUrl      !== undefined) { updateSet.dressCodeImageUrl      = data.dressCodeImageUrl;      insertValues.dressCodeImageUrl      = data.dressCodeImageUrl;      }
+  if (data.thingsToDo             !== undefined) { updateSet.thingsToDo             = data.thingsToDo;             insertValues.thingsToDo             = data.thingsToDo;             }
+  if (data.multipleEvents         !== undefined) { updateSet.multipleEvents         = data.multipleEvents;         insertValues.multipleEvents         = data.multipleEvents;         }
+  if (data.photoGalleryUrls       !== undefined) { updateSet.photoGalleryUrls       = data.photoGalleryUrls;       insertValues.photoGalleryUrls       = data.photoGalleryUrls;       }
 
   /* Session / attribution capture — INSERT-only fields. Read from request
    * headers + the AttributionCapture cookie. Setting these on the INSERT

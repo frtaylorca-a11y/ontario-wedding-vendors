@@ -1,12 +1,25 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import Link from "next/link";
-import type { Route } from "next";
+import { cookies } from "next/headers";
 import { eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { venues, vendors, weddingPlans } from "@/lib/schema";
 import { weddingSiteUrl } from "@/lib/wedding-site";
+import {
+  DEFAULT_PAGE_CONFIG,
+  EVENT_AUDIENCE_LABELS,
+  mergePageConfig,
+  type FaqItem,
+  type GeneratedCopy,
+  type MultipleEvent,
+  type RegistryLink,
+  type ThingsToDoItem,
+  type WeddingPageConfig,
+  type WeddingPartyMember,
+} from "@/lib/wedding-website";
+import { themeStyle } from "@/lib/wedding-themes";
 import type { BookedVendor } from "@/lib/plan-state";
+import { PasswordGate } from "./PasswordGate";
 
 export const dynamic = "force-dynamic";
 
@@ -26,9 +39,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
     .where(eq(weddingPlans.weddingSiteSlug, slug))
     .limit(1);
 
-  if (!plan) {
-    return { title: "Wedding site not found" };
-  }
+  if (!plan) return { title: "Wedding site not found" };
   const names = [plan.partner1Name, plan.partner2Name].filter(Boolean).join(" & ");
   const title = names ? `${names} · Wedding` : "Our Wedding";
   return {
@@ -40,7 +51,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   };
 }
 
-/* ─── Category labels + icons for the vendor credits section ─────────── */
+/* ─── Vendor category icons (compact set for credits) ─────────────────── */
 
 const CATEGORY_META: Record<string, { label: string; icon: React.ReactNode }> = {
   photographer:    { label: "Photographer",     icon: <CategoryIcon kind="photographer" /> },
@@ -99,6 +110,8 @@ function categoryUrlSlug(key: string): string {
   return key.replace(/_/g, "-");
 }
 
+/* ─────────────────────────────────────────────────────────────────────── */
+
 export default async function WeddingSitePage({ params }: { params: Params }) {
   const { slug } = await params;
 
@@ -110,6 +123,31 @@ export default async function WeddingSitePage({ params }: { params: Params }) {
 
   if (!plan) notFound();
 
+  const names = [plan.partner1Name, plan.partner2Name].filter(Boolean).join(" & ");
+  const coupleLabel = names || "Our Wedding";
+
+  /* Password gate — only when plan.weddingPassword is set and the auth
+   * cookie isn't present. */
+  if (plan.weddingPassword) {
+    const c = await cookies();
+    const authed = c.get(`owv_wsite_auth_${slug}`)?.value === "1";
+    if (!authed) {
+      return (
+        <div style={themeStyle(plan.weddingTheme)}>
+          <PasswordGate slug={slug} coupleLabel={coupleLabel} />
+        </div>
+      );
+    }
+  }
+
+  /* Page-view counter — fire-and-forget. */
+  void db
+    .update(weddingPlans)
+    .set({ weddingPageViews: (plan.weddingPageViews ?? 0) + 1 })
+    .where(eq(weddingPlans.id, plan.id))
+    .catch(() => {});
+
+  /* Resolve venue (always needed for hero + event details + credits). */
   let venue: { name: string | null; city: string | null; address: string | null; website: string | null; slug: string | null } | null = null;
   if (plan.venueId != null) {
     const [v] = await db
@@ -120,17 +158,17 @@ export default async function WeddingSitePage({ params }: { params: Params }) {
     venue = v ?? null;
   }
 
-  /* Booked vendor credits — only when toggle is on and there's at least one. */
+  const config: WeddingPageConfig = plan.weddingPageConfig
+    ? mergePageConfig(plan.weddingPageConfig)
+    : { ...DEFAULT_PAGE_CONFIG };
+
   const booked = (plan.bookedVendors ?? {}) as Record<string, BookedVendor>;
   const bookedList = Object.values(booked).filter((b) => b && b.name);
-  const showCredits =
-    (plan.weddingSiteShowVendors ?? true) &&
-    (bookedList.length > 0 || venue != null);
 
-  /* Hydrate each booked vendor's full row (for website + slug). */
+  /* Hydrate vendor credits — same pattern as before. */
   type CreditVendor = { name: string; category: string; slug: string | null; website: string | null };
   let credits: CreditVendor[] = [];
-  if (showCredits && bookedList.length > 0) {
+  if (config.vendorCredits && (plan.weddingSiteShowVendors ?? true) && bookedList.length > 0) {
     const ids = bookedList
       .map((b) => b.vendorId)
       .filter((v): v is number => typeof v === "number");
@@ -153,7 +191,6 @@ export default async function WeddingSitePage({ params }: { params: Params }) {
     });
   }
 
-  const names = [plan.partner1Name, plan.partner2Name].filter(Boolean).join(" & ");
   const canonical = weddingSiteUrl(plan.weddingSiteSlug, plan.weddingSiteRegionalDomain);
 
   const weddingDateFormatted = plan.weddingDate
@@ -165,8 +202,9 @@ export default async function WeddingSitePage({ params }: { params: Params }) {
       })
     : null;
 
-  /* Event JSON-LD — wedding sites are noindex, but the schema makes a clean
-   * preview on shared links and is harmless when present. */
+  const generated = (plan.weddingGeneratedCopy as GeneratedCopy | null) ?? null;
+
+  /* Event JSON-LD */
   const eventSchema =
     plan.weddingDate && names && venue?.name
       ? {
@@ -189,8 +227,15 @@ export default async function WeddingSitePage({ params }: { params: Params }) {
         }
       : null;
 
+  const party        = (plan.weddingParty     as WeddingPartyMember[] | null) ?? [];
+  const registry     = (plan.weddingRegistry  as RegistryLink[]       | null) ?? [];
+  const things       = (plan.thingsToDo       as ThingsToDoItem[]     | null) ?? [];
+  const extraEvents  = (plan.multipleEvents   as MultipleEvent[]      | null) ?? [];
+  const gallery      = (plan.photoGalleryUrls as string[]             | null) ?? [];
+  const faqItems     = (generated?.faqItems   ?? []) as FaqItem[];
+
   return (
-    <main className="min-h-screen bg-bg-warm">
+    <main style={themeStyle(plan.weddingTheme)} className="min-h-screen">
       {eventSchema && (
         <script
           type="application/ld+json"
@@ -199,94 +244,305 @@ export default async function WeddingSitePage({ params }: { params: Params }) {
         />
       )}
 
-      {/* Hero — save the date */}
-      <section className="mx-auto max-w-[820px] px-6 py-16 text-center lg:py-24">
-        <div className="text-xs font-bold uppercase tracking-[0.18em] text-rose">
+      {/* ─── Hero ───────────────────────────────────────────────── */}
+      <section className="relative mx-auto max-w-[820px] px-6 py-20 text-center lg:py-28">
+        {plan.weddingHeroImage && (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={plan.weddingHeroImage}
+            alt=""
+            className="absolute inset-0 -z-10 h-full w-full object-cover opacity-25"
+          />
+        )}
+        <div className="text-xs font-bold uppercase tracking-[0.18em]"
+             style={{ color: "var(--wt-accent)" }}>
           Save the date
         </div>
-        <h1 className="mt-3 font-display text-5xl font-semibold leading-tight text-charcoal md:text-7xl">
-          {names || "Our Wedding"}
+        <h1
+          className="mt-4 text-5xl font-semibold leading-tight md:text-7xl"
+          style={{
+            fontFamily: "var(--wt-font-display)",
+            fontStyle:  "var(--wt-display-italic)",
+            color:      "var(--wt-ink)",
+          }}
+        >
+          {coupleLabel}
         </h1>
+        {generated?.heroTagline && (
+          <p className="mt-4 text-base italic md:text-lg" style={{ color: "var(--wt-ink-muted)" }}>
+            {generated.heroTagline}
+          </p>
+        )}
         {weddingDateFormatted && (
-          <p className="mt-5 font-display text-2xl italic text-rose md:text-3xl">
+          <p
+            className="mt-6 text-2xl md:text-3xl"
+            style={{
+              fontFamily: "var(--wt-font-display)",
+              fontStyle:  "italic",
+              color:      "var(--wt-accent)",
+            }}
+          >
             {weddingDateFormatted}
           </p>
         )}
         {venue?.name && (
-          <p className="mt-2 text-sm text-text-mid md:text-base">
+          <p className="mt-2 text-sm md:text-base" style={{ color: "var(--wt-ink-muted)" }}>
             {venue.name}
             {venue.city ? ` · ${venue.city}` : ""}, Ontario
           </p>
         )}
 
-        {plan.oneqrSlug && (
+        {plan.weddingHashtag && (
+          <p className="mt-6 text-xs font-bold uppercase tracking-[0.18em]"
+             style={{ color: "var(--wt-accent)" }}>
+            {plan.weddingHashtag}
+          </p>
+        )}
+
+        {config.rsvp && plan.oneqrSlug && (
           <div className="mt-10">
             <a
               href={`https://oneqr.events/e/${plan.oneqrSlug}`}
-              className="inline-flex items-center gap-2 rounded-pill bg-rose px-6 py-3 text-sm font-bold text-white shadow-[0_4px_14px_rgba(185,100,118,0.3)] transition-all hover:bg-rose-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
+              className="inline-flex items-center gap-2 rounded-full px-7 py-3 text-sm font-bold shadow-md transition-all"
+              style={{ background: "var(--wt-accent)", color: "var(--wt-accent-ink)" }}
             >
               RSVP &amp; details →
             </a>
-            <p className="mt-3 text-xs text-text-muted">
-              Live guest gallery, seating chart, and day-of timeline open on
-              the wedding day.
-            </p>
           </div>
         )}
-
-        {!plan.oneqrSlug && (
-          <p className="mt-10 rounded-card border border-dashed border-border bg-white p-6 text-sm text-text-muted">
-            Full RSVP + guest experience coming soon — the couple is still
-            setting things up. Check back closer to the wedding date.
+        {config.rsvp && !plan.oneqrSlug && (
+          <p className="mt-10 rounded-2xl border border-dashed p-6 text-sm"
+             style={{ borderColor: "var(--wt-border)", background: "var(--wt-surface)", color: "var(--wt-ink-muted)" }}>
+            RSVP opens 6 weeks before the wedding date.
           </p>
         )}
       </section>
 
-      {/* Venue + vendor credits */}
-      {showCredits && (
-        <section className="border-t border-border-light bg-white">
-          <div className="mx-auto max-w-[820px] px-6 py-12 lg:py-16">
-            <div className="text-center">
-              <div className="text-xs font-bold uppercase tracking-[0.18em] text-rose">
-                The team
-              </div>
-              <h2 className="mt-3 font-display text-3xl font-semibold text-charcoal md:text-4xl">
-                Our <em className="italic text-rose">venue &amp; vendors</em>
-              </h2>
-            </div>
+      {/* ─── Our Story ──────────────────────────────────────────── */}
+      {config.ourStory && plan.ourStory && (
+        <ThemeSection title="Our story">
+          <p className="mx-auto max-w-[640px] whitespace-pre-line text-center text-base leading-relaxed md:text-lg"
+             style={{ color: "var(--wt-ink-muted)" }}>
+            {plan.ourStory}
+          </p>
+        </ThemeSection>
+      )}
 
-            {/* Venue */}
+      {/* ─── Event Details ──────────────────────────────────────── */}
+      {(venue?.name || extraEvents.length > 0) && (
+        <ThemeSection title="Event details">
+          <div className="mx-auto max-w-[680px] space-y-5">
             {venue?.name && (
-              <div className="mt-8 rounded-card border border-border bg-bg-warm p-5">
-                <div className="text-[0.65rem] font-bold uppercase tracking-[0.12em] text-rose">
+              <DetailCard
+                title="Ceremony &amp; reception"
+                when={weddingDateFormatted}
+                location={[venue.name, venue.city, venue.address].filter(Boolean).join(" · ")}
+              />
+            )}
+            {extraEvents.map((ev) => (
+              <DetailCard
+                key={ev.id}
+                title={ev.name || "Additional event"}
+                when={[ev.date, ev.time].filter(Boolean).join(" · ")}
+                location={ev.location}
+                audience={EVENT_AUDIENCE_LABELS[ev.audience]}
+                description={ev.description}
+              />
+            ))}
+          </div>
+        </ThemeSection>
+      )}
+
+      {/* ─── Travel ─────────────────────────────────────────────── */}
+      {config.travel && plan.travelCopy && (
+        <ThemeSection title="Travel &amp; accommodation">
+          <p className="mx-auto max-w-[640px] whitespace-pre-line text-center text-base leading-relaxed"
+             style={{ color: "var(--wt-ink-muted)" }}>
+            {plan.travelCopy}
+          </p>
+        </ThemeSection>
+      )}
+
+      {/* ─── Wedding Party ──────────────────────────────────────── */}
+      {config.weddingParty && party.length > 0 && (
+        <ThemeSection title="Wedding party">
+          <ul className="mx-auto grid max-w-[820px] gap-4 sm:grid-cols-2">
+            {party.map((m) => (
+              <li key={m.id}
+                  className="rounded-2xl border p-5 text-center"
+                  style={{ background: "var(--wt-surface)", borderColor: "var(--wt-border)" }}>
+                <div className="text-xs font-bold uppercase tracking-[0.12em]"
+                     style={{ color: "var(--wt-accent)" }}>
+                  {m.role}
+                </div>
+                <div className="mt-2 text-xl"
+                     style={{ fontFamily: "var(--wt-font-display)", fontStyle: "var(--wt-display-italic)" }}>
+                  {m.name}
+                </div>
+                {m.bio && (
+                  <p className="mt-2 text-sm" style={{ color: "var(--wt-ink-muted)" }}>
+                    {m.bio}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </ThemeSection>
+      )}
+
+      {/* ─── Photo Gallery ──────────────────────────────────────── */}
+      {config.photoGallery && gallery.filter(Boolean).length > 0 && (
+        <ThemeSection title="Our photos">
+          <div className="mx-auto grid max-w-[1080px] gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {gallery.filter(Boolean).map((url, i) => (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                key={i}
+                src={url}
+                alt=""
+                className="aspect-square w-full rounded-2xl object-cover"
+                loading="lazy"
+              />
+            ))}
+          </div>
+        </ThemeSection>
+      )}
+
+      {/* ─── Dress Code ─────────────────────────────────────────── */}
+      {config.dressCode && (plan.dressCodeStyle || plan.dressCodeDescription) && (
+        <ThemeSection title="Dress code">
+          <div className="mx-auto max-w-[640px] text-center">
+            {plan.dressCodeStyle && (
+              <div
+                className="inline-block rounded-full px-5 py-1.5 text-sm font-bold uppercase tracking-[0.1em]"
+                style={{ background: "var(--wt-accent)", color: "var(--wt-accent-ink)" }}
+              >
+                {plan.dressCodeStyle}
+              </div>
+            )}
+            {plan.dressCodeDescription && (
+              <p className="mt-4 text-base leading-relaxed" style={{ color: "var(--wt-ink-muted)" }}>
+                {plan.dressCodeDescription}
+              </p>
+            )}
+            {plan.dressCodeImageUrl && (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={plan.dressCodeImageUrl}
+                alt=""
+                className="mx-auto mt-6 max-h-96 rounded-2xl object-cover"
+              />
+            )}
+          </div>
+        </ThemeSection>
+      )}
+
+      {/* ─── Things to Do ───────────────────────────────────────── */}
+      {config.thingsToDo && things.length > 0 && (
+        <ThemeSection title="Things to do nearby">
+          <ol className="mx-auto max-w-[760px] space-y-4">
+            {things.map((t, i) => (
+              <li key={t.id}
+                  className="flex gap-4 rounded-2xl border p-5"
+                  style={{ background: "var(--wt-surface)", borderColor: "var(--wt-border)" }}>
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-base font-bold"
+                     style={{ background: "var(--wt-accent-soft)", color: "var(--wt-accent)" }}>
+                  {i + 1}
+                </div>
+                <div className="flex-1">
+                  <div className="text-lg"
+                       style={{ fontFamily: "var(--wt-font-display)", color: "var(--wt-ink)" }}>
+                    {t.name}
+                  </div>
+                  <p className="mt-1 text-sm leading-relaxed" style={{ color: "var(--wt-ink-muted)" }}>
+                    {t.description}
+                  </p>
+                  {t.url && (
+                    <a href={t.url} target="_blank" rel="noopener"
+                       className="mt-2 inline-block text-xs font-bold"
+                       style={{ color: "var(--wt-accent)" }}>
+                      Visit website ↗
+                    </a>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ol>
+        </ThemeSection>
+      )}
+
+      {/* ─── Registry ───────────────────────────────────────────── */}
+      {config.registry && registry.length > 0 && (
+        <ThemeSection title="Registry">
+          <div className="mx-auto flex max-w-[680px] flex-wrap justify-center gap-3">
+            {registry.map((r) => (
+              <a
+                key={r.id}
+                href={r.url}
+                target="_blank"
+                rel="noopener"
+                className="rounded-full border-2 px-5 py-2 text-sm font-bold transition-colors"
+                style={{ borderColor: "var(--wt-accent)", color: "var(--wt-accent)" }}
+              >
+                {r.label || "Registry"} ↗
+              </a>
+            ))}
+          </div>
+        </ThemeSection>
+      )}
+
+      {/* ─── FAQ ────────────────────────────────────────────────── */}
+      {config.faq && faqItems.length > 0 && (
+        <ThemeSection title="Frequently asked">
+          <ul className="mx-auto max-w-[680px] space-y-3">
+            {faqItems.map((f) => (
+              <li key={f.id}
+                  className="rounded-2xl border p-5"
+                  style={{ background: "var(--wt-surface)", borderColor: "var(--wt-border)" }}>
+                <div className="text-base font-bold" style={{ color: "var(--wt-ink)" }}>
+                  {f.question}
+                </div>
+                <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--wt-ink-muted)" }}>
+                  {f.answer}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </ThemeSection>
+      )}
+
+      {/* ─── Vendor Credits ─────────────────────────────────────── */}
+      {config.vendorCredits && (plan.weddingSiteShowVendors ?? true) && (venue?.name || credits.length > 0) && (
+        <ThemeSection title="Our venue & vendors">
+          <div className="mx-auto max-w-[820px] space-y-4">
+            {venue?.name && (
+              <div className="rounded-2xl border p-5"
+                   style={{ background: "var(--wt-surface)", borderColor: "var(--wt-border)" }}>
+                <div className="text-[0.65rem] font-bold uppercase tracking-[0.12em]"
+                     style={{ color: "var(--wt-accent)" }}>
                   Venue
                 </div>
-                <div className="mt-1 font-display text-2xl font-semibold text-charcoal">
+                <div className="mt-1 text-2xl"
+                     style={{ fontFamily: "var(--wt-font-display)", fontStyle: "var(--wt-display-italic)" }}>
                   {venue.name}
                 </div>
                 {venue.city && (
-                  <div className="mt-0.5 text-sm text-text-mid">
+                  <div className="mt-0.5 text-sm" style={{ color: "var(--wt-ink-muted)" }}>
                     {venue.city}, Ontario
                   </div>
                 )}
                 <div className="mt-3 flex flex-wrap gap-2 text-[0.75rem]">
                   {venue.slug && (
-                    <a
-                      href={`${SITE_URL}/venues/${venue.slug}`}
-                      target="_blank"
-                      rel="noopener"
-                      className="rounded-pill border border-rose bg-white px-3 py-1 font-bold text-rose hover:bg-rose hover:text-white"
-                    >
+                    <a href={`${SITE_URL}/venues/${venue.slug}`} target="_blank" rel="noopener"
+                       className="rounded-full border-2 px-3 py-1 font-bold"
+                       style={{ borderColor: "var(--wt-accent)", color: "var(--wt-accent)" }}>
                       View profile →
                     </a>
                   )}
                   {venue.website && (
-                    <a
-                      href={venue.website}
-                      target="_blank"
-                      rel="noopener"
-                      className="rounded-pill border border-border bg-white px-3 py-1 font-medium text-charcoal hover:border-rose hover:text-rose"
-                    >
+                    <a href={venue.website} target="_blank" rel="noopener"
+                       className="rounded-full border px-3 py-1 font-medium"
+                       style={{ borderColor: "var(--wt-border)", color: "var(--wt-ink)" }}>
                       Visit website ↗
                     </a>
                   )}
@@ -294,44 +550,43 @@ export default async function WeddingSitePage({ params }: { params: Params }) {
               </div>
             )}
 
-            {/* Vendors grid */}
             {credits.length > 0 && (
-              <ul className="mt-6 grid gap-3 sm:grid-cols-2">
+              <ul className="grid gap-3 sm:grid-cols-2">
                 {credits.map((c, i) => {
                   const meta = CATEGORY_META[c.category];
                   return (
-                    <li key={`${c.category}-${i}`} className="rounded-card border border-border-light bg-bg-warm p-4">
+                    <li key={`${c.category}-${i}`}
+                        className="rounded-2xl border p-4"
+                        style={{ background: "var(--wt-surface)", borderColor: "var(--wt-border)" }}>
                       <div className="flex items-center gap-2">
-                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-rose-pale text-rose">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-lg"
+                              style={{ background: "var(--wt-accent-soft)", color: "var(--wt-accent)" }}>
                           {meta?.icon}
                         </span>
                         <div className="min-w-0 flex-1">
-                          <div className="text-[0.6rem] font-bold uppercase tracking-[0.1em] text-rose">
+                          <div className="text-[0.6rem] font-bold uppercase tracking-[0.1em]"
+                               style={{ color: "var(--wt-accent)" }}>
                             {meta?.label ?? c.category}
                           </div>
-                          <div className="truncate font-display text-base font-semibold text-charcoal">
+                          <div className="truncate text-base"
+                               style={{ fontFamily: "var(--wt-font-display)" }}>
                             {c.name}
                           </div>
                         </div>
                       </div>
                       <div className="mt-3 flex flex-wrap gap-2 text-[0.7rem]">
                         {c.slug && (
-                          <a
-                            href={`${SITE_URL}/vendors/${categoryUrlSlug(c.category)}/${c.slug}`}
-                            target="_blank"
-                            rel="noopener"
-                            className="rounded-pill border border-border bg-white px-2.5 py-0.5 font-bold text-rose hover:border-rose"
-                          >
+                          <a href={`${SITE_URL}/vendors/${categoryUrlSlug(c.category)}/${c.slug}`}
+                             target="_blank" rel="noopener"
+                             className="rounded-full border px-2.5 py-0.5 font-bold"
+                             style={{ borderColor: "var(--wt-accent)", color: "var(--wt-accent)" }}>
                             View profile →
                           </a>
                         )}
                         {c.website && (
-                          <a
-                            href={c.website}
-                            target="_blank"
-                            rel="noopener"
-                            className="rounded-pill border border-border bg-white px-2.5 py-0.5 font-medium text-charcoal hover:border-rose hover:text-rose"
-                          >
+                          <a href={c.website} target="_blank" rel="noopener"
+                             className="rounded-full border px-2.5 py-0.5 font-medium"
+                             style={{ borderColor: "var(--wt-border)", color: "var(--wt-ink)" }}>
                             Visit website ↗
                           </a>
                         )}
@@ -341,38 +596,89 @@ export default async function WeddingSitePage({ params }: { params: Params }) {
                 })}
               </ul>
             )}
-
-            <p className="mt-10 text-center text-[0.7rem] text-text-muted">
-              Planned with{" "}
-              <a
-                href={SITE_URL}
-                target="_blank"
-                rel="noopener"
-                className="text-rose hover:underline"
-              >
-                Ontario Wedding Vendors
-              </a>
-            </p>
           </div>
-        </section>
+        </ThemeSection>
       )}
 
-      {/* Canonical + ultra-fine footer (always, regardless of credits) */}
-      {!showCredits && (
-        <section className="mx-auto max-w-[820px] px-6 pb-12 text-center">
-          {canonical && (
-            <p className="text-[0.65rem] text-text-muted">
-              {canonical}
-            </p>
-          )}
-          <p className="mt-4 text-[0.6rem] text-text-muted">
-            Wedding site powered by{" "}
-            <Link href={"/" as Route} className="text-rose hover:underline">
-              Ontario Wedding Vendors
-            </Link>
+      {/* ─── Footer ─────────────────────────────────────────────── */}
+      <footer className="mx-auto max-w-[820px] px-6 pb-14 pt-4 text-center">
+        {plan.weddingHashtag && (
+          <p className="text-sm font-bold uppercase tracking-[0.18em]"
+             style={{ color: "var(--wt-accent)" }}>
+            {plan.weddingHashtag}
           </p>
-        </section>
-      )}
+        )}
+        <p className="mt-3 text-[0.65rem]" style={{ color: "var(--wt-ink-muted)" }}>
+          Planned with{" "}
+          <a href={SITE_URL} target="_blank" rel="noopener"
+             style={{ color: "var(--wt-accent)" }}
+             className="font-bold hover:underline">
+            Ontario Wedding Vendors
+          </a>
+        </p>
+      </footer>
     </main>
+  );
+}
+
+/* ─── Layout atoms (theme-aware) ───────────────────────────────────── */
+
+function ThemeSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="border-t" style={{ borderColor: "var(--wt-border)" }}>
+      <div className="mx-auto max-w-[1080px] px-6 py-16 lg:py-20">
+        <h2 className="text-center text-3xl font-semibold md:text-4xl"
+            style={{
+              fontFamily: "var(--wt-font-display)",
+              fontStyle:  "var(--wt-display-italic)",
+              color:      "var(--wt-ink)",
+            }}>
+          {title}
+        </h2>
+        <div className="mt-10">{children}</div>
+      </div>
+    </section>
+  );
+}
+
+function DetailCard({
+  title, when, location, audience, description,
+}: {
+  title:        string;
+  when?:        string | null;
+  location?:    string | null;
+  audience?:    string | null;
+  description?: string | null;
+}) {
+  return (
+    <div className="rounded-2xl border p-5 text-center"
+         style={{ background: "var(--wt-surface)", borderColor: "var(--wt-border)" }}>
+      <div className="text-xs font-bold uppercase tracking-[0.12em]"
+           style={{ color: "var(--wt-accent)" }}>
+        {audience ?? "All guests"}
+      </div>
+      <div className="mt-2 text-2xl"
+           style={{
+             fontFamily: "var(--wt-font-display)",
+             fontStyle:  "var(--wt-display-italic)",
+             color:      "var(--wt-ink)",
+           }}
+           dangerouslySetInnerHTML={{ __html: title }} />
+      {when && (
+        <div className="mt-2 text-sm" style={{ color: "var(--wt-ink-muted)" }}>
+          {when}
+        </div>
+      )}
+      {location && (
+        <div className="mt-1 text-sm" style={{ color: "var(--wt-ink-muted)" }}>
+          {location}
+        </div>
+      )}
+      {description && (
+        <p className="mt-3 text-sm leading-relaxed" style={{ color: "var(--wt-ink-muted)" }}>
+          {description}
+        </p>
+      )}
+    </div>
   );
 }

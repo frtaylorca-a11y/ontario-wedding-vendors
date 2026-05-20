@@ -265,8 +265,40 @@ export const weddingPlans = pgTable(
     weddingSiteRegionalDomain:  varchar("wedding_site_regional_domain",  { length: 100 }),
     /* Toggle: show the "Our Venue & Vendors" credits section on the
      * couple's wedding site. Default true — couple opts out in the
-     * future /plan/website editor. */
+     * /plan/website editor. */
     weddingSiteShowVendors:     boolean("wedding_site_show_vendors").default(true),
+
+    /* ── Wedding-website fields ────────────────────────────────────
+     * Everything below is owned by the /plan/website editor. The
+     * couple's public site at {slug}.{regional-domain} renders from
+     * these fields + the toggles in weddingPageConfig. */
+    weddingTheme:               varchar("wedding_theme",        { length: 20 }).default("romantic"),
+    weddingPublished:           boolean("wedding_published").default(false),
+    weddingHeroImage:           varchar("wedding_hero_image",   { length: 500 }),
+    weddingParty:               jsonb("wedding_party"),
+    weddingRegistry:            jsonb("wedding_registry"),
+    weddingGeneratedCopy:       jsonb("wedding_generated_copy"),
+    /* Per-section visibility toggle map — see WeddingPageConfig in
+     * src/lib/wedding-website.ts for the canonical shape. */
+    weddingPageConfig:          jsonb("wedding_page_config"),
+    /* Optional password gate. When set, /weddings/[slug] renders a
+     * password form; correct entry sets a 30-day cookie. */
+    weddingPassword:            varchar("wedding_password",     { length: 100 }),
+    weddingHashtag:             varchar("wedding_hashtag",      { length: 100 }),
+    weddingPageViews:           integer("wedding_page_views").default(0),
+    /* Editable section copy — drives Our Story + Travel sections. */
+    ourStory:                   text("our_story"),
+    travelCopy:                 text("travel_copy"),
+    /* Dress code section */
+    dressCodeStyle:             varchar("dress_code_style",     { length: 50 }),
+    dressCodeDescription:       text("dress_code_description"),
+    dressCodeImageUrl:          varchar("dress_code_image_url", { length: 500 }),
+    /* Things-to-do items array — see ThingsToDoItem[] type */
+    thingsToDo:                 jsonb("things_to_do"),
+    /* Additional events beyond ceremony + reception */
+    multipleEvents:             jsonb("multiple_events"),
+    /* Photo gallery — array of image URLs (couple-uploaded later) */
+    photoGalleryUrls:           jsonb("photo_gallery_urls"),
     ipAddress:          varchar("ip_address",   { length: 45 }),
     userAgent:          text("user_agent"),
     referrer:           varchar("referrer",     { length: 500 }),
