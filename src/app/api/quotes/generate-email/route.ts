@@ -153,19 +153,50 @@ export async function POST(request: Request) {
     .map((c) => `${c} (${CATEGORY_LABEL[c]})`)
     .join(", ");
 
-  const userPrompt = [
-    `Couple: ${names || "Partner A and Partner B"}.`,
-    `Wedding date: ${plan.weddingDate ?? "TBD"}.`,
-    venueName ? `Venue: ${venueName}${venueCity ? ` in ${venueCity}` : ""}.` : "",
-    plan.region    ? `Region: ${plan.region}.` : "",
-    plan.guestCount ? `Expected guest count: ${plan.guestCount}.` : "",
-    publicUrl ? `Wedding website URL (include in the closing): ${publicUrl}` : "(No public wedding website yet — don't include a URL in the closing.)",
-    "",
-    `Categories in the shortlist (generate ONE paragraph per category, keyed by these exact keys):`,
-    `${categoriesLine}`,
-    "",
-    "Generate the JSON exactly as specified in the system prompt.",
-  ].filter(Boolean).join("\n");
+  /* Prefer the couple's own seed story when present — that's the
+   * voice we want vendors to hear. The structured fields stay in the
+   * prompt as orienting facts (date, venue, guest count) but the
+   * story becomes the EMOTIONAL anchor for both the opening and the
+   * category paragraphs. When rawStory is empty we fall back to the
+   * old structured-only prompt so the route still produces a usable
+   * template before the couple has touched the website wizard. */
+  const rawStory = plan.rawStory?.trim();
+  const hasStory = !!rawStory;
+
+  const userPrompt = hasStory
+    ? [
+        `Couple: ${names || "Partner A and Partner B"}.`,
+        "",
+        "The couple's own words — this is the emotional anchor. Use the warmth, specifics, and tone here to shape BOTH the opening (so it sounds like they wrote it) AND the category paragraphs (so each one feels rooted in their actual wedding, not generic). Do NOT quote the story verbatim; let it inform the voice.",
+        `"""${rawStory}"""`,
+        "",
+        "Orienting facts (use these as concrete details inside the email — date, venue, guest count — but keep the emotional weight on the story above):",
+        `- Wedding date: ${plan.weddingDate ?? "TBD"}`,
+        venueName ? `- Venue: ${venueName}${venueCity ? ` in ${venueCity}` : ""}` : "",
+        plan.region     ? `- Region: ${plan.region}` : "",
+        plan.guestCount ? `- Expected guests: ${plan.guestCount}` : "",
+        publicUrl
+          ? `- Wedding website URL (include in the closing): ${publicUrl}`
+          : "- No public wedding website yet — don't include a URL in the closing.",
+        "",
+        `Categories in the shortlist (generate ONE paragraph per category, keyed by these exact keys):`,
+        `${categoriesLine}`,
+        "",
+        "Generate the JSON exactly as specified in the system prompt.",
+      ].filter(Boolean).join("\n")
+    : [
+        `Couple: ${names || "Partner A and Partner B"}.`,
+        `Wedding date: ${plan.weddingDate ?? "TBD"}.`,
+        venueName ? `Venue: ${venueName}${venueCity ? ` in ${venueCity}` : ""}.` : "",
+        plan.region    ? `Region: ${plan.region}.` : "",
+        plan.guestCount ? `Expected guest count: ${plan.guestCount}.` : "",
+        publicUrl ? `Wedding website URL (include in the closing): ${publicUrl}` : "(No public wedding website yet — don't include a URL in the closing.)",
+        "",
+        `Categories in the shortlist (generate ONE paragraph per category, keyed by these exact keys):`,
+        `${categoriesLine}`,
+        "",
+        "Generate the JSON exactly as specified in the system prompt.",
+      ].filter(Boolean).join("\n");
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   let template: QuoteEmailTemplate;
