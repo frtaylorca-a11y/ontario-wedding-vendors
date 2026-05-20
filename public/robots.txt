@@ -1,0 +1,64 @@
+# Ontario Wedding Vendors — robots.txt
+#
+# Policy: encourage real search-engine crawlers, block AI training crawlers,
+# and rate-limit polite ones. /api/ and /plan/ never get crawled by anyone.
+
+# ─── Block AI training crawlers ───────────────────────────────────────────
+# These scrape content for model training, not for surfacing in search
+# results. Allowing them costs us bandwidth + gives our editorial work to
+# competing AI products. Block at the source.
+
+User-agent: GPTBot
+Disallow: /
+
+User-agent: anthropic-ai
+Disallow: /
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: PerplexityBot
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: FacebookBot
+Disallow: /
+
+# ─── Real search engine crawlers ──────────────────────────────────────────
+# Googlebot — first-class citizen. Crawl freely with a light delay so we
+# don't get hammered during sitemap submissions.
+
+User-agent: Googlebot
+Allow: /
+Disallow: /api/
+Disallow: /plan/
+Crawl-delay: 1
+
+# Bingbot — second-class but welcome.
+
+User-agent: Bingbot
+Allow: /
+Disallow: /api/
+Disallow: /plan/
+Crawl-delay: 2
+
+# ─── Everything else ──────────────────────────────────────────────────────
+# Polite crawlers (DuckDuckBot, Yandex, etc.) and unknown bots. Allow the
+# public site, block private paths, slow them down so the rate limiter
+# doesn't have to do the heavy lifting.
+
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /plan/
+Crawl-delay: 2
+
+Sitemap: https://ontarioweddingvendors.com/sitemap.xml

@@ -4,6 +4,51 @@ import { ALL_REGIONAL_DOMAINS } from "@/lib/wedding-site";
 const COOKIE_NAME = "owv_plan_session";
 const ONE_YEAR = 60 * 60 * 24 * 365;
 
+/* ─── /api/* rate limiter ───────────────────────────────────────────────
+ * Sliding-window counter, in-process Map. 30 requests per minute per IP
+ * across all /api/* routes. No external dependency — fine for a single
+ * Vercel region; if we ever go multi-region this needs Redis.
+ *
+ * Exempt paths: /api/plan/save (autosave fires constantly while couples
+ * are editing) and /api/rsvp (guests on the wedding-site subdomain can
+ * legitimately burst when an RSVP link is shared).
+ */
+const RATE_LIMIT_MAX = 30;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_EXEMPT = ["/api/plan/save", "/api/rsvp"];
+
+type RateHit = { count: number; resetAt: number };
+const rateMap = new Map<string, RateHit>();
+
+function clientIp(req: NextRequest): string {
+  const fwd = req.headers.get("x-forwarded-for");
+  if (fwd) return fwd.split(",")[0].trim();
+  return req.headers.get("x-real-ip") ?? "unknown";
+}
+
+function checkRateLimit(ip: string): { ok: true } | { ok: false; retryAfter: number } {
+  const now = Date.now();
+  const hit = rateMap.get(ip);
+  if (!hit || hit.resetAt <= now) {
+    rateMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return { ok: true };
+  }
+  if (hit.count >= RATE_LIMIT_MAX) {
+    return { ok: false, retryAfter: Math.max(1, Math.ceil((hit.resetAt - now) / 1000)) };
+  }
+  hit.count += 1;
+  return { ok: true };
+}
+
+/* Opportunistic garbage collection — keep the map from growing forever. */
+function maybeGcRateMap(): void {
+  if (rateMap.size < 5000) return;
+  const now = Date.now();
+  for (const [ip, hit] of rateMap) {
+    if (hit.resetAt <= now) rateMap.delete(ip);
+  }
+}
+
 /**
  * Middleware does two things:
  *
@@ -21,6 +66,23 @@ const ONE_YEAR = 60 * 60 * 24 * 365;
 export function middleware(req: NextRequest) {
   const host = (req.headers.get("host") ?? "").split(":")[0].toLowerCase();
   const pathname = req.nextUrl.pathname;
+
+  /* 0. Rate-limit /api/* — runs before anything else so the limiter
+   *    can short-circuit the rest of middleware. */
+  if (pathname.startsWith("/api/") && !RATE_LIMIT_EXEMPT.includes(pathname)) {
+    const ip = clientIp(req);
+    const verdict = checkRateLimit(ip);
+    if (!verdict.ok) {
+      return new NextResponse("Too Many Requests", {
+        status: 429,
+        headers: {
+          "Retry-After":  String(verdict.retryAfter),
+          "Content-Type": "text/plain; charset=utf-8",
+        },
+      });
+    }
+    maybeGcRateMap();
+  }
 
   /* 1. Wedding-website subdomain rewrite */
   for (const domain of ALL_REGIONAL_DOMAINS) {

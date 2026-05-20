@@ -143,6 +143,18 @@ export default async function VenuesPage({
           totalPages={totalPages}
           baseParams={baseParams}
         />
+
+        {/* Honeypot — invisible to real users + screen readers, but
+            scrapers that follow every <a> in the DOM will hit /api/hp
+            and be logged. */}
+        <a
+          href="/api/hp"
+          aria-hidden="true"
+          tabIndex={-1}
+          style={{ display: "none" }}
+        >
+          .
+        </a>
       </div>
     </main>
   );
