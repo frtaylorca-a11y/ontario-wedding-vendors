@@ -157,34 +157,49 @@ export default async function VendorPage({ params }: { params: Params }) {
             priority
             sizes="100vw"
             className="object-cover"
+            style={{ filter: "saturate(0.7)", zIndex: 0 }}
           />
           <div
             aria-hidden
             className="absolute inset-0"
-            style={{ background: "rgba(28, 20, 25, 0.55)" }}
+            style={{ background: "rgba(0,0,0,0.45)", zIndex: 1 }}
           />
-          <div className="relative mx-auto flex h-full max-w-[1180px] flex-col justify-end px-6 pb-10 text-white">
-            <nav aria-label="Breadcrumb" className="mb-5 text-xs font-medium text-white/75">
+          <div
+            className="relative mx-auto flex h-full max-w-[1180px] flex-col justify-end px-6 pb-10"
+            style={{ zIndex: 2 }}
+          >
+            <nav
+              aria-label="Breadcrumb"
+              className="mb-5 text-xs font-medium"
+              style={{ color: "rgba(255,255,255,0.7)" }}
+            >
               <ol className="flex flex-wrap items-center gap-1">
-                <li><Link href={"/" as Route} className="hover:text-white">Home</Link></li>
+                <li><Link href={"/" as Route} className="hover:text-white" style={{ color: "rgba(255,255,255,0.7)" }}>Home</Link></li>
                 <li aria-hidden>/</li>
-                <li><Link href={"/vendors" as Route} className="hover:text-white">Vendors</Link></li>
+                <li><Link href={"/vendors" as Route} className="hover:text-white" style={{ color: "rgba(255,255,255,0.7)" }}>Vendors</Link></li>
                 <li aria-hidden>/</li>
-                <li><Link href={`/vendors/${rawCategory}` as Route} className="hover:text-white">{plural}</Link></li>
+                <li><Link href={`/vendors/${rawCategory}` as Route} className="hover:text-white" style={{ color: "rgba(255,255,255,0.7)" }}>{plural}</Link></li>
                 <li aria-hidden>/</li>
-                <li aria-current="page" className="text-white/90">{vendor.name}</li>
+                <li aria-current="page" style={{ color: "#ffffff" }}>{vendor.name}</li>
               </ol>
             </nav>
 
             <div
-              className="text-xs font-bold uppercase tracking-[0.14em] text-white"
-              style={{ opacity: 0.8, textShadow: "0 1px 8px rgba(0,0,0,0.5)" }}
+              className="text-xs font-bold uppercase tracking-[0.14em]"
+              style={{
+                color: "rgba(255,255,255,0.8)",
+                textShadow: "0 1px 8px rgba(0,0,0,0.6)",
+              }}
             >
               {label} · {regionLabel(vendor.region)}
             </div>
             <h1
-              className="mt-2 font-display text-4xl font-semibold leading-tight text-white md:text-6xl"
-              style={{ textShadow: "0 2px 16px rgba(0,0,0,0.5)" }}
+              className="mt-2 font-display text-4xl font-semibold leading-tight md:text-6xl text-white!"
+              style={{
+                color: "#ffffff",
+                textShadow:
+                  "0 2px 20px rgba(0,0,0,0.9), 0 1px 3px rgba(0,0,0,1)",
+              }}
             >
               {vendor.name}
             </h1>

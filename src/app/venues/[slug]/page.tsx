@@ -220,37 +220,58 @@ export default async function VenuePage({ params }: { params: Params }) {
             priority
             sizes="100vw"
             className="object-cover"
+            style={{ filter: "saturate(0.7)", zIndex: 0 }}
           />
           <div
             aria-hidden
             className="absolute inset-0"
-            style={{ background: "rgba(28, 20, 25, 0.55)" }}
+            style={{ background: "rgba(0,0,0,0.45)", zIndex: 1 }}
           />
-          <div className="relative mx-auto flex h-full max-w-[1180px] flex-col justify-end px-6 pb-12 text-white">
-            <nav aria-label="Breadcrumb" className="mb-6 text-xs font-medium text-white/75">
+          <div
+            className="relative mx-auto flex h-full max-w-[1180px] flex-col justify-end px-6 pb-12"
+            style={{ zIndex: 2 }}
+          >
+            <nav
+              aria-label="Breadcrumb"
+              className="mb-6 text-xs font-medium"
+              style={{ color: "rgba(255,255,255,0.7)" }}
+            >
               <ol className="flex flex-wrap items-center gap-1">
-                <li><Link href={"/" as Route} className="hover:text-white">Home</Link></li>
+                <li><Link href={"/" as Route} className="hover:text-white" style={{ color: "rgba(255,255,255,0.7)" }}>Home</Link></li>
                 <li aria-hidden>/</li>
-                <li><Link href={"/venues" as Route} className="hover:text-white">Venues</Link></li>
+                <li><Link href={"/venues" as Route} className="hover:text-white" style={{ color: "rgba(255,255,255,0.7)" }}>Venues</Link></li>
                 <li aria-hidden>/</li>
-                <li aria-current="page" className="text-white/90">{venue.name}</li>
+                <li aria-current="page" style={{ color: "#ffffff" }}>{venue.name}</li>
               </ol>
             </nav>
 
             {venue.venueType && (
-              <div className="text-xs font-bold uppercase tracking-[0.14em] text-rose">
+              <div
+                className="text-xs font-bold uppercase tracking-[0.14em]"
+                style={{
+                  color: "rgba(255,255,255,0.8)",
+                  textShadow: "0 1px 8px rgba(0,0,0,0.6)",
+                }}
+              >
                 {venue.venueType}
               </div>
             )}
             <h1
-              className="mt-2 font-display text-4xl font-semibold leading-tight md:text-6xl"
-              style={{ textShadow: "0 2px 8px rgba(0,0,0,0.4)" }}
+              className="mt-2 font-display text-4xl font-semibold leading-tight md:text-6xl text-white!"
+              style={{
+                color: "#ffffff",
+                textShadow:
+                  "0 2px 20px rgba(0,0,0,0.9), 0 1px 3px rgba(0,0,0,1)",
+              }}
             >
               {venue.name}
             </h1>
             <p
-              className="mt-3 flex items-center gap-2 text-sm text-white/85 md:text-base"
-              style={{ textShadow: "0 1px 4px rgba(0,0,0,0.5)" }}
+              className="mt-3 flex items-center gap-2 text-sm md:text-base"
+              style={{
+                color: "#ffffff",
+                textShadow: "0 1px 8px rgba(0,0,0,0.6), 0 1px 2px rgba(0,0,0,0.9)",
+              }}
             >
               <svg
                 aria-hidden
