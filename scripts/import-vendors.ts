@@ -9,7 +9,11 @@
  *
  * Behaviour:
  *   - Skips vendors with vendor_readiness_score < 50 (configurable via SCORE_MIN)
- *   - Skips vendors with no place_id (can't upsert without a unique key)
+ *   - Skips vendors with no place_id, EXCEPT when source === "weddingwire"
+ *     AND both name + city are present — those get a synthetic place_id
+ *     of "ww-" + slugify(name) so the (place_id) unique constraint still
+ *     holds. WeddingWire listings don't carry Google place IDs but are
+ *     otherwise high-signal, so this opens the door for them.
  *   - Skips rows from the "unknown.json" file (no actionable category)
  *   - Forces Pic Booth's slug to "pic-booth-st-catharines" (must match the
  *     hardcoded reference in PicBoothSitePartnerCard)
@@ -113,6 +117,17 @@ function cleanString(s: string | null | undefined): string | null {
   const t = s.trim();
   if (!t || t.toLowerCase() === "unknown") return null;
   return t;
+}
+
+/** URL-safe slug for synthesizing WeddingWire place IDs. */
+function slugify(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD").replace(/[̀-ͯ]/g, "") /* strip accents */
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
 }
 
 function toRow(raw: ScrapedVendor): NewVendor | null {
@@ -251,6 +266,15 @@ async function main() {
       const cat = normalizeCategoryName(raw.category);
       if (!perCategory[cat]) perCategory[cat] = newStats();
       const catStats = perCategory[cat];
+
+      /* WeddingWire scrapes lack Google place_ids — synthesize one when we
+       * have enough identity (name + city) to keep the row unique. */
+      if (!raw.place_id) {
+        const sourceLc = (raw.source ?? "").toLowerCase();
+        if (sourceLc === "weddingwire" && raw.name?.trim() && raw.city?.trim()) {
+          raw.place_id = `ww-${slugify(raw.name)}`;
+        }
+      }
 
       if (!raw.place_id) {
         fileStats.skippedNoPlaceId++; catStats.skippedNoPlaceId++; total.skippedNoPlaceId++;
