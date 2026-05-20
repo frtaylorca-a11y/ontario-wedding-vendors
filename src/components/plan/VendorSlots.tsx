@@ -475,14 +475,12 @@ export function VendorSlots({
                               </p>
                             )}
                             {hasDate && (
-                              <button
-                                type="button"
-                                disabled
-                                title="Quote requests coming soon — Brevo + vendor response page next"
-                                className="block w-full cursor-not-allowed rounded-pill border border-dashed border-rose bg-rose-pale px-4 py-2 text-center text-xs font-bold text-rose"
+                              <Link
+                                href={"/plan/quotes" as Route}
+                                className="block w-full rounded-pill bg-rose px-4 py-2 text-center text-xs font-bold text-white shadow-[0_4px_14px_rgba(185,100,118,0.3)] transition-all hover:bg-rose-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
                               >
-                                Request quotes from saved vendors → (soon)
-                              </button>
+                                Request quotes from saved vendors →
+                              </Link>
                             )}
                           </div>
                         );

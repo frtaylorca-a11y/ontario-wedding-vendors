@@ -325,6 +325,21 @@ export const weddingPlans = pgTable(
     rawStory:                   text("raw_story"),
     wizardCompleted:            boolean("wizard_completed").default(false),
     wizardCompletedAt:          timestamp("wizard_completed_at"),
+
+    /* ── Bulk quote request flow ────────────────────────────────────
+     * /plan/quotes lets the couple shortlist saved vendors and send
+     * one personalised inquiry per vendor in a single batch. The
+     * AI-generated 3-part template is cached here so the preview UI
+     * doesn't have to regenerate on every render; quotesSentAt marks
+     * the last successful batch send and drives the "you sent this
+     * on {date}" UX.
+     *
+     * coupleEmail is the reply-to address — collected once when the
+     * couple first sends a batch, then reused. Distinct from
+     * alertEmail (which is OneQR RSVP notifications). */
+    coupleEmail:                varchar("couple_email", { length: 255 }),
+    quoteEmailTemplate:         text("quote_email_template"),
+    quotesSentAt:               timestamp("quotes_sent_at"),
     ipAddress:          varchar("ip_address",   { length: 45 }),
     userAgent:          text("user_agent"),
     referrer:           varchar("referrer",     { length: 500 }),
@@ -379,6 +394,50 @@ export const userSuggestedVendors = pgTable(
     mentionCountIdx:   index("usv_mention_count_idx").on(t.mentionCount),
   }),
 );
+
+/**
+ * Bulk quote requests sent from /plan/quotes. One row per
+ * (session, vendor) batch send. The row captures the exact
+ * personalised email body that landed in the vendor's inbox so the
+ * couple can audit what they sent, and so future reply-tracking
+ * (webhook or polling) has somewhere to attach.
+ *
+ * Index notes:
+ *   - sessionIdx: powers "have I contacted X?" lookups in the UI
+ *   - vendorIdx + emailSentAt: powers the 30-day dedupe guardrail
+ *     ("you contacted them on {date} — send again?")
+ */
+export const quoteRequests = pgTable(
+  "quote_requests",
+  {
+    id:                serial("id").primaryKey(),
+    sessionId:         varchar("session_id", { length: 64 }).notNull(),
+    vendorId:          integer("vendor_id").notNull(),
+    vendorCategory:    varchar("vendor_category", { length: 50 }),
+    vendorEmail:       varchar("vendor_email", { length: 255 }),
+    coupleEmail:       varchar("couple_email",  { length: 255 }),
+    emailSubject:      text("email_subject"),
+    emailBody:         text("email_body"),
+    emailSent:         boolean("email_sent").default(false),
+    emailSentAt:       timestamp("email_sent_at"),
+    sendError:         text("send_error"),
+    /* Vendor response capture — populated by a future reply-tracking
+     * webhook. Today these stay null; the columns exist now so the
+     * shape lands in the table on the first migration. */
+    vendorResponse:    text("vendor_response"),
+    vendorRespondedAt: timestamp("vendor_responded_at"),
+    createdAt:         timestamp("created_at").defaultNow(),
+    updatedAt:         timestamp("updated_at").defaultNow(),
+  },
+  (t) => ({
+    sessionIdx: index("quote_requests_session_idx").on(t.sessionId),
+    vendorIdx:  index("quote_requests_vendor_idx").on(t.vendorId, t.emailSentAt),
+    sentIdx:    index("quote_requests_sent_idx").on(t.emailSent, t.emailSentAt),
+  }),
+);
+
+export type QuoteRequest = typeof quoteRequests.$inferSelect;
+export type NewQuoteRequest = typeof quoteRequests.$inferInsert;
 
 /**
  * Pricing data overlay for vendor categories. Two sources:

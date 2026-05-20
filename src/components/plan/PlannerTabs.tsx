@@ -8,7 +8,8 @@ export type PlannerTabKey =
   | "music"
   | "guests"
   | "itinerary"
-  | "website";
+  | "website"
+  | "quotes";
 
 const TABS: { key: PlannerTabKey; label: string; href: Route; isNew?: boolean }[] = [
   { key: "planner",      label: "Wedding Planner", href: "/plan" as Route },
@@ -17,7 +18,8 @@ const TABS: { key: PlannerTabKey; label: string; href: Route; isNew?: boolean }[
   { key: "music",        label: "Music",           href: "/plan/music" as Route },
   { key: "guests",       label: "Guests",          href: "/plan/guests" as Route },
   { key: "itinerary",    label: "Itinerary",       href: "/plan/itinerary" as Route },
-  { key: "website",      label: "Website",         href: "/plan/website" as Route,   isNew: true },
+  { key: "website",      label: "Website",         href: "/plan/website" as Route },
+  { key: "quotes",       label: "Quotes",          href: "/plan/quotes"  as Route,   isNew: true },
 ];
 
 export function PlannerTabs({ active }: { active: PlannerTabKey }) {
