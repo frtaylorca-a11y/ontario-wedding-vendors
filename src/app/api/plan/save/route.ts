@@ -66,6 +66,10 @@ const planSchema = z.object({
   thingsToDo:             z.unknown().optional(),
   multipleEvents:         z.unknown().optional(),
   photoGalleryUrls:       z.unknown().optional(),
+
+  /* Setup wizard (Step 2 story seed + Step 3 completion flag) */
+  rawStory:               z.string().max(2000).nullable().optional(),
+  wizardCompleted:        z.boolean().optional(),
 });
 
 export async function POST(request: Request) {
@@ -134,6 +138,20 @@ export async function POST(request: Request) {
   if (data.thingsToDo             !== undefined) { updateSet.thingsToDo             = data.thingsToDo;             insertValues.thingsToDo             = data.thingsToDo;             }
   if (data.multipleEvents         !== undefined) { updateSet.multipleEvents         = data.multipleEvents;         insertValues.multipleEvents         = data.multipleEvents;         }
   if (data.photoGalleryUrls       !== undefined) { updateSet.photoGalleryUrls       = data.photoGalleryUrls;       insertValues.photoGalleryUrls       = data.photoGalleryUrls;       }
+  if (data.rawStory               !== undefined) { updateSet.rawStory               = data.rawStory;               insertValues.rawStory               = data.rawStory;               }
+  if (data.wizardCompleted        !== undefined) {
+    updateSet.wizardCompleted    = data.wizardCompleted;
+    insertValues.wizardCompleted = data.wizardCompleted;
+    /* Stamp wizardCompletedAt the first time the flag flips true.
+     * Stamping unconditionally on every save with wizardCompleted=true
+     * would overwrite the original timestamp on no-op updates, so the
+     * stamp only goes onto the insert path and onto updates where it
+     * goes from any falsy state to true. */
+    if (data.wizardCompleted === true) {
+      updateSet.wizardCompletedAt    = new Date();
+      insertValues.wizardCompletedAt = new Date();
+    }
+  }
   if (data.customColorPrimary     !== undefined) { updateSet.customColorPrimary     = data.customColorPrimary;     insertValues.customColorPrimary     = data.customColorPrimary;     }
   if (data.customColorAccent      !== undefined) { updateSet.customColorAccent      = data.customColorAccent;      insertValues.customColorAccent      = data.customColorAccent;      }
   if (data.customColorBg          !== undefined) { updateSet.customColorBg          = data.customColorBg;          insertValues.customColorBg          = data.customColorBg;          }

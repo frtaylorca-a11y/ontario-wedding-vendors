@@ -313,6 +313,18 @@ export const weddingPlans = pgTable(
     premiumActivatedAt:         timestamp("premium_activated_at"),
     premiumExpiresAt:           timestamp("premium_expires_at"),
     weddingGenerationCount:     integer("wedding_generation_count").default(0),
+
+    /* ── Wedding-website setup wizard ────────────────────────────────
+     * The wizard on /plan/website is the screenshot-driven flow shown
+     * to fresh couples (where wedding_published=false AND
+     * wizard_completed=false). rawStory is the seed paragraph entered
+     * in wizard Step 2; the AI generator turns it into ourStory + the
+     * rest of the editorial copy. wizardCompleted flips true once the
+     * couple reaches Step 3 (photo + publish), at which point future
+     * visits go straight to the advanced editor. */
+    rawStory:                   text("raw_story"),
+    wizardCompleted:            boolean("wizard_completed").default(false),
+    wizardCompletedAt:          timestamp("wizard_completed_at"),
     ipAddress:          varchar("ip_address",   { length: 45 }),
     userAgent:          text("user_agent"),
     referrer:           varchar("referrer",     { length: 500 }),

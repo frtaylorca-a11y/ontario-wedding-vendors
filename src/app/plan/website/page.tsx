@@ -5,6 +5,7 @@ import { weddingPlans, venues } from "@/lib/schema";
 import { readPlanSessionId } from "@/lib/session";
 import { PlannerTabs } from "@/components/plan/PlannerTabs";
 import { WebsiteEditor } from "@/components/plan/WebsiteEditor";
+import { WebsiteWizard } from "@/components/plan/WebsiteWizard";
 import {
   DEFAULT_PAGE_CONFIG,
   mergePageConfig,
@@ -100,7 +101,17 @@ export default async function WebsiteEditorPage() {
     /* Premium + AI generation tracking */
     tier:                   (plan?.tier as "free" | "premium" | null) ?? "free",
     weddingGenerationCount: plan?.weddingGenerationCount ?? 0,
+    /* Wizard state */
+    rawStory:               plan?.rawStory               ?? "",
+    wizardCompleted:        plan?.wizardCompleted        ?? false,
   };
+
+  /* First-time couples (no publish + no wizard finish) see the
+   * 3-step wizard. Anyone who's already been through it — even if
+   * they only ran the AI generator and bailed — drops into the
+   * advanced editor and uses "Edit sections" / "Browse all themes"
+   * to fine-tune. */
+  const showWizard = !initial.weddingPublished && !initial.wizardCompleted;
 
   return (
     <main className="bg-bg-warm">
@@ -115,13 +126,31 @@ export default async function WebsiteEditorPage() {
             Your free <em className="italic text-rose">wedding website</em>
           </h1>
           <p className="mt-3 max-w-[640px] text-text-mid">
-            Pick a theme. Toggle sections on or off. Edit each one inline.
-            Claude can write your copy for you — start there and edit anything
-            you don&rsquo;t love.
+            {showWizard
+              ? "Three quick steps. Pick a style, tell us your story, then publish. You can fine-tune anything you want once it's live."
+              : "Pick a theme. Toggle sections on or off. Edit each one inline. Claude can write your copy for you — start there and edit anything you don’t love."}
           </p>
         </header>
 
-        <WebsiteEditor initial={initial} />
+        {showWizard ? (
+          <WebsiteWizard
+            initial={{
+              sessionId:              initial.sessionId,
+              partner1Name:           initial.partner1Name,
+              partner2Name:           initial.partner2Name,
+              venueLabel:             initial.venueLabel,
+              weddingSiteSlug:        initial.weddingSiteSlug,
+              weddingSiteDomain:      initial.weddingSiteDomain,
+              weddingTheme:           initial.weddingTheme,
+              weddingHeroImage:       initial.weddingHeroImage,
+              rawStory:               initial.rawStory,
+              tier:                   initial.tier,
+              weddingGenerationCount: initial.weddingGenerationCount,
+            }}
+          />
+        ) : (
+          <WebsiteEditor initial={initial} />
+        )}
       </div>
     </main>
   );

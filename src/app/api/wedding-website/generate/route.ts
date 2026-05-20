@@ -148,6 +148,13 @@ export async function POST() {
   const typo = TYPOGRAPHY_BY_ID[typoId];
   const toneLine = typo ? `Visual feel: ${typo.label}. ${typo.promptHint}` : "";
 
+  /* The wizard's Step 2 seed paragraph — when present this is the
+   * primary input for "ourStory". Claude should expand it into 2–3
+   * warm paragraphs in the couple's own voice, not paraphrase it. */
+  const storyLine = plan.rawStory && plan.rawStory.trim().length > 0
+    ? `The couple's seed story (use this as the primary input for ourStory — expand into 2–3 warm paragraphs in their voice, keep their specific details):\n"""${plan.rawStory.trim()}"""`
+    : "";
+
   const userPrompt = [
     `Couple: ${names || "Partner A and Partner B"}.`,
     venueContext,
@@ -155,6 +162,7 @@ export async function POST() {
     guestLine,
     regionLine,
     toneLine,
+    storyLine,
     "",
     "Generate the wedding-website copy as specified in the system prompt.",
   ].filter(Boolean).join("\n");
