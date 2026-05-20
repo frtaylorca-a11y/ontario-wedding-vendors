@@ -21,11 +21,13 @@ const CATEGORY_LABEL: Record<string, string> = {
   wedding_planner: "Wedding Planner",
 };
 
-/* Spec: budget = green, mid = blue, premium (DB term for luxury) = amber */
-const PRICE_TIER: Record<string, { label: string; classes: string }> = {
-  budget:  { label: "$",   classes: "bg-emerald-100 text-emerald-800" },
-  mid:     { label: "$$",  classes: "bg-blue-100 text-blue-800" },
-  premium: { label: "$$$", classes: "bg-amber-100 text-amber-800" },
+/* Warm-palette price tier pills — all three tones sit inside the
+ * #FAF8F5 → #FDF8F0 cream range so they read as editorial accents,
+ * not the loud emerald/blue/amber from the prior palette. */
+const PRICE_TIER: Record<string, { label: string; style: CSSProperties }> = {
+  budget:  { label: "$",   style: { background: "#F5F1EC", color: "#6B7280" } },
+  mid:     { label: "$$",  style: { background: "#FAF8F5", color: "#4B5563", border: "1px solid #EDE9E3" } },
+  premium: { label: "$$$", style: { background: "#FDF8F0", color: "#C9A96E" } },
 };
 
 const ICON_PROPS = {
@@ -222,7 +224,8 @@ export function VendorCard({
             <SaveVendorButton category={vendor.category} slug={vendor.slug} />
             {priceTier && (
               <span
-                className={`rounded-pill px-2.5 py-1 text-[0.78rem] font-bold ${priceTier.classes}`}
+                className="rounded-pill px-2.5 py-1 text-[0.78rem] font-bold"
+                style={priceTier.style}
                 title={`${vendor.priceTier} price tier`}
               >
                 {priceTier.label}
@@ -367,7 +370,8 @@ export function VendorCard({
 
         {priceTier && (
           <span
-            className={`rounded-pill px-2.5 py-1 text-[0.78rem] font-bold ${priceTier.classes}`}
+            className="rounded-pill px-2.5 py-1 text-[0.78rem] font-bold"
+            style={priceTier.style}
             title={`${vendor.priceTier} price tier`}
           >
             {priceTier.label}

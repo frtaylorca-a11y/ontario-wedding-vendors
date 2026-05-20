@@ -71,7 +71,7 @@ function FooterColumn({ heading, links }: { heading: string; links: FooterLink[]
 
 export function Footer() {
   return (
-    <footer style={{ background: "#0F0D0C" }}>
+    <footer style={{ background: "#2C2C2A" }}>
       <div className="mx-auto max-w-[1280px] px-6 py-16">
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4 lg:gap-8">
           {/* Col 1 — Brand */}

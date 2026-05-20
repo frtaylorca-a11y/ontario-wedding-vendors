@@ -69,17 +69,17 @@ export async function Header() {
         </nav>
       </header>
 
-      <div className="bg-charcoal">
+      <div className="bg-bg-soft border-b border-border">
         <div className="mx-auto flex max-w-[1280px] flex-wrap items-center justify-center gap-x-2 gap-y-1 px-6 py-2 text-center">
           {trustItems.map((item, i) => (
             <span key={item} className="flex items-center gap-2">
               {i > 0 && (
-                <span aria-hidden className="text-white/35">
+                <span aria-hidden className="text-text-muted/60">
                   ·
                 </span>
               )}
               <span
-                className="font-medium text-white"
+                className="font-medium text-text-mid"
                 style={{ fontSize: "0.7rem" }}
               >
                 {item}
