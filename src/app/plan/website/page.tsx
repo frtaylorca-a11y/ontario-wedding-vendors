@@ -90,6 +90,16 @@ export default async function WebsiteEditorPage() {
     photoGalleryUrls:       (plan?.photoGalleryUrls as string[]              | null) ?? [],
     weddingGeneratedCopy:   (plan?.weddingGeneratedCopy as GeneratedCopy     | null) ?? null,
     region:                 plan?.region                 ?? null,
+    /* Custom palette + typography */
+    customColorPrimary:     plan?.customColorPrimary     ?? null,
+    customColorAccent:      plan?.customColorAccent      ?? null,
+    customColorBg:          plan?.customColorBg          ?? null,
+    customColorText:        plan?.customColorText        ?? null,
+    customPaletteId:        plan?.customPaletteId        ?? null,
+    weddingTypographyStyle: plan?.weddingTypographyStyle ?? null,
+    /* Premium + AI generation tracking */
+    tier:                   (plan?.tier as "free" | "premium" | null) ?? "free",
+    weddingGenerationCount: plan?.weddingGenerationCount ?? 0,
   };
 
   return (

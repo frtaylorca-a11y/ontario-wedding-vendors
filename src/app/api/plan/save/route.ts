@@ -42,7 +42,14 @@ const planSchema = z.object({
   alertChannel:   z.enum(["sms", "email", "both", "none"]).nullable().optional(),
 
   /* Wedding-website fields (owned by /plan/website editor) */
-  weddingTheme:           z.enum(["classic", "romantic", "rustic", "modern", "garden", "coastal", "boho", "luxe", "terracotta", "frosted"]).optional(),
+  weddingTheme:           z.enum(["classic", "romantic", "rustic", "modern", "garden", "coastal", "boho", "luxe", "terracotta", "frosted", "custom"]).optional(),
+  /* Custom palette colours + identifier — set by the palette picker. */
+  customColorPrimary:     z.string().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
+  customColorAccent:      z.string().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
+  customColorBg:          z.string().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
+  customColorText:        z.string().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
+  customPaletteId:        z.string().max(50).nullable().optional(),
+  weddingTypographyStyle: z.string().max(30).nullable().optional(),
   weddingPublished:       z.boolean().optional(),
   weddingHeroImage:       z.string().max(500).nullable().optional(),
   weddingParty:           z.unknown().optional(),
@@ -127,6 +134,12 @@ export async function POST(request: Request) {
   if (data.thingsToDo             !== undefined) { updateSet.thingsToDo             = data.thingsToDo;             insertValues.thingsToDo             = data.thingsToDo;             }
   if (data.multipleEvents         !== undefined) { updateSet.multipleEvents         = data.multipleEvents;         insertValues.multipleEvents         = data.multipleEvents;         }
   if (data.photoGalleryUrls       !== undefined) { updateSet.photoGalleryUrls       = data.photoGalleryUrls;       insertValues.photoGalleryUrls       = data.photoGalleryUrls;       }
+  if (data.customColorPrimary     !== undefined) { updateSet.customColorPrimary     = data.customColorPrimary;     insertValues.customColorPrimary     = data.customColorPrimary;     }
+  if (data.customColorAccent      !== undefined) { updateSet.customColorAccent      = data.customColorAccent;      insertValues.customColorAccent      = data.customColorAccent;      }
+  if (data.customColorBg          !== undefined) { updateSet.customColorBg          = data.customColorBg;          insertValues.customColorBg          = data.customColorBg;          }
+  if (data.customColorText        !== undefined) { updateSet.customColorText        = data.customColorText;        insertValues.customColorText        = data.customColorText;        }
+  if (data.customPaletteId        !== undefined) { updateSet.customPaletteId        = data.customPaletteId;        insertValues.customPaletteId        = data.customPaletteId;        }
+  if (data.weddingTypographyStyle !== undefined) { updateSet.weddingTypographyStyle = data.weddingTypographyStyle; insertValues.weddingTypographyStyle = data.weddingTypographyStyle; }
 
   /* Session / attribution capture — INSERT-only fields. Read from request
    * headers + the AttributionCapture cookie. Setting these on the INSERT

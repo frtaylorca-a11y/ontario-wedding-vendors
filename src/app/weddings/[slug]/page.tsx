@@ -17,7 +17,8 @@ import {
   type WeddingPageConfig,
   type WeddingPartyMember,
 } from "@/lib/wedding-website";
-import { themeStyle } from "@/lib/wedding-themes";
+import { buildCustomTokens, themeStyle } from "@/lib/wedding-themes";
+import { TYPOGRAPHY_BY_ID, defaultTypographyForTheme } from "@/lib/wedding-typography";
 import type { BookedVendor } from "@/lib/plan-state";
 import { PasswordGate } from "./PasswordGate";
 import { HeroBlock } from "@/components/weddings/HeroBlock";
@@ -280,6 +281,28 @@ export default async function WeddingSitePage({ params }: { params: Params }) {
     return "rings";
   }
 
+  /* Resolve custom theme tokens — when wedding_theme is "custom", build
+   * the token bundle from the four custom_color_* columns + chosen
+   * typography. Falls back to romantic if any colour is missing. */
+  let customTokens: ReturnType<typeof buildCustomTokens> | null = null;
+  if (plan.weddingTheme === "custom"
+      && plan.customColorPrimary && plan.customColorAccent
+      && plan.customColorBg && plan.customColorText) {
+    const typoId = plan.weddingTypographyStyle ?? defaultTypographyForTheme(plan.weddingTheme);
+    const typo   = TYPOGRAPHY_BY_ID[typoId] ?? TYPOGRAPHY_BY_ID["romantic-serif"];
+    customTokens = buildCustomTokens({
+      primary:      plan.customColorPrimary,
+      accent:       plan.customColorAccent,
+      bg:           plan.customColorBg,
+      text:         plan.customColorText,
+      fontDisplay:  typo.fontDisplay,
+      fontBody:     typo.fontBody,
+      displayStyle: typo.displayStyle,
+      displayLabel: typo.label,
+      bodyLabel:    typo.label,
+    });
+  }
+
   /* Build the payload once — all layout components consume this shape. */
   const layoutProps: WeddingLayoutProps = {
     plan, venue, config, credits, coupleLabel,
@@ -290,16 +313,19 @@ export default async function WeddingSitePage({ params }: { params: Params }) {
 
   /* Dispatch to the matching layout for distinct theme variants. The
    * remaining 8 colour-only themes fall through to the default layout
-   * rendered inline below. */
-  switch (plan.weddingTheme) {
-    case "terracotta":
-      return <TerracottaLayout {...layoutProps} />;
-    case "frosted":
-      return <FrostedGlassLayout {...layoutProps} />;
+   * rendered inline below. Premium variants are gated server-side —
+   * a free user whose theme was set on a previous premium subscription
+   * still gets the colour-only fallback. */
+  const isPremium = plan.tier === "premium";
+  if (isPremium && plan.weddingTheme === "terracotta") {
+    return <TerracottaLayout {...layoutProps} />;
+  }
+  if (isPremium && plan.weddingTheme === "frosted") {
+    return <FrostedGlassLayout {...layoutProps} />;
   }
 
   return (
-    <main style={themeStyle(plan.weddingTheme)} className="min-h-screen">
+    <main style={themeStyle(plan.weddingTheme, customTokens ?? undefined)} className="min-h-screen">
       {/* Scoped: wedding-party avatar hover. Keyed to .wedding-party-avatar
        * so the rule doesn't bleed into anything else on the page. */}
       <style>{`

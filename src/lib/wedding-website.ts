@@ -24,9 +24,13 @@ export type WeddingTheme =
   | "boho"
   | "luxe"
   | "terracotta"
-  | "frosted";
+  | "frosted"
+  /* Special: "custom" means the layout uses the colours stored on
+   * wedding_plans.custom_color_* (set by the palette picker) on top
+   * of the default layout structure. */
+  | "custom";
 
-export const WEDDING_THEMES: { id: WeddingTheme; label: string; description: string; isLayoutVariant?: boolean }[] = [
+export const WEDDING_THEMES: { id: WeddingTheme; label: string; description: string; isLayoutVariant?: boolean; isPremium?: boolean }[] = [
   { id: "romantic",   label: "Romantic",      description: "Dusty rose + blush, Cormorant italic display." },
   { id: "classic",    label: "Classic",       description: "Navy + ivory, formal Cormorant and Inter." },
   { id: "rustic",     label: "Rustic",        description: "Burgundy + cream, Playfair Display with Lato." },
@@ -35,9 +39,9 @@ export const WEDDING_THEMES: { id: WeddingTheme; label: string; description: str
   { id: "coastal",    label: "Coastal",       description: "Ocean blue + seafoam, Inter with friendly Nunito." },
   { id: "boho",       label: "Boho",          description: "Terracotta + warm sand, expressive Fraunces serif." },
   { id: "luxe",       label: "Luxe",          description: "Deep gold on charcoal — the dark theme." },
-  /* — Distinct layout variants (own component, not just token swap) — */
-  { id: "terracotta", label: "Terracotta",    description: "Full-bleed weekend invite, terracotta colour bands, editorial 'Love Story' panel.", isLayoutVariant: true },
-  { id: "frosted",    label: "Frosted Glass", description: "Golden-hour photo hero with a frosted glass card + polaroid overlay.",               isLayoutVariant: true },
+  /* — Premium-only layout variants (own component) — */
+  { id: "terracotta", label: "Terracotta",    description: "Full-bleed weekend invite, terracotta colour bands, editorial 'Love Story' panel.", isLayoutVariant: true, isPremium: true },
+  { id: "frosted",    label: "Frosted Glass", description: "Golden-hour photo hero with a frosted glass card + polaroid overlay.",               isLayoutVariant: true, isPremium: true },
 ];
 
 /* ── Per-section visibility config ────────────────────────────────── */

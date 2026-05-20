@@ -17,6 +17,11 @@ import {
 } from "@/lib/wedding-website";
 import { defaultThingsToDo } from "@/lib/things-to-do";
 import { ThemePicker } from "./ThemePicker";
+import { PalettePicker } from "./PalettePicker";
+import { TypographyPicker } from "./TypographyPicker";
+import { PremiumUpgradeModal } from "./PremiumUpgradeModal";
+import type { WeddingPalette } from "@/lib/wedding-palettes";
+import type { TypographyStyle } from "@/lib/wedding-typography";
 
 type EditorState = {
   sessionId:              string;
@@ -45,7 +50,20 @@ type EditorState = {
   photoGalleryUrls:       string[];
   weddingGeneratedCopy:   GeneratedCopy | null;
   region:                 string | null;
+  /* Custom palette + typography */
+  customColorPrimary:     string | null;
+  customColorAccent:      string | null;
+  customColorBg:          string | null;
+  customColorText:        string | null;
+  customPaletteId:        string | null;
+  weddingTypographyStyle: string | null;
+  /* Premium + AI generation tracking */
+  tier:                   "free" | "premium";
+  weddingGenerationCount: number;
 };
+
+const FREE_GENERATION_LIMIT = 3;
+type UpgradeReason = "generation-limit" | "premium-theme" | "premium-palette";
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -57,6 +75,7 @@ export function WebsiteEditor({ initial }: { initial: EditorState }) {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const [upgradeReason, setUpgradeReason] = useState<UpgradeReason | null>(null);
 
   /* ── Debounced autosave ────────────────────────────────────────── */
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -85,6 +104,12 @@ export function WebsiteEditor({ initial }: { initial: EditorState }) {
           thingsToDo:             next.thingsToDo,
           multipleEvents:         next.multipleEvents,
           photoGalleryUrls:       next.photoGalleryUrls,
+          customColorPrimary:     next.customColorPrimary,
+          customColorAccent:      next.customColorAccent,
+          customColorBg:          next.customColorBg,
+          customColorText:        next.customColorText,
+          customPaletteId:        next.customPaletteId,
+          weddingTypographyStyle: next.weddingTypographyStyle,
         }),
       });
       if (!res.ok) throw new Error(`save failed: ${res.status}`);
@@ -127,21 +152,33 @@ export function WebsiteEditor({ initial }: { initial: EditorState }) {
   /* ── AI copy generation ───────────────────────────────────────── */
 
   async function generateCopy() {
+    /* Client-side pre-check — quick UX feedback. The server enforces
+     * the same limit regardless. */
+    if (state.tier !== "premium" && state.weddingGenerationCount >= FREE_GENERATION_LIMIT) {
+      setUpgradeReason("generation-limit");
+      return;
+    }
+
     setGenerating(true);
     setGenerateError(null);
     try {
       const res = await fetch("/api/wedding-website/generate", { method: "POST" });
+      if (res.status === 402) {
+        setUpgradeReason("generation-limit");
+        return;
+      }
       if (!res.ok) throw new Error(`generate ${res.status}`);
-      const body = (await res.json()) as { generated: GeneratedCopy };
+      const body = (await res.json()) as { generated: GeneratedCopy; remaining: number | null; tier: string };
       const g = body.generated ?? {};
       const next: EditorState = {
         ...state,
         weddingGeneratedCopy: g,
         /* Apply suggestions only into fields the couple hasn't filled in. */
-        ourStory:      state.ourStory             || g.ourStory      || state.ourStory,
-        travelCopy:    state.travelCopy           || g.travelCopy    || state.travelCopy,
-        dressCodeDescription: state.dressCodeDescription || g.dressCopyHint || state.dressCodeDescription,
-        thingsToDo:    state.thingsToDo.length > 0 ? state.thingsToDo : (g.thingsToDo ?? []),
+        ourStory:              state.ourStory             || g.ourStory      || state.ourStory,
+        travelCopy:            state.travelCopy           || g.travelCopy    || state.travelCopy,
+        dressCodeDescription:  state.dressCodeDescription || g.dressCopyHint || state.dressCodeDescription,
+        thingsToDo:            state.thingsToDo.length > 0 ? state.thingsToDo : (g.thingsToDo ?? []),
+        weddingGenerationCount: state.weddingGenerationCount + 1,
       };
       setState(next);
       persist(next);
@@ -151,6 +188,38 @@ export function WebsiteEditor({ initial }: { initial: EditorState }) {
     } finally {
       setGenerating(false);
     }
+  }
+
+  /* ── Palette + typography apply ───────────────────────────────── */
+
+  function applyPalette(p: WeddingPalette) {
+    update({
+      weddingTheme:       "custom",
+      customColorPrimary: p.primary,
+      customColorAccent:  p.accent,
+      customColorBg:      p.bg,
+      customColorText:    p.text,
+      customPaletteId:    p.id,
+    });
+  }
+
+  function applyTypography(t: TypographyStyle) {
+    update({ weddingTypographyStyle: t.id });
+  }
+
+  /* ── Premium upgrade handler ──────────────────────────────────── */
+
+  function handleUpgraded() {
+    /* Server already updated; just reflect locally so locks lift. */
+    setState((prev) => ({ ...prev, tier: "premium" }));
+  }
+
+  function handleLockedTheme(theme: WeddingTheme) {
+    if (state.tier === "premium") {
+      update({ weddingTheme: theme });
+      return;
+    }
+    setUpgradeReason("premium-theme");
   }
 
   /* ── Section content updaters ─────────────────────────────────── */
@@ -206,6 +275,13 @@ export function WebsiteEditor({ initial }: { initial: EditorState }) {
 
   return (
     <div className="space-y-6">
+      {/* Upgrade modal — global, rendered above the editor */}
+      <PremiumUpgradeModal
+        reason={upgradeReason}
+        onClose={() => setUpgradeReason(null)}
+        onUpgraded={handleUpgraded}
+      />
+
       {/* Save indicator */}
       <div className="flex items-center justify-between rounded-card border border-border bg-white p-4">
         <div className="text-sm text-text-mid">
@@ -223,6 +299,31 @@ export function WebsiteEditor({ initial }: { initial: EditorState }) {
         <SaveIndicator status={saveStatus} />
       </div>
 
+      {/* Premium-tier badge */}
+      <div className="flex items-center justify-between rounded-card border border-border bg-white px-5 py-3 text-sm">
+        <div>
+          <span className="font-medium text-charcoal">Plan: </span>
+          {state.tier === "premium" ? (
+            <span className="inline-flex items-center gap-1.5 rounded-pill bg-emerald-100 px-2.5 py-0.5 text-[0.65rem] font-bold uppercase tracking-[0.08em] text-emerald-700">
+              ✓ Premium
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 rounded-pill bg-bg-soft px-2.5 py-0.5 text-[0.65rem] font-bold uppercase tracking-[0.08em] text-text-muted">
+              Free
+            </span>
+          )}
+        </div>
+        {state.tier !== "premium" && (
+          <button
+            type="button"
+            onClick={() => setUpgradeReason("premium-theme")}
+            className="text-xs font-bold text-rose hover:underline"
+          >
+            Upgrade to unlock everything →
+          </button>
+        )}
+      </div>
+
       {/* Theme picker */}
       <Section
         title="Choose a theme"
@@ -230,6 +331,7 @@ export function WebsiteEditor({ initial }: { initial: EditorState }) {
       >
         <ThemePicker
           applied={state.weddingTheme}
+          tier={state.tier}
           coupleLabel={
             [state.partner1Name, state.partner2Name].filter(Boolean).join(" & ") || "Charlotte & Francis"
           }
@@ -242,6 +344,41 @@ export function WebsiteEditor({ initial }: { initial: EditorState }) {
           }
           venueLine={state.venueLabel}
           onApply={(theme) => update({ weddingTheme: theme })}
+          onLockedClick={(theme) => handleLockedTheme(theme)}
+        />
+      </Section>
+
+      {/* Colour palette picker */}
+      <Section
+        title="Colour palette"
+        description="Pick a hand-tuned palette. Applies as a custom theme — the four colours flow into every section of your site."
+      >
+        <PalettePicker
+          activeId={state.customPaletteId}
+          isPremium={state.tier === "premium"}
+          onApply={applyPalette}
+          onLockedClick={() => setUpgradeReason("premium-palette")}
+        />
+      </Section>
+
+      {/* Typography style chips */}
+      <Section
+        title="Typography feel"
+        description="The tone of your site — and the tone of the AI-generated copy. No font names; just pick the vibe."
+      >
+        <TypographyPicker
+          activeId={state.weddingTypographyStyle}
+          previewCoupleLabel={
+            [state.partner1Name, state.partner2Name].filter(Boolean).join(" & ") || "Charlotte & Francis"
+          }
+          previewDateUpper={
+            state.weddingDate
+              ? new Date(`${state.weddingDate.slice(0,10)}T12:00:00`).toLocaleDateString("en-CA", {
+                  year: "numeric", month: "long", day: "numeric",
+                }).toUpperCase()
+              : "AUGUST 15, 2026"
+          }
+          onApply={applyTypography}
         />
       </Section>
 
@@ -300,6 +437,15 @@ export function WebsiteEditor({ initial }: { initial: EditorState }) {
               {generating ? "Generating…" : "Generate copy →"}
             </button>
           </div>
+
+          {/* Generation counter — green / amber / rose by remaining */}
+          <GenerationCounter
+            tier={state.tier}
+            used={state.weddingGenerationCount}
+            limit={FREE_GENERATION_LIMIT}
+            onUpgradeClick={() => setUpgradeReason("generation-limit")}
+          />
+
           {generateError && (
             <p className="text-sm text-red-600">{generateError}</p>
           )}
@@ -823,6 +969,44 @@ function GeneratedSuggestion({ text, onAccept }: { text: string; onAccept: () =>
       </div>
       <p className="mt-2 text-sm text-text-mid">{text}</p>
     </div>
+  );
+}
+
+function GenerationCounter({
+  tier, used, limit, onUpgradeClick,
+}: {
+  tier:           "free" | "premium";
+  used:           number;
+  limit:          number;
+  onUpgradeClick: () => void;
+}) {
+  if (tier === "premium") {
+    return (
+      <p className="mt-1 inline-flex items-center gap-1.5 rounded-pill bg-emerald-100 px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-[0.08em] text-emerald-700">
+        ✓ Unlimited generations
+      </p>
+    );
+  }
+  const remaining = Math.max(0, limit - used);
+  if (remaining === 0) {
+    return (
+      <button
+        type="button"
+        onClick={onUpgradeClick}
+        className="mt-1 inline-flex items-center gap-1.5 rounded-pill bg-rose-pale px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-[0.08em] text-rose hover:bg-rose-pale/70"
+      >
+        0 generations — upgrade to continue →
+      </button>
+    );
+  }
+  const cls =
+    remaining === 1
+      ? "bg-amber-100 text-amber-700"
+      : "bg-emerald-100 text-emerald-700";
+  return (
+    <p className={`mt-1 inline-flex rounded-pill px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-[0.08em] ${cls}`}>
+      {remaining} {remaining === 1 ? "generation" : "generations"} remaining
+    </p>
   );
 }
 

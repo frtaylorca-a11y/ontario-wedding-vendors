@@ -6,6 +6,7 @@ import { venues, weddingPlans } from "@/lib/schema";
 import { readPlanSessionId } from "@/lib/session";
 import { newId, type GeneratedCopy, type FaqItem, type ThingsToDoItem } from "@/lib/wedding-website";
 import { defaultThingsToDo } from "@/lib/things-to-do";
+import { TYPOGRAPHY_BY_ID, defaultTypographyForTheme } from "@/lib/wedding-typography";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -98,6 +99,26 @@ export async function POST() {
     return NextResponse.json({ error: "No plan to generate from" }, { status: 404 });
   }
 
+  /* Free tier: 3 generations included. Premium: unlimited. The free
+   * count + tier are stored on the plan row — the editor reads the
+   * same values to show the counter / unlock state, so we don't need
+   * a separate "quota" table. */
+  const FREE_LIMIT = 3;
+  const tier = plan.tier ?? "free";
+  const count = plan.weddingGenerationCount ?? 0;
+  if (tier !== "premium" && count >= FREE_LIMIT) {
+    return NextResponse.json(
+      {
+        error:     "Free generation limit reached",
+        code:      "GENERATION_LIMIT",
+        used:      count,
+        limit:     FREE_LIMIT,
+        upgradeTo: "premium",
+      },
+      { status: 402 }, /* 402 Payment Required reads correctly for this */
+    );
+  }
+
   /* Pull venue context — name/city drive most of the copy. */
   let venueContext = "";
   if (plan.venueId != null) {
@@ -121,12 +142,19 @@ export async function POST() {
   const guestLine = plan.guestCount ? `Expected guest count: ${plan.guestCount}.` : "";
   const regionLine = plan.region ? `Region: ${plan.region}.` : "";
 
+  /* Steer tone via the typography choice — the visual feel and the
+   * copy voice should match. */
+  const typoId = plan.weddingTypographyStyle ?? defaultTypographyForTheme(plan.weddingTheme);
+  const typo = TYPOGRAPHY_BY_ID[typoId];
+  const toneLine = typo ? `Visual feel: ${typo.label}. ${typo.promptHint}` : "";
+
   const userPrompt = [
     `Couple: ${names || "Partner A and Partner B"}.`,
     venueContext,
     dateLine,
     guestLine,
     regionLine,
+    toneLine,
     "",
     "Generate the wedding-website copy as specified in the system prompt.",
   ].filter(Boolean).join("\n");
@@ -176,16 +204,20 @@ export async function POST() {
   }
 
   /* Persist alongside the editable fields so the editor can show
-   * "AI suggested" preview chips next to each input. */
+   * "AI suggested" preview chips next to each input. Increment the
+   * generation counter in the same write — the counter is part of
+   * the free-tier quota check at the top of this handler. */
   await db
     .update(weddingPlans)
     .set({
-      weddingGeneratedCopy: generated,
-      updatedAt: new Date(),
+      weddingGeneratedCopy:     generated,
+      weddingGenerationCount: (count ?? 0) + 1,
+      updatedAt:                new Date(),
     })
     .where(eq(weddingPlans.sessionId, sessionId));
 
-  return NextResponse.json({ ok: true, generated });
+  const remaining = tier === "premium" ? null : Math.max(0, FREE_LIMIT - (count + 1));
+  return NextResponse.json({ ok: true, generated, remaining, tier });
 }
 
 function fallbackCopy(region: string | null, names: string): GeneratedCopy {

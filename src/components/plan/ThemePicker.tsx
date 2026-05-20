@@ -20,40 +20,53 @@ import { WEDDING_THEMES, type WeddingTheme } from "@/lib/wedding-website";
  */
 export function ThemePicker({
   applied,
+  tier,
   coupleLabel,
   weddingDateFormatted,
   venueLine,
   onApply,
+  onLockedClick,
 }: {
   applied:              WeddingTheme;
+  tier:                 "free" | "premium";
   coupleLabel:          string;
   weddingDateFormatted: string | null;
   venueLine:            string | null;
   onApply:              (theme: WeddingTheme) => void;
+  onLockedClick:        (theme: WeddingTheme) => void;
 }) {
   const [previewed, setPreviewed] = useState<WeddingTheme>(applied);
   const tokens = getThemeTokens(previewed);
+
+  /* Premium themes are tagged on WEDDING_THEMES — render a lock badge
+   * when the couple is free-tier; clicking opens the upgrade modal. */
+  const themeMeta = WEDDING_THEMES.find((t) => t.id === previewed);
+  const isPreviewedLocked = !!themeMeta?.isPremium && tier !== "premium";
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
       {/* ── Cards grid ────────────────────────────────────────────── */}
       <div>
         <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-          {WEDDING_THEMES.map((t) => (
-            <ThemeCard
-              key={t.id}
-              theme={t.id}
-              label={t.label}
-              isPreviewed={previewed === t.id}
-              isApplied={applied === t.id}
-              onClick={() => setPreviewed(t.id)}
-            />
-          ))}
+          {WEDDING_THEMES.map((t) => {
+            const locked = !!t.isPremium && tier !== "premium";
+            return (
+              <ThemeCard
+                key={t.id}
+                theme={t.id}
+                label={t.label}
+                isPreviewed={previewed === t.id}
+                isApplied={applied === t.id}
+                isLocked={locked}
+                onClick={() => setPreviewed(t.id)}
+              />
+            );
+          })}
         </div>
         <p className="mt-3 text-[0.7rem] text-text-muted">
-          Click a card to preview. The applied theme has a checkmark; the
-          previewed theme has a rose border. Apply only saves when you
-          confirm with the button on the right.
+          {tier === "premium"
+            ? "All themes unlocked. Click a card to preview, then Apply."
+            : "Premium themes (lock icon) unlock the layout variants — Terracotta and Frosted Glass."}
         </p>
       </div>
 
@@ -90,10 +103,18 @@ export function ThemePicker({
           <button
             type="button"
             disabled={applied === previewed}
-            onClick={() => onApply(previewed)}
-            className="w-full rounded-pill bg-rose px-5 py-3 text-sm font-bold text-white shadow-[0_4px_14px_rgba(185,100,118,0.3)] transition-all hover:bg-rose-hover disabled:cursor-not-allowed disabled:opacity-40"
+            onClick={() => isPreviewedLocked ? onLockedClick(previewed) : onApply(previewed)}
+            className={`w-full rounded-pill px-5 py-3 text-sm font-bold shadow-[0_4px_14px_rgba(185,100,118,0.3)] transition-all disabled:cursor-not-allowed disabled:opacity-40 ${
+              isPreviewedLocked
+                ? "bg-charcoal text-white hover:bg-charcoal/90"
+                : "bg-rose text-white hover:bg-rose-hover"
+            }`}
           >
-            {applied === previewed ? "✓ Theme applied" : "Apply this theme →"}
+            {applied === previewed
+              ? "✓ Theme applied"
+              : isPreviewedLocked
+              ? "🔒 Unlock with Premium →"
+              : "Apply this theme →"}
           </button>
           <p className="mt-2 text-center text-[0.65rem] text-text-muted">
             Fonts shown: {tokens.fontDisplayLabel} (headings) · {tokens.fontBodyLabel} (body)
@@ -107,12 +128,13 @@ export function ThemePicker({
 /* ─── Mini preview card ────────────────────────────────────────────── */
 
 function ThemeCard({
-  theme, label, isPreviewed, isApplied, onClick,
+  theme, label, isPreviewed, isApplied, isLocked, onClick,
 }: {
   theme:       WeddingTheme;
   label:       string;
   isPreviewed: boolean;
   isApplied:   boolean;
+  isLocked:    boolean;
   onClick:     () => void;
 }) {
   const t = getThemeTokens(theme);
@@ -198,6 +220,17 @@ function ThemeCard({
           <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-none stroke-current"
                strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <polyline points="20 6 9 17 4 12" />
+          </svg>
+        </div>
+      )}
+
+      {/* Lock badge (premium-only themes) */}
+      {isLocked && (
+        <div className="absolute right-2 top-3.5 flex h-6 w-6 items-center justify-center rounded-full bg-charcoal/80 text-white shadow-sm">
+          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-none stroke-current"
+               strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <rect x="5" y="11" width="14" height="10" rx="2" />
+            <path d="M8 11V8a4 4 0 0 1 8 0v3" />
           </svg>
         </div>
       )}

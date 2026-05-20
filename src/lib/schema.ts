@@ -299,6 +299,20 @@ export const weddingPlans = pgTable(
     multipleEvents:             jsonb("multiple_events"),
     /* Photo gallery — array of image URLs (couple-uploaded later) */
     photoGalleryUrls:           jsonb("photo_gallery_urls"),
+
+    /* ── Custom palette + typography (owned by /plan/website) ────── */
+    customColorPrimary:         varchar("custom_color_primary",     { length: 7 }),
+    customColorAccent:          varchar("custom_color_accent",      { length: 7 }),
+    customColorBg:              varchar("custom_color_bg",          { length: 7 }),
+    customColorText:            varchar("custom_color_text",        { length: 7 }),
+    customPaletteId:            varchar("custom_palette_id",        { length: 50 }),
+    weddingTypographyStyle:     varchar("wedding_typography_style", { length: 30 }),
+
+    /* ── Premium tier + AI generation tracking ────────────────────── */
+    tier:                       varchar("tier", { length: 20 }).default("free"),
+    premiumActivatedAt:         timestamp("premium_activated_at"),
+    premiumExpiresAt:           timestamp("premium_expires_at"),
+    weddingGenerationCount:     integer("wedding_generation_count").default(0),
     ipAddress:          varchar("ip_address",   { length: 45 }),
     userAgent:          text("user_agent"),
     referrer:           varchar("referrer",     { length: 500 }),

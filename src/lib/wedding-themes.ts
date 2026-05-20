@@ -227,7 +227,7 @@ const FROSTED: ThemeTokens = {
   isDark:        false,
 };
 
-const THEME_TABLE: Record<WeddingTheme, ThemeTokens> = {
+const THEME_TABLE: Record<Exclude<WeddingTheme, "custom">, ThemeTokens> = {
   classic:    CLASSIC,
   romantic:   ROMANTIC,
   rustic:     RUSTIC,
@@ -240,14 +240,97 @@ const THEME_TABLE: Record<WeddingTheme, ThemeTokens> = {
   frosted:    FROSTED,
 };
 
+/* Build tokens from a custom palette + typography choice. Used when
+ * weddingTheme === "custom" — the picker stores the four colours on
+ * wedding_plans and we hydrate them back here at render time.
+ *
+ * Derived shades:
+ *   surfaceAlt = a barely-perceptible wash of the bg toward the primary
+ *   border     = bg tinted toward primary (more saturated than surfaceAlt)
+ *   accentSoft = primary at low opacity over bg (for soft chips)
+ *   inkMuted   = text lightened by ~25%
+ */
+export function buildCustomTokens(opts: {
+  primary:        string;
+  accent:         string;
+  bg:             string;
+  text:           string;
+  fontDisplay:    string;
+  fontBody:       string;
+  displayStyle:   "italic" | "normal";
+  displayLabel:   string;
+  bodyLabel:      string;
+}): ThemeTokens {
+  return {
+    pageBg:        opts.bg,
+    surface:       lighten(opts.bg, 0.55),
+    surfaceAlt:    mix(opts.bg, opts.primary, 0.06),
+    border:        mix(opts.bg, opts.primary, 0.16),
+    ink:           opts.text,
+    inkMuted:      mix(opts.text, opts.bg, 0.35),
+    accent:        opts.primary,
+    accentInk:     readableInk(opts.primary),
+    accentSoft:    mix(opts.bg, opts.primary, 0.22),
+    fontDisplay:   opts.fontDisplay,
+    fontBody:      opts.fontBody,
+    displayItalic: opts.displayStyle,
+    fontDisplayLabel: opts.displayLabel,
+    fontBodyLabel:    opts.bodyLabel,
+    isDark:        relativeLuminance(opts.bg) < 0.4,
+  };
+}
+
+/* ─── Tiny colour helpers (no external dep) ───────────────────────── */
+
+function clamp(n: number) { return Math.max(0, Math.min(255, Math.round(n))); }
+
+function toRgb(hex: string): [number, number, number] {
+  const h = hex.replace("#", "").trim();
+  const norm = h.length === 3
+    ? h.split("").map((c) => c + c).join("")
+    : h.padEnd(6, "0").slice(0, 6);
+  const r = parseInt(norm.slice(0, 2), 16) || 0;
+  const g = parseInt(norm.slice(2, 4), 16) || 0;
+  const b = parseInt(norm.slice(4, 6), 16) || 0;
+  return [r, g, b];
+}
+
+function toHex(r: number, g: number, b: number): string {
+  return "#" + [r, g, b].map((c) => clamp(c).toString(16).padStart(2, "0")).join("");
+}
+
+function mix(a: string, b: string, t: number): string {
+  const [ar, ag, ab] = toRgb(a);
+  const [br, bg, bb] = toRgb(b);
+  return toHex(ar + (br - ar) * t, ag + (bg - ag) * t, ab + (bb - ab) * t);
+}
+
+function lighten(hex: string, t: number): string {
+  return mix(hex, "#ffffff", t);
+}
+
+function relativeLuminance(hex: string): number {
+  const [r, g, b] = toRgb(hex).map((c) => c / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function readableInk(bg: string): string {
+  return relativeLuminance(bg) > 0.55 ? "#1A1A1A" : "#FFFFFF";
+}
+
 export function getThemeTokens(theme: WeddingTheme | string | null | undefined): ThemeTokens {
-  if (theme && theme in THEME_TABLE) return THEME_TABLE[theme as WeddingTheme];
+  if (theme && theme !== "custom" && theme in THEME_TABLE) {
+    return THEME_TABLE[theme as Exclude<WeddingTheme, "custom">];
+  }
   return ROMANTIC;
 }
 
 /* Build the inline CSS-variable bundle for a <main style={…}>. */
-export function themeStyle(theme: WeddingTheme | string | null | undefined): React.CSSProperties {
-  const t = getThemeTokens(theme);
+export function themeStyle(
+  theme: WeddingTheme | string | null | undefined,
+  override?: ThemeTokens,
+): React.CSSProperties {
+  const t = override ?? getThemeTokens(theme);
   return {
     ["--wt-page-bg"        as string]: t.pageBg,
     ["--wt-surface"        as string]: t.surface,
