@@ -282,22 +282,20 @@ export function WebsiteEditor({ initial }: { initial: EditorState }) {
         onUpgraded={handleUpgraded}
       />
 
-      {/* Save indicator */}
-      <div className="flex items-center justify-between rounded-card border border-border bg-white p-4">
-        <div className="text-sm text-text-mid">
-          {publicUrl ? (
-            <>
-              Your site is at{" "}
-              <a href={publicUrl} target="_blank" rel="noopener" className="font-medium text-rose hover:underline">
-                {publicUrl.replace(/^https:\/\//, "")}
-              </a>
-            </>
-          ) : (
-            <>Pick a venue + couple names in the planner tab to mint your wedding URL.</>
-          )}
-        </div>
-        <SaveIndicator status={saveStatus} />
-      </div>
+      {/* Sticky publish bar — URL on the left, actions on the right.
+       *
+       * Sticky to the viewport top so it stays visible while the
+       * couple scrolls the (often very long) editor. Includes the
+       * SaveIndicator so the user always knows whether their last
+       * edit landed. */}
+      <PublishBar
+        publicUrl={publicUrl}
+        slug={state.weddingSiteSlug}
+        published={state.weddingPublished}
+        saveStatus={saveStatus}
+        onPublish={() => update({ weddingPublished: true })}
+        onUnpublish={() => update({ weddingPublished: false })}
+      />
 
       {/* Premium-tier badge */}
       <div className="flex items-center justify-between rounded-card border border-border bg-white px-5 py-3 text-sm">
@@ -969,6 +967,138 @@ function GeneratedSuggestion({ text, onAccept }: { text: string; onAccept: () =>
       </div>
       <p className="mt-2 text-sm text-text-mid">{text}</p>
     </div>
+  );
+}
+
+function PublishBar({
+  publicUrl, slug, published, saveStatus, onPublish, onUnpublish,
+}: {
+  publicUrl:   string | null;
+  slug:        string | null;
+  published:   boolean;
+  saveStatus:  SaveStatus;
+  onPublish:   () => void;
+  onUnpublish: () => void;
+}) {
+  /* The container's parent uses `space-y-6` which would push the bar
+   * down off the viewport top. -mt-* + a self-contained padding pulls
+   * it back to the top edge of the page area so sticky works flush. */
+  return (
+    <div className="sticky top-0 z-40 -mx-6 -mt-6 border-b border-border bg-white/95 px-6 py-3 shadow-[0_2px_8px_rgba(44,44,44,0.06)] backdrop-blur sm:-mx-0 sm:rounded-card sm:border sm:px-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* Left — URL pill or empty-state copy */}
+        <div className="min-w-0 flex-1">
+          {publicUrl ? (
+            <CopyablePill url={publicUrl} />
+          ) : (
+            <div className="text-xs text-text-muted">
+              Pick a venue + couple names in the planner tab to mint
+              your wedding URL.
+            </div>
+          )}
+        </div>
+
+        {/* Right — save chip + action buttons */}
+        <div className="flex flex-shrink-0 items-center gap-2">
+          <SaveIndicator status={saveStatus} />
+          {slug && (
+            <>
+              {published ? (
+                <>
+                  <a
+                    href={publicUrl ?? `/weddings/${slug}`}
+                    target="_blank"
+                    rel="noopener"
+                    className="inline-flex items-center gap-1.5 rounded-pill border border-border bg-white px-3.5 py-1.5 text-xs font-bold text-charcoal transition-colors hover:border-rose hover:text-rose"
+                  >
+                    View live site →
+                  </a>
+                  <button
+                    type="button"
+                    onClick={onUnpublish}
+                    className="inline-flex items-center gap-1.5 rounded-pill border border-charcoal bg-white px-3.5 py-1.5 text-xs font-bold text-charcoal transition-colors hover:bg-charcoal hover:text-white"
+                  >
+                    Unpublish
+                  </button>
+                </>
+              ) : (
+                <>
+                  <a
+                    href={`/weddings/${slug}`}
+                    target="_blank"
+                    rel="noopener"
+                    className="inline-flex items-center gap-1.5 rounded-pill border border-border bg-white px-3.5 py-1.5 text-xs font-bold text-charcoal transition-colors hover:border-rose hover:text-rose"
+                  >
+                    Preview →
+                  </a>
+                  <button
+                    type="button"
+                    onClick={onPublish}
+                    className="inline-flex items-center gap-1.5 rounded-pill bg-rose px-4 py-1.5 text-xs font-bold text-white shadow-[0_4px_14px_rgba(185,100,118,0.3)] transition-all hover:bg-rose-hover"
+                  >
+                    Publish website
+                  </button>
+                </>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Live URL line — only shown once published, just below the bar.
+       * Helps the couple confirm where to send guests. */}
+      {published && publicUrl && (
+        <div className="mt-2 text-[0.65rem] uppercase tracking-[0.18em] text-emerald-700">
+          ✓ Live at <span className="font-bold normal-case tracking-normal">{publicUrl.replace(/^https?:\/\//, "")}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CopyablePill({ url }: { url: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* Older browsers — fall back to a select-all hint. */
+      setCopied(false);
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={copy}
+      aria-label={copied ? "URL copied" : "Copy URL"}
+      className="group inline-flex max-w-full items-center gap-2 rounded-pill border-2 border-rose bg-rose-pale px-4 py-2 text-sm font-bold text-rose transition-colors hover:bg-rose hover:text-white"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        className="h-3.5 w-3.5 flex-shrink-0 fill-none stroke-current"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden
+      >
+        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72" />
+        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+      </svg>
+      <span className="truncate">{url.replace(/^https?:\/\//, "")}</span>
+      <span
+        className={`flex-shrink-0 rounded-pill px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-[0.08em] ${
+          copied
+            ? "bg-emerald-100 text-emerald-700 group-hover:bg-white"
+            : "bg-white/70 text-rose group-hover:bg-white group-hover:text-rose"
+        }`}
+      >
+        {copied ? "✓ Copied" : "Copy"}
+      </span>
+    </button>
   );
 }
 
