@@ -14,14 +14,25 @@
 
 /* ── Theme ────────────────────────────────────────────────────────── */
 
-export type WeddingTheme = "classic" | "romantic" | "rustic" | "modern" | "garden";
+export type WeddingTheme =
+  | "romantic"
+  | "classic"
+  | "rustic"
+  | "modern"
+  | "garden"
+  | "coastal"
+  | "boho"
+  | "luxe";
 
 export const WEDDING_THEMES: { id: WeddingTheme; label: string; description: string }[] = [
-  { id: "romantic", label: "Romantic", description: "Soft rose + cream, italic serif headings, floral hairline accents." },
-  { id: "classic",  label: "Classic",  description: "Black + white, tall serif headings, formal copperplate accents." },
-  { id: "rustic",   label: "Rustic",   description: "Warm tan + sage, handwritten script accents, kraft-paper texture." },
-  { id: "modern",   label: "Modern",   description: "Charcoal + clean sans, full-bleed photos, minimal ornamentation." },
-  { id: "garden",   label: "Garden",   description: "Sage green + ivory, botanical illustrations, light airy spacing." },
+  { id: "romantic", label: "Romantic", description: "Dusty rose + blush, Cormorant italic display." },
+  { id: "classic",  label: "Classic",  description: "Navy + ivory, formal Cormorant and Inter." },
+  { id: "rustic",   label: "Rustic",   description: "Burgundy + cream, Playfair Display with Lato." },
+  { id: "modern",   label: "Modern",   description: "Pure black on white, bold Inter throughout." },
+  { id: "garden",   label: "Garden",   description: "Sage green + mint, Cormorant with airy Nunito." },
+  { id: "coastal",  label: "Coastal",  description: "Ocean blue + seafoam, Inter with friendly Nunito." },
+  { id: "boho",     label: "Boho",     description: "Terracotta + warm sand, expressive Fraunces serif." },
+  { id: "luxe",     label: "Luxe",     description: "Deep gold on charcoal — the dark theme, Cormorant + Inter." },
 ];
 
 /* ── Per-section visibility config ────────────────────────────────── */

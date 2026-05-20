@@ -42,7 +42,7 @@ const planSchema = z.object({
   alertChannel:   z.enum(["sms", "email", "both", "none"]).nullable().optional(),
 
   /* Wedding-website fields (owned by /plan/website editor) */
-  weddingTheme:           z.enum(["classic", "romantic", "rustic", "modern", "garden"]).optional(),
+  weddingTheme:           z.enum(["classic", "romantic", "rustic", "modern", "garden", "coastal", "boho", "luxe"]).optional(),
   weddingPublished:       z.boolean().optional(),
   weddingHeroImage:       z.string().max(500).nullable().optional(),
   weddingParty:           z.unknown().optional(),

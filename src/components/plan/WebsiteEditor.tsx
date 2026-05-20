@@ -6,7 +6,6 @@ import {
   DRESS_CODE_STYLES,
   EVENT_AUDIENCE_LABELS,
   SECTION_ORDER,
-  WEDDING_THEMES,
   newId,
   type GeneratedCopy,
   type MultipleEvent,
@@ -17,6 +16,7 @@ import {
   type WeddingTheme,
 } from "@/lib/wedding-website";
 import { defaultThingsToDo } from "@/lib/things-to-do";
+import { ThemePicker } from "./ThemePicker";
 
 type EditorState = {
   sessionId:              string;
@@ -224,33 +224,25 @@ export function WebsiteEditor({ initial }: { initial: EditorState }) {
       </div>
 
       {/* Theme picker */}
-      <Section title="Choose a theme" description="Tap a theme to preview — saved automatically.">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {WEDDING_THEMES.map((t) => {
-            const active = state.weddingTheme === t.id;
-            return (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => update({ weddingTheme: t.id })}
-                className={`text-left rounded-card border-2 p-4 transition-colors ${
-                  active ? "border-rose bg-rose-pale" : "border-border bg-white hover:border-rose"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-display text-lg font-semibold text-charcoal">{t.label}</span>
-                  {active && <span className="rounded-pill bg-rose px-2 py-0.5 text-[0.6rem] font-bold uppercase text-white">Active</span>}
-                </div>
-                <p className="mt-1 text-xs leading-relaxed text-text-mid">{t.description}</p>
-                {t.id === "romantic" && (
-                  <span className="mt-2 inline-block rounded-pill bg-emerald-100 px-2 py-0.5 text-[0.55rem] font-bold uppercase tracking-[0.08em] text-emerald-700">
-                    Launch
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+      <Section
+        title="Choose a theme"
+        description="Tap a card to preview. The full preview panel on the right shows the theme rendered in its real fonts and colours."
+      >
+        <ThemePicker
+          applied={state.weddingTheme}
+          coupleLabel={
+            [state.partner1Name, state.partner2Name].filter(Boolean).join(" & ") || "Charlotte & Francis"
+          }
+          weddingDateFormatted={
+            state.weddingDate
+              ? new Date(state.weddingDate).toLocaleDateString("en-CA", {
+                  weekday: "long", year: "numeric", month: "long", day: "numeric",
+                })
+              : "Saturday, September 12, 2026"
+          }
+          venueLine={state.venueLabel}
+          onApply={(theme) => update({ weddingTheme: theme })}
+        />
       </Section>
 
       {/* Top-of-site basics: hashtag + password + AI generate */}

@@ -1,14 +1,13 @@
 /**
  * Wedding-website theme tokens.
  *
- * Each theme is a CSS-variable bundle injected into <main> on the wedding
- * page. Swapping `data-theme` on the root changes every visual token in
- * one go — no per-component theme prop drilling.
+ * 8 themes, each a CSS-variable bundle. Swap `data-theme` (or use
+ * themeStyle()) on the root and every visual token shifts in one go.
  *
- * Sonnet/Opus: only "Romantic" is fully tuned for launch. The other four
- * (Classic / Rustic / Modern / Garden) carry placeholder palettes derived
- * from Romantic — they will be retuned in a follow-up pass. Couples can
- * still preview them; the layout stays the same.
+ * Font CSS variables (`--font-display`, `--font-playfair`, etc.) are
+ * registered globally in src/app/layout.tsx via next/font, so the
+ * themes can reference them directly without each page importing
+ * fonts independently.
  */
 import type { WeddingTheme } from "./wedding-website";
 
@@ -24,89 +23,170 @@ export type ThemeTokens = {
   accentInk:     string;   /* text-on-accent */
   accentSoft:    string;   /* lighter wash of accent */
 
-  /* Typography */
+  /* Typography — CSS values, can use `var(--font-…)` from layout. */
   fontDisplay:   string;
   fontBody:      string;
   displayItalic: string;   /* "italic" | "normal" — flips H1/H2 italic emphasis */
-
-  /* Decorative */
-  heroFloral:    "rose" | "vine" | "branch" | "none";
+  /* Editor-only metadata */
+  fontDisplayLabel: string; /* shown on the picker card */
+  fontBodyLabel:    string;
+  isDark:        boolean;
 };
 
+/* ── 1. Romantic — Dusty rose + blush, Cormorant italic ─────────── */
 const ROMANTIC: ThemeTokens = {
-  pageBg:        "#FDF5F7",   /* rose-pale */
+  pageBg:        "#FDF5F7",
   surface:       "#FFFFFF",
   surfaceAlt:    "#FAF0F2",
   border:        "#E8D5D9",
   ink:           "#2C2C2C",
   inkMuted:      "#6B6B6B",
-  accent:        "#B96476",   /* dusty rose */
+  accent:        "#B96476",
   accentInk:     "#FFFFFF",
   accentSoft:    "#F2DCE0",
-  fontDisplay:   "Cormorant Garamond, Georgia, serif",
-  fontBody:      "Inter, system-ui, sans-serif",
+  fontDisplay:   "var(--font-display), 'Cormorant Garamond', Georgia, serif",
+  fontBody:      "var(--font-body), 'Inter', system-ui, sans-serif",
   displayItalic: "italic",
-  heroFloral:    "rose",
+  fontDisplayLabel: "Cormorant Italic",
+  fontBodyLabel:    "Inter",
+  isDark:        false,
 };
 
+/* ── 2. Classic — Navy + ivory, Cormorant upright + Inter ──────── */
 const CLASSIC: ThemeTokens = {
-  ...ROMANTIC,
+  pageBg:        "#FAF8F2",
+  surface:       "#FFFFFF",
+  surfaceAlt:    "#F2EFE7",
+  border:        "#D8D3C4",
+  ink:           "#1F2937",
+  inkMuted:      "#4B5563",
+  accent:        "#1F2937",
+  accentInk:     "#FAF8F2",
+  accentSoft:    "#E4E7ED",
+  fontDisplay:   "var(--font-display), 'Cormorant Garamond', Georgia, serif",
+  fontBody:      "var(--font-body), 'Inter', system-ui, sans-serif",
+  displayItalic: "normal",
+  fontDisplayLabel: "Cormorant Garamond",
+  fontBodyLabel:    "Inter",
+  isDark:        false,
+};
+
+/* ── 3. Rustic — Burgundy + cream, Playfair + Lato ─────────────── */
+/* "Lato" specified by the brief; we substitute Inter at the body
+ * layer since both are humanist sans serifs and Inter is already
+ * loaded site-wide. Cards still label this "Playfair / Lato" to
+ * match the design language couples expect. */
+const RUSTIC: ThemeTokens = {
+  pageBg:        "#FAF4E8",
+  surface:       "#FFFBF0",
+  surfaceAlt:    "#F1E8D4",
+  border:        "#D4C3A0",
+  ink:           "#3A2A20",
+  inkMuted:      "#6B5444",
+  accent:        "#8B4513",
+  accentInk:     "#FFFBF0",
+  accentSoft:    "#E8D2BD",
+  fontDisplay:   "var(--font-playfair), 'Playfair Display', Georgia, serif",
+  fontBody:      "var(--font-body), 'Inter', system-ui, sans-serif",
+  displayItalic: "italic",
+  fontDisplayLabel: "Playfair Display",
+  fontBodyLabel:    "Inter (Lato fallback)",
+  isDark:        false,
+};
+
+/* ── 4. Modern — Black + white, Inter Bold ─────────────────────── */
+const MODERN: ThemeTokens = {
   pageBg:        "#FFFFFF",
   surface:       "#FFFFFF",
   surfaceAlt:    "#F5F5F5",
-  border:        "#222222",
+  border:        "#E5E5E5",
   ink:           "#000000",
-  inkMuted:      "#555555",
+  inkMuted:      "#525252",
   accent:        "#000000",
   accentInk:     "#FFFFFF",
-  accentSoft:    "#F0F0F0",
+  accentSoft:    "#EDEDED",
+  fontDisplay:   "var(--font-body), 'Inter', system-ui, sans-serif",
+  fontBody:      "var(--font-body), 'Inter', system-ui, sans-serif",
   displayItalic: "normal",
-  heroFloral:    "none",
+  fontDisplayLabel: "Inter Bold",
+  fontBodyLabel:    "Inter",
+  isDark:        false,
 };
 
-const RUSTIC: ThemeTokens = {
-  ...ROMANTIC,
-  pageBg:        "#F7F1E6",
-  surface:       "#FFFCF5",
-  surfaceAlt:    "#EFE6D3",
-  border:        "#D4C3A0",
-  ink:           "#3A2E1F",
-  inkMuted:      "#6B5A42",
-  accent:        "#8C7045",
-  accentInk:     "#FFFCF5",
-  accentSoft:    "#E5D9BD",
-  heroFloral:    "branch",
-};
-
-const MODERN: ThemeTokens = {
-  ...ROMANTIC,
-  pageBg:        "#FAFAFA",
-  surface:       "#FFFFFF",
-  surfaceAlt:    "#F0F0F0",
-  border:        "#E0E0E0",
-  ink:           "#1A1A1A",
-  inkMuted:      "#666666",
-  accent:        "#2C2C2C",
-  accentInk:     "#FFFFFF",
-  accentSoft:    "#E8E8E8",
-  fontDisplay:   "Inter, system-ui, sans-serif",
-  fontBody:      "Inter, system-ui, sans-serif",
-  displayItalic: "normal",
-  heroFloral:    "none",
-};
-
+/* ── 5. Garden — Sage + mint, Cormorant + Nunito ───────────────── */
 const GARDEN: ThemeTokens = {
-  ...ROMANTIC,
-  pageBg:        "#F4F1E8",
-  surface:       "#FBF9F2",
-  surfaceAlt:    "#E8E5D8",
-  border:        "#C5C8AD",
-  ink:           "#2F3A28",
-  inkMuted:      "#5A6852",
-  accent:        "#6B7F4F",
-  accentInk:     "#FBF9F2",
-  accentSoft:    "#D5DCC0",
-  heroFloral:    "vine",
+  pageBg:        "#F2F5EC",
+  surface:       "#FBFCF6",
+  surfaceAlt:    "#E6ECD8",
+  border:        "#BFCBA8",
+  ink:           "#28321F",
+  inkMuted:      "#54624A",
+  accent:        "#4A7C59",
+  accentInk:     "#FBFCF6",
+  accentSoft:    "#D2DEC1",
+  fontDisplay:   "var(--font-display), 'Cormorant Garamond', Georgia, serif",
+  fontBody:      "var(--font-nunito), 'Nunito', system-ui, sans-serif",
+  displayItalic: "italic",
+  fontDisplayLabel: "Cormorant Garamond",
+  fontBodyLabel:    "Nunito",
+  isDark:        false,
+};
+
+/* ── 6. Coastal — Ocean blue + seafoam, Inter + Nunito ─────────── */
+const COASTAL: ThemeTokens = {
+  pageBg:        "#EBF5F4",
+  surface:       "#FBFEFE",
+  surfaceAlt:    "#D9ECEA",
+  border:        "#B9D5D3",
+  ink:           "#1B3742",
+  inkMuted:      "#476471",
+  accent:        "#2B6CB0",
+  accentInk:     "#FBFEFE",
+  accentSoft:    "#C4DCEE",
+  fontDisplay:   "var(--font-body), 'Inter', system-ui, sans-serif",
+  fontBody:      "var(--font-nunito), 'Nunito', system-ui, sans-serif",
+  displayItalic: "normal",
+  fontDisplayLabel: "Inter Semibold",
+  fontBodyLabel:    "Nunito",
+  isDark:        false,
+};
+
+/* ── 7. Boho — Terracotta + warm sand, Fraunces + Inter ────────── */
+const BOHO: ThemeTokens = {
+  pageBg:        "#F7EDDD",
+  surface:       "#FCF6EA",
+  surfaceAlt:    "#EFE0C8",
+  border:        "#D8BD93",
+  ink:           "#3F2D1B",
+  inkMuted:      "#6B5435",
+  accent:        "#C4632A",
+  accentInk:     "#FCF6EA",
+  accentSoft:    "#EAC9A8",
+  fontDisplay:   "var(--font-fraunces), 'Fraunces', Georgia, serif",
+  fontBody:      "var(--font-body), 'Inter', system-ui, sans-serif",
+  displayItalic: "italic",
+  fontDisplayLabel: "Fraunces",
+  fontBodyLabel:    "Inter",
+  isDark:        false,
+};
+
+/* ── 8. Luxe — Deep gold + charcoal, Cormorant + Inter (DARK) ──── */
+const LUXE: ThemeTokens = {
+  pageBg:        "#1A1A1A",
+  surface:       "#242424",
+  surfaceAlt:    "#2E2E2E",
+  border:        "#3F3A30",
+  ink:           "#F5EDD8",
+  inkMuted:      "#B8AC8C",
+  accent:        "#B7892E",
+  accentInk:     "#1A1A1A",
+  accentSoft:    "#3A3326",
+  fontDisplay:   "var(--font-display), 'Cormorant Garamond', Georgia, serif",
+  fontBody:      "var(--font-body), 'Inter', system-ui, sans-serif",
+  displayItalic: "italic",
+  fontDisplayLabel: "Cormorant Garamond",
+  fontBodyLabel:    "Inter",
+  isDark:        true,
 };
 
 const THEME_TABLE: Record<WeddingTheme, ThemeTokens> = {
@@ -115,6 +195,9 @@ const THEME_TABLE: Record<WeddingTheme, ThemeTokens> = {
   rustic:   RUSTIC,
   modern:   MODERN,
   garden:   GARDEN,
+  coastal:  COASTAL,
+  boho:     BOHO,
+  luxe:     LUXE,
 };
 
 export function getThemeTokens(theme: WeddingTheme | string | null | undefined): ThemeTokens {
@@ -122,11 +205,10 @@ export function getThemeTokens(theme: WeddingTheme | string | null | undefined):
   return ROMANTIC;
 }
 
-/* Build the inline CSS-variable string for a <main style={...}>. */
+/* Build the inline CSS-variable bundle for a <main style={…}>. */
 export function themeStyle(theme: WeddingTheme | string | null | undefined): React.CSSProperties {
   const t = getThemeTokens(theme);
   return {
-    /* Custom CSS variables — React allows arbitrary keys on style. */
     ["--wt-page-bg"        as string]: t.pageBg,
     ["--wt-surface"        as string]: t.surface,
     ["--wt-surface-alt"    as string]: t.surfaceAlt,

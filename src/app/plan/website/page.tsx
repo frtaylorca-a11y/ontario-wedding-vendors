@@ -14,6 +14,7 @@ import {
   type ThingsToDoItem,
   type MultipleEvent,
   type GeneratedCopy,
+  type WeddingTheme,
 } from "@/lib/wedding-website";
 
 export const dynamic = "force-dynamic";
@@ -70,7 +71,7 @@ export default async function WebsiteEditorPage() {
     venueLabel,
     weddingSiteSlug:        plan?.weddingSiteSlug        ?? null,
     weddingSiteDomain:      plan?.weddingSiteRegionalDomain ?? null,
-    weddingTheme:           (plan?.weddingTheme as "classic" | "romantic" | "rustic" | "modern" | "garden" | null) ?? "romantic",
+    weddingTheme:           (plan?.weddingTheme as WeddingTheme | null) ?? "romantic",
     weddingPublished:       plan?.weddingPublished       ?? false,
     weddingHeroImage:       plan?.weddingHeroImage       ?? "",
     weddingHashtag:         plan?.weddingHashtag         ?? "",

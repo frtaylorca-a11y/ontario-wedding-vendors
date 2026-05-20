@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, Inter } from "next/font/google";
+import { Cormorant_Garamond, Inter, Playfair_Display, Fraunces, Nunito } from "next/font/google";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { AnalyticsLoaders } from "@/components/analytics/AnalyticsLoaders";
@@ -21,6 +21,31 @@ const body = Inter({
   weight: ["300", "400", "500", "600", "700"],
   variable: "--font-body",
   display: "swap",
+});
+
+/* Wedding-website theme fonts — loaded once at the document root so any
+ * subtree can reference them via `var(--font-playfair)` etc. */
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  weight:  ["400", "500", "600", "700"],
+  style:   ["normal", "italic"],
+  variable: "--font-playfair",
+  display:  "swap",
+});
+
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  weight:  ["400", "500", "600", "700"],
+  style:   ["normal", "italic"],
+  variable: "--font-fraunces",
+  display:  "swap",
+});
+
+const nunito = Nunito({
+  subsets: ["latin"],
+  weight:  ["400", "500", "600", "700"],
+  variable: "--font-nunito",
+  display:  "swap",
 });
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ontarioweddingvendors.com";
@@ -51,7 +76,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${display.variable} ${body.variable}`}>
+    <html lang="en" className={`${display.variable} ${body.variable} ${playfair.variable} ${fraunces.variable} ${nunito.variable}`}>
       <body className="min-h-screen antialiased">
         <AnalyticsLoaders
           ga4Id={process.env.NEXT_PUBLIC_GA4_ID}
