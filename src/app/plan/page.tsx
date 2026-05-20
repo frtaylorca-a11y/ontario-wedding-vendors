@@ -44,6 +44,8 @@ export default async function PlanPage() {
         savedVendors:  (row.savedVendors  as PlanState["savedVendors"])  ?? {},
         budgetCategoryStates:
           (row.budgetCategoryStates as BudgetCategoryStates | null) ?? undefined,
+        partner1Name:    row.partner1Name ?? null,
+        partner2Name:    row.partner2Name ?? null,
         musicSelections: (row.musicSelections as PlanState["musicSelections"]) ?? null,
         guestList:       (row.guestList       as PlanState["guestList"])       ?? [],
         itinerary:       (row.itinerary       as PlanState["itinerary"])       ?? [],

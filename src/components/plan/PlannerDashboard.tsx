@@ -6,6 +6,7 @@ import { VenueSearch } from "./VenueSearch";
 import { VendorSlots } from "./VendorSlots";
 import { AddVendorSlideOver } from "./AddVendorSlideOver";
 import { OneQrActivationCard } from "./OneQrActivationCard";
+import { CoupleNamesForm } from "./CoupleNamesForm";
 import { trackEvent } from "@/lib/analytics";
 import {
   DEFAULT_PLAN,
@@ -103,6 +104,8 @@ export function PlannerDashboard({ sessionId, initialPlan, totalVenueCount }: Pr
             region:               state.region,
             weddingDate:          state.weddingDate,
             venueId:              state.venueId,
+            partner1Name:         state.partner1Name,
+            partner2Name:         state.partner2Name,
             bookedVendors:        state.bookedVendors,
             savedVendors:         state.savedVendors,
             budgetCategoryStates: state.budgetCategoryStates,
@@ -147,7 +150,14 @@ export function PlannerDashboard({ sessionId, initialPlan, totalVenueCount }: Pr
         </span>
       </div>
 
-      {/* Step 1 — Budget */}
+      {/* Step 1a — Couple names (feeds the wedding-website slug) */}
+      <CoupleNamesForm
+        partner1Name={state.partner1Name}
+        partner2Name={state.partner2Name}
+        onChange={(patch) => setState((s) => ({ ...s, ...patch }))}
+      />
+
+      {/* Step 1b — Budget */}
       <BudgetCalculator
         totalBudget={state.totalBudget}
         guestCount={state.guestCount}

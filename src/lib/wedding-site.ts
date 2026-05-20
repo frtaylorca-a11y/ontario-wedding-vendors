@@ -79,22 +79,21 @@ function slugify(value: string): string {
 }
 
 /**
- * Build the wedding-site subdomain slug.
+ * Build the wedding-site subdomain slug from neutral partner names.
  *
- *   buildWeddingSiteSlug("Alice", "Bob")       → "alice-and-bob"
- *   buildWeddingSiteSlug("",      "Bob")       → "bob"
- *   buildWeddingSiteSlug(null,    null, "abc") → "couple-abc12345"
+ *   buildWeddingSiteSlug("Charlotte", "Francis")  → "charlotte-and-francis"
+ *   buildWeddingSiteSlug("",          "Francis")  → "francis"
+ *   buildWeddingSiteSlug(null, null, "abc12345…") → "couple-abc12345"
  *
- * Pass `dedupeSuffix` (typically the first 8 chars of session_id) when the
- * preferred slug collides with another row — appended with a single dash.
+ * Always uses "and" as the connector — never gendered terms.
  */
 export function buildWeddingSiteSlug(
-  brideName: string | null | undefined,
-  groomName: string | null | undefined,
+  partner1Name: string | null | undefined,
+  partner2Name: string | null | undefined,
   fallbackSeed?: string,
 ): string {
-  const a = slugify(brideName ?? "");
-  const b = slugify(groomName ?? "");
+  const a = slugify(partner1Name ?? "");
+  const b = slugify(partner2Name ?? "");
 
   let base: string;
   if (a && b)  base = `${a}-and-${b}`;

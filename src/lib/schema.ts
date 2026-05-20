@@ -249,8 +249,8 @@ export const weddingPlans = pgTable(
      *   {wedding_site_slug}.{wedding_site_regional_domain}
      * e.g. "smith-and-jones.niagaraweddingvenues.com". Middleware in
      * src/middleware.ts rewrites these to /wedding/[slug] internally. */
-    brideName:                  varchar("bride_name",                    { length: 100 }),
-    groomName:                  varchar("groom_name",                    { length: 100 }),
+    partner1Name:               varchar("partner1_name",                 { length: 100 }),
+    partner2Name:               varchar("partner2_name",                 { length: 100 }),
     weddingSiteSlug:            varchar("wedding_site_slug",             { length: 60 }),
     weddingSiteRegionalDomain:  varchar("wedding_site_regional_domain",  { length: 100 }),
     ipAddress:          varchar("ip_address",   { length: 45 }),

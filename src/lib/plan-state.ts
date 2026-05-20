@@ -54,8 +54,10 @@ export const BUDGET_CATEGORIES: BudgetCategory[] = [
   { key: "officiant",        label: "Officiant",                   pct: 0.0092, vendorCategory: "officiant" },
   { key: "stationery",       label: "Invitations & Stationery",    pct: 0.0183, vendorCategory: null },
   { key: "transportation",   label: "Transportation",              pct: 0.0183, vendorCategory: "limo" },
-  { key: "attire_bride",     label: "Wedding Attire (Bride)",      pct: 0.0367, vendorCategory: null },
-  { key: "attire_groom",     label: "Wedding Attire (Groom)",      pct: 0.0183, vendorCategory: null },
+  /* Keys preserved (persisted in user budgetCategoryStates blobs); labels
+   * use neutral Partner 1 / Partner 2 wording. */
+  { key: "attire_bride",     label: "Wedding Attire — Partner 1",  pct: 0.0367, vendorCategory: null },
+  { key: "attire_groom",     label: "Wedding Attire — Partner 2",  pct: 0.0183, vendorCategory: null },
   { key: "lighting_sound",   label: "Lighting & Sound",            pct: 0.0275, vendorCategory: "lighting_decor" },
   { key: "photo_booth",      label: "Photo Booth",                 pct: 0.0092, vendorCategory: "photo_booth" },
   { key: "wedding_rings",    label: "Wedding Rings",               pct: 0.0275, vendorCategory: null },
@@ -379,6 +381,10 @@ export type PlanState = {
   /** Day-of timeline — captured in /plan/itinerary */
   itinerary: ItineraryEntry[];
 
+  /** Neutral partner names — drive the wedding-website slug + display copy */
+  partner1Name: string | null;
+  partner2Name: string | null;
+
   /** OneQR activation state */
   oneqrSlug:        string | null;
   oneqrActivatedAt: string | null; /* ISO datetime */
@@ -407,6 +413,8 @@ export const DEFAULT_PLAN: Omit<PlanState, "sessionId"> = {
   musicSelections:   null,
   guestList:         [],
   itinerary:         [],
+  partner1Name:      null,
+  partner2Name:      null,
   oneqrSlug:         null,
   oneqrActivatedAt:  null,
   oneqrQrCodeUrl:    null,

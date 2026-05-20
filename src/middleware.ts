@@ -35,10 +35,10 @@ export function middleware(req: NextRequest) {
         subdomain !== "www" &&
         /* Don't rewrite if we're already on the rewrite target — Next
          * sometimes re-runs middleware after a rewrite. */
-        !pathname.startsWith("/wedding/")
+        !pathname.startsWith("/weddings/")
       ) {
         const url = req.nextUrl.clone();
-        url.pathname = `/wedding/${subdomain}${pathname === "/" ? "" : pathname}`;
+        url.pathname = `/weddings/${subdomain}${pathname === "/" ? "" : pathname}`;
         return NextResponse.rewrite(url);
       }
       break;

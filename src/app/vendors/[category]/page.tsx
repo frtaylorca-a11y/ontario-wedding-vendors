@@ -50,7 +50,7 @@ const LABEL: Record<VendorCategory, { plural: string; intro: string }> = {
   photo_booth:   { plural: "Photo Booths",           intro: "Wedding photo booth companies serving Ontario — open-air, enclosed, sailcloth, and luxury cabinet setups." },
   catering:      { plural: "Caterers",               intro: "Wedding caterers serving Ontario venues — plated, family-style, station, and food-truck formats." },
   cake:          { plural: "Cake Designers",         intro: "Wedding cake designers and dessert bar specialists across Ontario." },
-  hair_makeup:   { plural: "Hair & Makeup Artists",  intro: "Bridal hair and makeup artists across Ontario." },
+  hair_makeup:   { plural: "Hair & Makeup Artists",  intro: "Wedding hair and makeup artists across Ontario." },
   officiant:       { plural: "Officiants",             intro: "Wedding officiants — civil, religious, and humanist ceremonies across Ontario." },
   limo:            { plural: "Limo & Transportation",  intro: "Wedding-day transportation: limos, vintage cars, party buses, and shuttle services." },
   lighting_decor:  { plural: "Lighting & Decor",       intro: "Wedding lighting designers, drapery and decor specialists across Ontario." },

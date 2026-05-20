@@ -15,8 +15,8 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const { slug } = await params;
   const [plan] = await db
     .select({
-      brideName: weddingPlans.brideName,
-      groomName: weddingPlans.groomName,
+      partner1Name: weddingPlans.partner1Name,
+      partner2Name: weddingPlans.partner2Name,
       weddingDate: weddingPlans.weddingDate,
     })
     .from(weddingPlans)
@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   if (!plan) {
     return { title: "Wedding site not found" };
   }
-  const names = [plan.brideName, plan.groomName].filter(Boolean).join(" & ");
+  const names = [plan.partner1Name, plan.partner2Name].filter(Boolean).join(" & ");
   const title = names ? `${names} · Wedding` : "Our Wedding";
   return {
     title,
@@ -60,7 +60,7 @@ export default async function WeddingSitePage({ params }: { params: Params }) {
     venue = v ?? null;
   }
 
-  const names = [plan.brideName, plan.groomName].filter(Boolean).join(" & ");
+  const names = [plan.partner1Name, plan.partner2Name].filter(Boolean).join(" & ");
   const canonical = weddingSiteUrl(plan.weddingSiteSlug, plan.weddingSiteRegionalDomain);
 
   const weddingDateFormatted = plan.weddingDate

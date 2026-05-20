@@ -953,3 +953,35 @@ Domain routing:
   venue type in [winery, estate, hotel, resort, barn, golf club]
   AND capacityMax >= 50 AND weddingReadinessScore >= 70
 - All venue data sourced from Google Places API under standard ToS
+
+---
+
+## Wedding Website DNS Setup (manual — Rick)
+
+Couple wedding websites live at `[slug].{regional-domain}` and are served
+by OWV via a Next.js middleware rewrite to `/weddings/[slug]`. To stand up
+a new regional domain:
+
+**1. Hostinger — wildcard CNAME on each domain:**
+```
+Type: CNAME    Host: *    Value: cname.vercel-dns.com
+```
+Domains to configure:
+- `*.niagaraweddingvenues.com`
+- `*.niagaraonthelakeweddingvenues.com`
+- `*.burlingtonweddingvenues.com`
+- `*.torontoweddingdirectory.com`
+
+**2. Vercel → ontario-wedding-vendors project → Settings → Domains:**
+Add each wildcard domain (`*.niagaraweddingvenues.com`, etc.). Vercel
+auto-provisions SSL certificates for the wildcard.
+
+**3. Verify:**
+```bash
+curl -H "Host: test-couple.niagaraweddingvenues.com" https://ontarioweddingvendors.com/
+# → renders the /weddings/test-couple page if the slug exists, else 404.
+```
+
+The regional-domain map is defined in `src/lib/wedding-site.ts` →
+`REGIONAL_DOMAINS`. Adding a new domain requires updating that constant
+plus the DNS + Vercel config above.
