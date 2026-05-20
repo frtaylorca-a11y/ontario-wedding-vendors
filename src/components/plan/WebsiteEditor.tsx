@@ -323,11 +323,16 @@ export function WebsiteEditor({ initial }: { initial: EditorState }) {
         )}
       </div>
 
-      {/* Wizard Step 1 — visual style picker (6 screenshot cards) */}
-      <Section
-        title="Pick a style"
-        description="Step 1 — start by choosing the visual feel. The detailed picker below has every option, including colour-only themes."
-      >
+      {/* ──────────────────────────────────────────────────────────
+       * WIZARD — the first two sections are framed as Step 1 +
+       * Step 2 so a first-time couple can generate a full website
+       * with just a style pick + a story paragraph. Everything
+       * below (palette, typography, sections, detailed pickers) is
+       * fine-tuning.
+       * ────────────────────────────────────────────────────────── */}
+
+      {/* Step 1 — visual style picker (6 screenshot cards) */}
+      <Section eyebrow="Step 1" title="" description="">
         <StylePicker
           applied={state.weddingTheme}
           tier={state.tier}
@@ -337,6 +342,20 @@ export function WebsiteEditor({ initial }: { initial: EditorState }) {
             const el = document.getElementById("theme-picker");
             if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
           }}
+        />
+      </Section>
+
+      {/* Step 2 — Story + Generate */}
+      <Section eyebrow="Step 2" title="" description="">
+        <StoryStep
+          value={state.ourStory}
+          onChange={(v) => update({ ourStory: v })}
+          onGenerate={generateCopy}
+          generating={generating}
+          tier={state.tier}
+          used={state.weddingGenerationCount}
+          limit={FREE_GENERATION_LIMIT}
+          onUpgradeClick={() => setUpgradeReason("generation-limit")}
         />
       </Section>
 
@@ -436,33 +455,11 @@ export function WebsiteEditor({ initial }: { initial: EditorState }) {
             />
           </Field>
 
-          <div className="flex flex-wrap items-center gap-3 rounded-card border border-rose-pale bg-rose-pale/40 p-4">
-            <div className="flex-1 min-w-[240px]">
-              <div className="font-display text-base font-semibold text-charcoal">
-                Let Claude write your first draft
-              </div>
-              <p className="mt-0.5 text-xs text-text-mid">
-                Generates your story, travel notes, dress-code hint, three things to do nearby,
-                and five FAQ answers. Only fills empty fields — edits stay yours.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={generateCopy}
-              disabled={generating}
-              className="rounded-pill bg-rose px-5 py-2 text-sm font-bold text-white shadow-[0_4px_14px_rgba(185,100,118,0.3)] transition-all hover:bg-rose-hover disabled:opacity-60"
-            >
-              {generating ? "Generating…" : "Generate copy →"}
-            </button>
-          </div>
-
-          {/* Generation counter — green / amber / rose by remaining */}
-          <GenerationCounter
-            tier={state.tier}
-            used={state.weddingGenerationCount}
-            limit={FREE_GENERATION_LIMIT}
-            onUpgradeClick={() => setUpgradeReason("generation-limit")}
-          />
+          <p className="text-xs italic text-text-muted">
+            Tip: kick off your first draft with the <strong>Step 2 — Tell us
+            your story</strong> panel above. It generates copy across every
+            section in one go.
+          </p>
 
           {generateError && (
             <p className="text-sm text-red-600">{generateError}</p>
@@ -912,17 +909,33 @@ function renderEditor(
 
 /* ─── Small UI atoms ──────────────────────────────────────────────── */
 
-function Section({ title, description, children }: {
-  title: string;
+function Section({ title, description, eyebrow, children }: {
+  title:        string;
   description?: string;
-  children: React.ReactNode;
+  eyebrow?:     string;
+  children:     React.ReactNode;
 }) {
+  /* Show the header only when there's actual heading content — wizard
+   * steps that have their own internal H3 pass title="" to suppress
+   * the section's H2 and keep visual hierarchy clean. */
+  const hasHeader = !!(title || description || eyebrow);
   return (
     <section className="rounded-card border border-border bg-white p-6 lg:p-7">
-      <header className="mb-4">
-        <h2 className="font-display text-xl font-semibold text-charcoal">{title}</h2>
-        {description && <p className="mt-1 text-sm text-text-mid">{description}</p>}
-      </header>
+      {hasHeader && (title || description || eyebrow) && (
+        <header className="mb-4">
+          {eyebrow && (
+            <div className="text-[0.65rem] font-bold uppercase tracking-[0.28em] text-rose">
+              {eyebrow}
+            </div>
+          )}
+          {title && (
+            <h2 className="mt-1 font-display text-xl font-semibold text-charcoal">{title}</h2>
+          )}
+          {description && (
+            <p className="mt-1 text-sm text-text-mid">{description}</p>
+          )}
+        </header>
+      )}
       {children}
     </section>
   );
@@ -986,6 +999,85 @@ function GeneratedSuggestion({ text, onAccept }: { text: string; onAccept: () =>
         </button>
       </div>
       <p className="mt-2 text-sm text-text-mid">{text}</p>
+    </div>
+  );
+}
+
+function StoryStep({
+  value, onChange, onGenerate, generating, tier, used, limit, onUpgradeClick,
+}: {
+  value:          string;
+  onChange:       (s: string) => void;
+  onGenerate:     () => void;
+  generating:     boolean;
+  tier:           "free" | "premium";
+  used:           number;
+  limit:          number;
+  onUpgradeClick: () => void;
+}) {
+  const MAX = 500;
+  /* Truncate aggressively on paste so the textarea state never grows
+   * past the limit. Counter then shows the live char total. */
+  const remaining = Math.max(0, limit - used);
+  const outOfGenerations = tier === "free" && remaining === 0;
+
+  return (
+    <div>
+      <header className="mb-5 text-center sm:text-left">
+        <h3 className="font-display text-2xl font-semibold leading-tight text-charcoal sm:text-3xl">
+          Tell us your story{" "}
+          <span className="text-base font-normal italic text-text-muted">
+            (optional)
+          </span>
+        </h3>
+        <p className="mt-1 text-sm text-text-mid">
+          A line or two on how you met, the proposal, why this venue — Claude
+          uses it as the seed for your &ldquo;Our Story&rdquo;, plus your
+          travel notes, dress code, things-to-do, and FAQ.
+        </p>
+      </header>
+
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value.slice(0, MAX))}
+        rows={5}
+        maxLength={MAX}
+        placeholder="We met on a Wednesday-night architecture studio in 2019. The proposal was at the end of a wine tour, exactly five years later…"
+        className="w-full rounded-card border border-border bg-white px-4 py-3 text-base leading-relaxed focus:border-rose focus:outline-none"
+      />
+      <div className="mt-1 flex items-center justify-between text-[0.65rem] text-text-muted">
+        <span>{value.length}/{MAX} characters</span>
+        {tier === "premium" ? (
+          <span className="font-bold uppercase tracking-[0.16em] text-emerald-700">
+            ✓ Unlimited generations
+          </span>
+        ) : (
+          <span
+            className={`font-bold uppercase tracking-[0.16em] ${
+              remaining === 0 ? "text-rose" : remaining === 1 ? "text-amber-700" : "text-emerald-700"
+            }`}
+          >
+            {remaining} {remaining === 1 ? "generation" : "generations"} remaining
+          </span>
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={outOfGenerations ? onUpgradeClick : onGenerate}
+        disabled={generating}
+        className="mt-5 w-full rounded-pill bg-rose px-6 py-4 text-base font-bold text-white shadow-[0_8px_24px_rgba(185,100,118,0.32)] transition-all hover:bg-rose-hover disabled:opacity-60"
+      >
+        {generating
+          ? "Generating…"
+          : outOfGenerations
+          ? "🔒 Upgrade to keep generating →"
+          : "Generate my website →"}
+      </button>
+      <p className="mt-3 text-center text-[0.7rem] text-text-muted">
+        Generation takes ~15 seconds. The copy fills empty fields only —
+        anything you&rsquo;ve already written stays put.
+      </p>
     </div>
   );
 }
