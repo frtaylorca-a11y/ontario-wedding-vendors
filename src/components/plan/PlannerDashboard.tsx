@@ -5,6 +5,7 @@ import { BudgetCalculator } from "./BudgetCalculator";
 import { VenueSearch } from "./VenueSearch";
 import { VendorSlots } from "./VendorSlots";
 import { AddVendorSlideOver } from "./AddVendorSlideOver";
+import { OneQrActivationCard } from "./OneQrActivationCard";
 import {
   DEFAULT_PLAN,
   CATERING_PER_GUEST,
@@ -257,6 +258,23 @@ export function PlannerDashboard({ sessionId, initialPlan, totalVenueCount }: Pr
           </p>
         </section>
       )}
+
+      {/* OneQR activation — readiness checklist + activate CTA */}
+      <OneQrActivationCard
+        readiness={{
+          venueSelected:    state.venueId != null,
+          guestListAdded:   state.guestList.length > 0,
+          itineraryStarted: state.itinerary.length > 0,
+          musicSaved:       state.musicSelections != null,
+        }}
+        activated={{
+          slug:        state.oneqrSlug,
+          qrCodeUrl:   state.oneqrQrCodeUrl,
+          djPortalUrl: state.oneqrDjPortalUrl,
+          adminUrl:    state.oneqrAdminUrl,
+          activatedAt: state.oneqrActivatedAt,
+        }}
+      />
 
       {/* Step 4 — slide-over (overlay, lives outside the doc flow) */}
       <AddVendorSlideOver

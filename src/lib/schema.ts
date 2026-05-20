@@ -230,6 +230,16 @@ export const weddingPlans = pgTable(
     stagAndDoe:         jsonb("stag_and_doe"),
     budgetCategoryStates: jsonb("budget_category_states"),
     checklistTasks:     jsonb("checklist_tasks"),
+    /* Lightweight collection blobs that ship to OneQR on activation */
+    musicSelections:    jsonb("music_selections"),
+    guestList:          jsonb("guest_list"),
+    itinerary:          jsonb("itinerary"),
+    /* OneQR activation state — populated by /api/oneqr/activate response */
+    oneqrSlug:          varchar("oneqr_slug",         { length: 100 }),
+    oneqrActivatedAt:   timestamp("oneqr_activated_at"),
+    oneqrQrCodeUrl:     varchar("oneqr_qr_code_url",  { length: 500 }),
+    oneqrDjPortalUrl:   varchar("oneqr_dj_portal_url",{ length: 500 }),
+    oneqrAdminUrl:      varchar("oneqr_admin_url",    { length: 500 }),
     alertPhone:         varchar("alert_phone", { length: 50 }),
     alertEmail:         varchar("alert_email", { length: 255 }),
     alertChannel:       varchar("alert_channel", { length: 10 }),

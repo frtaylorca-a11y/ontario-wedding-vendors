@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { weddingPlans } from "@/lib/schema";
 import { readPlanSessionId } from "@/lib/session";
 import { StagAndDoeDashboard } from "@/components/plan/StagAndDoeDashboard";
+import { PlannerTabs } from "@/components/plan/PlannerTabs";
 import type { StagAndDoeState } from "@/lib/plan-state";
 
 export const dynamic = "force-dynamic";
@@ -37,28 +38,7 @@ export default async function StagAndDoePage() {
   return (
     <main className="bg-bg-warm">
       <div className="mx-auto max-w-[1180px] px-6 py-12 lg:py-16">
-        {/* Same tab bar as /plan, with Stag & Doe active */}
-        <nav aria-label="Planning tools" className="mb-8 flex flex-wrap gap-2 border-b border-border-light pb-4">
-          <Link
-            href={"/plan" as Route}
-            className="inline-flex items-center rounded-pill border border-border bg-white px-5 py-2 text-sm font-medium text-text-mid transition-colors hover:border-rose hover:text-rose focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
-          >
-            Wedding Planner
-          </Link>
-          <Link
-            href={"/plan/stag-and-doe" as Route}
-            aria-current="page"
-            className="inline-flex items-center rounded-pill bg-rose px-5 py-2 text-sm font-bold text-white"
-          >
-            Stag &amp; Doe
-          </Link>
-          <Link
-            href={"/plan/checklist" as Route}
-            className="inline-flex items-center rounded-pill border border-border bg-white px-5 py-2 text-sm font-medium text-text-mid transition-colors hover:border-rose hover:text-rose focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
-          >
-            Checklist
-          </Link>
-        </nav>
+        <PlannerTabs active="stag-and-doe" />
 
         <header className="mb-10">
           <div className="text-xs font-bold uppercase tracking-[0.14em] text-rose">

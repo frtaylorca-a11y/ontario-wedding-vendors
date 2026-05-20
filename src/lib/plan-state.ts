@@ -206,6 +206,55 @@ export const DEFAULT_STAG_AND_DOE: StagAndDoeState = {
   ticketTracker: [],
 };
 
+/**
+ * Generate a default 14-event wedding day timeline anchored on the user's
+ * ceremony time (HH:MM 24h). Offsets follow the conventional Ontario
+ * timeline: prep at -4h, photographer at -2h, ceremony at 0, dinner at +3h,
+ * last song at +8.5h.
+ */
+export function defaultItineraryFromCeremony(ceremonyTimeHHMM: string): ItineraryEntry[] {
+  const [hStr, mStr] = ceremonyTimeHHMM.split(":");
+  const hh = Number.parseInt(hStr, 10);
+  const mm = Number.parseInt(mStr ?? "0", 10);
+  if (!Number.isFinite(hh) || hh < 0 || hh > 23 || !Number.isFinite(mm) || mm < 0 || mm > 59) {
+    return [];
+  }
+  const ceremonyMinutes = hh * 60 + mm;
+  const fmt = (totalMin: number): string => {
+    /* Normalize across midnight in both directions */
+    const wrapped = ((totalMin % 1440) + 1440) % 1440;
+    const h = Math.floor(wrapped / 60).toString().padStart(2, "0");
+    const m = (wrapped % 60).toString().padStart(2, "0");
+    return `${h}:${m}`;
+  };
+
+  const events: Array<{ offsetMin: number; title: string; vendorTag: string | null; guestVisible: boolean }> = [
+    { offsetMin: -240, title: "Hair & makeup begins",       vendorTag: "hair_makeup",  guestVisible: false },
+    { offsetMin: -120, title: "Photographer arrives",       vendorTag: "photographer", guestVisible: false },
+    { offsetMin:  -60, title: "Getting-ready photos",       vendorTag: "photographer", guestVisible: false },
+    { offsetMin:  -30, title: "Guests begin arriving",      vendorTag: null,           guestVisible: true  },
+    { offsetMin:    0, title: "Ceremony begins",            vendorTag: "officiant",    guestVisible: true  },
+    { offsetMin:   30, title: "Cocktail hour",              vendorTag: null,           guestVisible: true  },
+    { offsetMin:  120, title: "Guests seated for dinner",   vendorTag: null,           guestVisible: true  },
+    { offsetMin:  150, title: "Grand entrance",             vendorTag: "dj",           guestVisible: true  },
+    { offsetMin:  165, title: "First dance",                vendorTag: "dj",           guestVisible: true  },
+    { offsetMin:  180, title: "Dinner service",             vendorTag: "catering",     guestVisible: true  },
+    { offsetMin:  270, title: "Speeches",                   vendorTag: null,           guestVisible: true  },
+    { offsetMin:  300, title: "Cake cutting",               vendorTag: "cake",         guestVisible: true  },
+    { offsetMin:  315, title: "Dancing begins",             vendorTag: "dj",           guestVisible: true  },
+    { offsetMin:  510, title: "Last song of the night",     vendorTag: "dj",           guestVisible: true  },
+  ];
+
+  return events.map((e, i) => ({
+    id:           `itin-${i}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    time:         fmt(ceremonyMinutes + e.offsetMin),
+    title:        e.title,
+    notes:        "",
+    vendorTag:    e.vendorTag,
+    guestVisible: e.guestVisible,
+  }));
+}
+
 export function calculateStagTotals(state: StagAndDoeState): {
   ticketRevenue: number;
   totalRevenue: number;
@@ -240,6 +289,67 @@ export function calculateStagTotals(state: StagAndDoeState): {
   return { ticketRevenue, totalRevenue, totalExpenses, netProfit, progressPct };
 }
 
+/* ─── Music selections (lightweight — OneQR DJ portal handles the full library) ── */
+
+export type SongPick = { title: string; artist: string };
+
+export type CeremonyVibe = "Classical" | "Acoustic" | "Religious" | "Modern" | "Custom";
+export type ReceptionVibe = "Top 40" | "R&B" | "Country" | "Rock" | "Latin" | "Mixed" | "Custom";
+
+export type MusicSelections = {
+  firstDance:        SongPick;
+  fatherDaughter:    SongPick;
+  motherSon:         SongPick;
+  grandEntrance:     SongPick;
+  lastSong:          SongPick;
+  ceremonyVibe:      CeremonyVibe | null;
+  receptionVibe:     ReceptionVibe | null;
+  doNotPlay:         string;
+};
+
+export const DEFAULT_MUSIC_SELECTIONS: MusicSelections = {
+  firstDance:     { title: "", artist: "" },
+  fatherDaughter: { title: "", artist: "" },
+  motherSon:      { title: "", artist: "" },
+  grandEntrance:  { title: "", artist: "" },
+  lastSong:       { title: "", artist: "" },
+  ceremonyVibe:   null,
+  receptionVibe:  null,
+  doNotPlay:      "",
+};
+
+/* ─── Guest list ─────────────────────────────────────────────────────── */
+
+export type Rsvp = "invited" | "confirmed" | "declined" | "maybe";
+export type Dietary = "none" | "vegetarian" | "vegan" | "gluten-free" | "halal" | "kosher" | "other";
+
+export type GuestEntry = {
+  id: string;               /* uuid */
+  firstName: string;
+  lastName: string;
+  rsvp: Rsvp;
+  dietary: Dietary;
+  dietaryNote?: string;     /* free-text when dietary === "other" */
+  tableNumber?: number | null;
+  plusOne: boolean;
+  plusOneName?: string;
+  notes?: string;
+};
+
+/* ─── Itinerary ──────────────────────────────────────────────────────── */
+
+export type ItineraryEntry = {
+  id: string;
+  /** ISO time-of-day "HH:MM" — relative to the wedding's local timezone */
+  time: string;
+  title: string;
+  notes?: string;
+  /** Vendor category for the "from booked vendors" link, e.g. "photographer" */
+  vendorTag?: string | null;
+  /** Shows on OneQR's guest-facing day timeline */
+  guestVisible: boolean;
+};
+
 export type PlanState = {
   sessionId: string;
   totalBudget: number;
@@ -261,6 +371,20 @@ export type PlanState = {
   /** Toggle + lock + order overrides for the 20-category budget allocation.
    *  Persists to localStorage immediately; DB sync via budget_category_states column. */
   budgetCategoryStates: BudgetCategoryStates;
+
+  /** Lightweight music collection — full DJ portal lives on OneQR */
+  musicSelections: MusicSelections | null;
+  /** Per-guest entries — captured in /plan/guests */
+  guestList: GuestEntry[];
+  /** Day-of timeline — captured in /plan/itinerary */
+  itinerary: ItineraryEntry[];
+
+  /** OneQR activation state */
+  oneqrSlug:        string | null;
+  oneqrActivatedAt: string | null; /* ISO datetime */
+  oneqrQrCodeUrl:   string | null;
+  oneqrDjPortalUrl: string | null;
+  oneqrAdminUrl:    string | null;
 };
 
 export const DEFAULT_PLAN: Omit<PlanState, "sessionId"> = {
@@ -280,6 +404,14 @@ export const DEFAULT_PLAN: Omit<PlanState, "sessionId"> = {
   get budgetCategoryStates() {
     return defaultBudgetCategoryStates();
   },
+  musicSelections:   null,
+  guestList:         [],
+  itinerary:         [],
+  oneqrSlug:         null,
+  oneqrActivatedAt:  null,
+  oneqrQrCodeUrl:    null,
+  oneqrDjPortalUrl:  null,
+  oneqrAdminUrl:     null,
 };
 
 export function calculateBudget(
