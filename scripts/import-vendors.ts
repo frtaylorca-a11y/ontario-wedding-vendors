@@ -177,13 +177,33 @@ function toRow(raw: ScrapedVendor): NewVendor | null {
   };
 }
 
-/** Insert or update one row by place_id. Returns "inserted" | "updated". */
-async function upsertOne(row: NewVendor): Promise<"inserted" | "updated"> {
+/** Suffix a slug with the trailing 6 chars of place_id when two vendors
+ *  generate the same base slug (different cities, same business name, etc.). */
+function makeUniqueSlug(baseSlug: string, placeId: string): string {
+  const tail = placeId.replace(/[^a-zA-Z0-9]/g, "").slice(-6).toLowerCase();
+  return tail ? `${baseSlug}-${tail}` : baseSlug;
+}
+
+/** Recognize "slug" unique-constraint violations from Postgres / Neon HTTP.
+ *  The place_id constraint is handled by ON CONFLICT — anything else that
+ *  raises 23505 with "slug" in the constraint / detail is a slug collision. */
+function isSlugUniqueViolation(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const e = err as { code?: string; constraint?: string; detail?: string; message?: string };
+  if (e.code === "23505") {
+    if (e.constraint && e.constraint.includes("slug")) return true;
+    if (e.detail     && e.detail.includes("(slug)"))     return true;
+  }
+  const msg = (e.message ?? "").toLowerCase();
+  return msg.includes("slug") && (msg.includes("duplicate") || msg.includes("unique"));
+}
+
+async function doUpsert(row: NewVendor): Promise<"inserted" | "updated"> {
   const result = await db
     .insert(vendors)
     .values(row)
     .onConflictDoUpdate({
-      target: vendors.placeId,
+      target: vendors.placeId, /* place_id is the true identity — slug is just a URL */
       set: {
         slug:                 row.slug,
         name:                 row.name,
@@ -219,6 +239,32 @@ async function upsertOne(row: NewVendor): Promise<"inserted" | "updated"> {
   const created = r.createdAt?.getTime() ?? 0;
   const updated = r.updatedAt?.getTime() ?? 0;
   return Math.abs(updated - created) < 1500 ? "inserted" : "updated";
+}
+
+/**
+ * Insert or update one vendor row.
+ *
+ * Two unique constraints exist on the table:
+ *   - place_id  (handled by ON CONFLICT DO UPDATE — same vendor seen twice
+ *                across JSON files just updates fields)
+ *   - slug      (NOT handled by ON CONFLICT because the conflict target
+ *                must match the constraint we're targeting; two different
+ *                place_ids that generate the same base slug collide here)
+ *
+ * On a slug collision we retry once with a placeId-suffixed slug. If that
+ * also collides (extremely unlikely — would require two vendors with the
+ * same name AND the same 6-char place_id tail), we bubble the error.
+ */
+async function upsertOne(row: NewVendor): Promise<"inserted" | "updated"> {
+  try {
+    return await doUpsert(row);
+  } catch (err) {
+    if (!isSlugUniqueViolation(err) || !row.placeId) throw err;
+    const newSlug = makeUniqueSlug(row.slug, row.placeId);
+    if (newSlug === row.slug) throw err; /* nothing to suffix */
+    console.warn(`  slug collision · '${row.slug}' → retrying as '${newSlug}'`);
+    return await doUpsert({ ...row, slug: newSlug });
+  }
 }
 
 async function main() {
