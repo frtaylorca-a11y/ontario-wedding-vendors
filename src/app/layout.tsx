@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, Inter, Playfair_Display, Fraunces, Nunito } from "next/font/google";
+import { Cormorant_Garamond, Inter, Playfair_Display, Fraunces, Nunito, Great_Vibes } from "next/font/google";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { AnalyticsLoaders } from "@/components/analytics/AnalyticsLoaders";
@@ -48,6 +48,14 @@ const nunito = Nunito({
   display:  "swap",
 });
 
+/* Wedding-monogram script — used for couple initials in the hero. */
+const greatVibes = Great_Vibes({
+  subsets: ["latin"],
+  weight:  "400",
+  variable: "--font-monogram",
+  display:  "swap",
+});
+
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ontarioweddingvendors.com";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -76,7 +84,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${display.variable} ${body.variable} ${playfair.variable} ${fraunces.variable} ${nunito.variable}`}>
+    <html lang="en" className={`${display.variable} ${body.variable} ${playfair.variable} ${fraunces.variable} ${nunito.variable} ${greatVibes.variable}`}>
       <body className="min-h-screen antialiased">
         <AnalyticsLoaders
           ga4Id={process.env.NEXT_PUBLIC_GA4_ID}
