@@ -985,3 +985,41 @@ curl -H "Host: test-couple.niagaraweddingvenues.com" https://ontarioweddingvendo
 The regional-domain map is defined in `src/lib/wedding-site.ts` →
 `REGIONAL_DOMAINS`. Adding a new domain requires updating that constant
 plus the DNS + Vercel config above.
+
+---
+
+## Wedding Website Template — Vendor Credits Section
+
+Couple wedding sites at `[slug].{regional-domain}` (rewritten internally
+to `/weddings/[slug]`) render an editorial "Our Venue & Vendors" credits
+section below the Save the Date hero.
+
+**Rendered when:** `wedding_site_show_vendors` is true (default) AND
+the plan has either a venue or at least one booked vendor.
+
+**Data source:**
+- Venue (top of section): `wedding_plans.venue_id → venues` join on the
+  server. Shows name, city, and two buttons:
+  *View profile →* (links to `${SITE_URL}/venues/{slug}`) and
+  *Visit website ↗* when `venues.website` is set.
+- Vendors (grid below): `wedding_plans.booked_vendors` jsonb, hydrated
+  with each vendor's slug + website via an `IN (...)` lookup on the
+  vendors table. Each card shows the category SVG icon + name + the
+  same two buttons.
+
+**Cross-domain links:** the wedding site lives on a regional subdomain
+(`niagaraweddingvenues.com` etc.) while the directory lives on the OWV
+apex, so the View profile / Visit website links use absolute
+`SITE_URL`-prefixed `<a target="_blank">` anchors, not Next `<Link>`.
+
+**Schema:** when the plan has a date + names + venue, a JSON-LD Event
+object is injected with `location`, `startDate`, and a `performer` array
+listing every booked vendor. Useful for shared-link previews even
+though the page itself is `robots: noindex`.
+
+**Toggle:** controlled by `wedding_plans.wedding_site_show_vendors`
+(boolean default true). Future `/plan/website` editor will surface
+this; for now the default applies and couples opt out by hand.
+
+**Footer:** small "Planned with Ontario Wedding Vendors" line linking
+back to the apex.

@@ -263,6 +263,10 @@ export const weddingPlans = pgTable(
     partner2Name:               varchar("partner2_name",                 { length: 100 }),
     weddingSiteSlug:            varchar("wedding_site_slug",             { length: 60 }),
     weddingSiteRegionalDomain:  varchar("wedding_site_regional_domain",  { length: 100 }),
+    /* Toggle: show the "Our Venue & Vendors" credits section on the
+     * couple's wedding site. Default true — couple opts out in the
+     * future /plan/website editor. */
+    weddingSiteShowVendors:     boolean("wedding_site_show_vendors").default(true),
     ipAddress:          varchar("ip_address",   { length: 45 }),
     userAgent:          text("user_agent"),
     referrer:           varchar("referrer",     { length: 500 }),
