@@ -227,17 +227,97 @@ const FROSTED: ThemeTokens = {
   isDark:        false,
 };
 
+/* ── 11. Editorial — Sage + cream, massive serif, collage feel ───── */
+const EDITORIAL: ThemeTokens = {
+  pageBg:        "#FAF7F2",
+  surface:       "#FFFFFF",
+  surfaceAlt:    "#F0EDE5",
+  border:        "#D8D3C4",
+  ink:           "#1A1A1A",
+  inkMuted:      "#888780",
+  accent:        "#7C9A7E",
+  accentInk:     "#FAF7F2",
+  accentSoft:    "#D8E1D6",
+  fontDisplay:   "var(--font-display), 'Cormorant Garamond', Georgia, serif",
+  fontBody:      "var(--font-body), 'Inter', system-ui, sans-serif",
+  displayItalic: "normal",
+  fontDisplayLabel: "Cormorant Garamond",
+  fontBodyLabel:    "Inter",
+  isDark:        false,
+};
+
+/* ── 12. Minimal Romantic — Blush + pale grey, vertical sidebar feel ── */
+const MINIMAL: ThemeTokens = {
+  pageBg:        "#FBF3F3",
+  surface:       "#FFFFFF",
+  surfaceAlt:    "#F5F5F3",
+  border:        "#E8D8D8",
+  ink:           "#1A1A1A",
+  inkMuted:      "#6B6B6B",
+  accent:        "#D4A0A0",
+  accentInk:     "#FFFFFF",
+  accentSoft:    "#F2DCDC",
+  fontDisplay:   "var(--font-display), 'Cormorant Garamond', Georgia, serif",
+  fontBody:      "var(--font-body), 'Inter', system-ui, sans-serif",
+  displayItalic: "italic",
+  fontDisplayLabel: "Cormorant Italic",
+  fontBodyLabel:    "Inter",
+  isDark:        false,
+};
+
+/* ── 13. Retro Charm — Burgundy + cream + gold, line-art accents ──── */
+const RETRO: ThemeTokens = {
+  pageBg:        "#FDF8F0",
+  surface:       "#FEFCF8",
+  surfaceAlt:    "#F5EDD8",
+  border:        "#D8C9A0",
+  ink:           "#2E1216",
+  inkMuted:      "#6B4248",
+  accent:        "#6B1F2A",
+  accentInk:     "#FDF8F0",
+  accentSoft:    "#EFD4D8",
+  fontDisplay:   "var(--font-playfair), 'Playfair Display', Georgia, serif",
+  fontBody:      "var(--font-body), 'Inter', system-ui, sans-serif",
+  displayItalic: "normal",
+  fontDisplayLabel: "Playfair Display",
+  fontBodyLabel:    "Inter",
+  isDark:        false,
+};
+
+/* ── 14. Bold & Colourful — Split-screen pink + sage, full-width bands ─ */
+const BOLD_GARDEN: ThemeTokens = {
+  pageBg:        "#FAF8F5",
+  surface:       "#FFFFFF",
+  surfaceAlt:    "#F4E2EA",
+  border:        "#E8C5D2",
+  ink:           "#1A1A1A",
+  inkMuted:      "#5A4E54",
+  accent:        "#D4789A",
+  accentInk:     "#FFFFFF",
+  accentSoft:    "#F4D4DF",
+  fontDisplay:   "var(--font-display), 'Cormorant Garamond', Georgia, serif",
+  fontBody:      "var(--font-body), 'Inter', system-ui, sans-serif",
+  displayItalic: "italic",
+  fontDisplayLabel: "Cormorant Garamond",
+  fontBodyLabel:    "Inter",
+  isDark:        false,
+};
+
 const THEME_TABLE: Record<Exclude<WeddingTheme, "custom">, ThemeTokens> = {
-  classic:    CLASSIC,
-  romantic:   ROMANTIC,
-  rustic:     RUSTIC,
-  modern:     MODERN,
-  garden:     GARDEN,
-  coastal:    COASTAL,
-  boho:       BOHO,
-  luxe:       LUXE,
-  terracotta: TERRACOTTA,
-  frosted:    FROSTED,
+  classic:      CLASSIC,
+  romantic:     ROMANTIC,
+  rustic:       RUSTIC,
+  modern:       MODERN,
+  garden:       GARDEN,
+  coastal:      COASTAL,
+  boho:         BOHO,
+  luxe:         LUXE,
+  terracotta:   TERRACOTTA,
+  frosted:      FROSTED,
+  editorial:    EDITORIAL,
+  minimal:      MINIMAL,
+  retro:        RETRO,
+  "bold-garden": BOLD_GARDEN,
 };
 
 /* Build tokens from a custom palette + typography choice. Used when

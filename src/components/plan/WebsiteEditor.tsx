@@ -20,6 +20,7 @@ import { ThemePicker } from "./ThemePicker";
 import { PalettePicker } from "./PalettePicker";
 import { TypographyPicker } from "./TypographyPicker";
 import { PremiumUpgradeModal } from "./PremiumUpgradeModal";
+import { StylePicker } from "./StylePicker";
 import type { WeddingPalette } from "@/lib/wedding-palettes";
 import type { TypographyStyle } from "@/lib/wedding-typography";
 
@@ -322,29 +323,48 @@ export function WebsiteEditor({ initial }: { initial: EditorState }) {
         )}
       </div>
 
-      {/* Theme picker */}
+      {/* Wizard Step 1 — visual style picker (6 screenshot cards) */}
       <Section
-        title="Choose a theme"
-        description="Tap a card to preview. The full preview panel on the right shows the theme rendered in its real fonts and colours."
+        title="Pick a style"
+        description="Step 1 — start by choosing the visual feel. The detailed picker below has every option, including colour-only themes."
       >
-        <ThemePicker
+        <StylePicker
           applied={state.weddingTheme}
           tier={state.tier}
-          coupleLabel={
-            [state.partner1Name, state.partner2Name].filter(Boolean).join(" & ") || "Charlotte & Francis"
-          }
-          weddingDateFormatted={
-            state.weddingDate
-              ? new Date(state.weddingDate).toLocaleDateString("en-CA", {
-                  weekday: "long", year: "numeric", month: "long", day: "numeric",
-                })
-              : "Saturday, September 12, 2026"
-          }
-          venueLine={state.venueLabel}
           onApply={(theme) => update({ weddingTheme: theme })}
           onLockedClick={(theme) => handleLockedTheme(theme)}
+          onBrowseAll={() => {
+            const el = document.getElementById("theme-picker");
+            if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+          }}
         />
       </Section>
+
+      {/* Detailed theme picker — all 14 themes with live preview panel */}
+      <div id="theme-picker">
+        <Section
+          title="All themes (detailed)"
+          description="Tap a card to preview. The full preview panel on the right shows the theme rendered in its real fonts and colours."
+        >
+          <ThemePicker
+            applied={state.weddingTheme}
+            tier={state.tier}
+            coupleLabel={
+              [state.partner1Name, state.partner2Name].filter(Boolean).join(" & ") || "Charlotte & Francis"
+            }
+            weddingDateFormatted={
+              state.weddingDate
+                ? new Date(state.weddingDate).toLocaleDateString("en-CA", {
+                    weekday: "long", year: "numeric", month: "long", day: "numeric",
+                  })
+                : "Saturday, September 12, 2026"
+            }
+            venueLine={state.venueLabel}
+            onApply={(theme) => update({ weddingTheme: theme })}
+            onLockedClick={(theme) => handleLockedTheme(theme)}
+          />
+        </Section>
+      </div>
 
       {/* Colour palette picker */}
       <Section

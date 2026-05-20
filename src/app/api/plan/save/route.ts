@@ -42,7 +42,7 @@ const planSchema = z.object({
   alertChannel:   z.enum(["sms", "email", "both", "none"]).nullable().optional(),
 
   /* Wedding-website fields (owned by /plan/website editor) */
-  weddingTheme:           z.enum(["classic", "romantic", "rustic", "modern", "garden", "coastal", "boho", "luxe", "terracotta", "frosted", "custom"]).optional(),
+  weddingTheme:           z.enum(["classic", "romantic", "rustic", "modern", "garden", "coastal", "boho", "luxe", "terracotta", "frosted", "editorial", "minimal", "retro", "bold-garden", "custom"]).optional(),
   /* Custom palette colours + identifier — set by the palette picker. */
   customColorPrimary:     z.string().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),
   customColorAccent:      z.string().regex(/^#[0-9A-Fa-f]{6}$/).nullable().optional(),

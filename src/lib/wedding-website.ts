@@ -25,23 +25,31 @@ export type WeddingTheme =
   | "luxe"
   | "terracotta"
   | "frosted"
+  | "editorial"
+  | "minimal"
+  | "retro"
+  | "bold-garden"
   /* Special: "custom" means the layout uses the colours stored on
    * wedding_plans.custom_color_* (set by the palette picker) on top
    * of the default layout structure. */
   | "custom";
 
 export const WEDDING_THEMES: { id: WeddingTheme; label: string; description: string; isLayoutVariant?: boolean; isPremium?: boolean }[] = [
-  { id: "romantic",   label: "Romantic",      description: "Dusty rose + blush, Cormorant italic display." },
-  { id: "classic",    label: "Classic",       description: "Navy + ivory, formal Cormorant and Inter." },
-  { id: "rustic",     label: "Rustic",        description: "Burgundy + cream, Playfair Display with Lato." },
-  { id: "modern",     label: "Modern",        description: "Pure black on white, bold Inter throughout." },
-  { id: "garden",     label: "Garden",        description: "Sage green + mint, Cormorant with airy Nunito." },
-  { id: "coastal",    label: "Coastal",       description: "Ocean blue + seafoam, Inter with friendly Nunito." },
-  { id: "boho",       label: "Boho",          description: "Terracotta + warm sand, expressive Fraunces serif." },
-  { id: "luxe",       label: "Luxe",          description: "Deep gold on charcoal — the dark theme." },
+  { id: "romantic",    label: "Romantic",         description: "Dusty rose + blush, Cormorant italic display." },
+  { id: "classic",     label: "Classic",          description: "Navy + ivory, formal Cormorant and Inter." },
+  { id: "rustic",      label: "Rustic",           description: "Burgundy + cream, Playfair Display with Lato." },
+  { id: "modern",      label: "Modern",           description: "Pure black on white, bold Inter throughout." },
+  { id: "garden",      label: "Garden",           description: "Sage green + mint, Cormorant with airy Nunito." },
+  { id: "coastal",     label: "Coastal",          description: "Ocean blue + seafoam, Inter with friendly Nunito." },
+  { id: "boho",        label: "Boho",             description: "Terracotta + warm sand, expressive Fraunces serif." },
+  { id: "luxe",        label: "Luxe",             description: "Deep gold on charcoal — the dark theme." },
   /* — Premium-only layout variants (own component) — */
-  { id: "terracotta", label: "Terracotta",    description: "Full-bleed weekend invite, terracotta colour bands, editorial 'Love Story' panel.", isLayoutVariant: true, isPremium: true },
-  { id: "frosted",    label: "Frosted Glass", description: "Golden-hour photo hero with a frosted glass card + polaroid overlay.",               isLayoutVariant: true, isPremium: true },
+  { id: "terracotta",  label: "Terracotta",       description: "Full-bleed weekend invite, terracotta colour bands, editorial 'Love Story' panel.", isLayoutVariant: true, isPremium: true },
+  { id: "frosted",     label: "Frosted Glass",    description: "Golden-hour photo hero with a frosted glass card + polaroid overlay.",               isLayoutVariant: true, isPremium: true },
+  { id: "editorial",   label: "Editorial",        description: "Massive serif headlines, asymmetric photo collage, small section numbering.",        isLayoutVariant: true, isPremium: true },
+  { id: "minimal",     label: "Minimal Romantic", description: "Vertical sidebar nav, ultra-spaced caps, italic body throughout.",                   isLayoutVariant: true, isPremium: true },
+  { id: "retro",       label: "Retro Charm",      description: "Floating white card on full-bleed photo, burgundy + gold, line-art accents.",        isLayoutVariant: true, isPremium: true },
+  { id: "bold-garden", label: "Bold & Colourful", description: "Split-screen pink colour block + photo, alternating full-width colour bands.",       isLayoutVariant: true, isPremium: true },
 ];
 
 /* ── Per-section visibility config ────────────────────────────────── */
