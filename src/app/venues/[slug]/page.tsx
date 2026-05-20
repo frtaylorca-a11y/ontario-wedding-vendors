@@ -12,6 +12,7 @@ import { VenueCard } from "@/components/ui/VenueCard";
 import { GoogleReviews } from "@/components/ui/GoogleReviews";
 import { InstagramCard } from "@/components/ui/InstagramCard";
 import { VenueSchema, BreadcrumbSchema, FaqSchema } from "@/components/seo/SchemaInjector";
+import { TrackPageView } from "@/components/analytics/TrackPageView";
 import {
   formatCapacity,
   getEstimatedCapacity,
@@ -207,6 +208,11 @@ export default async function VenuePage({ params }: { params: Params }) {
 
   return (
     <>
+      <TrackPageView
+        contentType="venue"
+        contentName={venue.name}
+        contentCategory={venue.venueType ?? undefined}
+      />
       <VenueSchema venue={venue} imageUrl={imageSrc} />
       <BreadcrumbSchema items={breadcrumbItems} />
       {autoFaqs.length > 0 && <FaqSchema items={autoFaqs} />}

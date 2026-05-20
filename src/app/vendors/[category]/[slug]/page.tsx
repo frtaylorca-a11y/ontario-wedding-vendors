@@ -14,6 +14,7 @@ import { GoogleReviews } from "@/components/ui/GoogleReviews";
 import { VendorCard } from "@/components/ui/VendorCard";
 import { VenueCard } from "@/components/ui/VenueCard";
 import { VendorSchema, BreadcrumbSchema } from "@/components/seo/SchemaInjector";
+import { TrackPageView } from "@/components/analytics/TrackPageView";
 import { formatRating, normalizeRegionDisplay } from "@/lib/utils";
 
 type Params = Promise<{ category: string; slug: string }>;
@@ -144,6 +145,11 @@ export default async function VendorPage({ params }: { params: Params }) {
 
   return (
     <>
+      <TrackPageView
+        contentType="vendor"
+        contentName={vendor.name}
+        contentCategory={vendor.category}
+      />
       <VendorSchema vendor={vendor} imageUrl={heroImage} />
       <BreadcrumbSchema items={breadcrumbItems} />
 

@@ -243,6 +243,18 @@ export const weddingPlans = pgTable(
     alertPhone:         varchar("alert_phone", { length: 50 }),
     alertEmail:         varchar("alert_email", { length: 255 }),
     alertChannel:       varchar("alert_channel", { length: 10 }),
+    /* Attribution / session capture — written once on INSERT, never updated.
+     * Drives marketing analytics + first-visit cohort reporting. */
+    ipAddress:          varchar("ip_address",   { length: 45 }),
+    userAgent:          text("user_agent"),
+    referrer:           varchar("referrer",     { length: 500 }),
+    utmSource:          varchar("utm_source",   { length: 100 }),
+    utmMedium:          varchar("utm_medium",   { length: 100 }),
+    utmCampaign:        varchar("utm_campaign", { length: 100 }),
+    utmContent:         varchar("utm_content",  { length: 100 }),
+    deviceType:         varchar("device_type",  { length: 20 }), /* mobile|tablet|desktop */
+    firstPage:          varchar("first_page",   { length: 500 }),
+    firstVisitedAt:     timestamp("first_visited_at"),
     notes:              text("notes"),
     createdAt:          timestamp("created_at").defaultNow(),
     updatedAt:          timestamp("updated_at").defaultNow(),

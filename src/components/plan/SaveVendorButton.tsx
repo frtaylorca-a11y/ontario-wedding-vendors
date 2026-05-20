@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { trackEvent } from "@/lib/analytics";
 
 const LOCAL_STORAGE_KEY = "owv_plan_state_v1";
 
@@ -53,6 +54,7 @@ export function SaveVendorButton({ category, slug }: { category: string; slug: s
       next = saved; /* revert if storage failed */
     }
     setSaved(next);
+    if (next) trackEvent("vendor_saved", { category, slug });
   }
 
   return (

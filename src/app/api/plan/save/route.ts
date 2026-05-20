@@ -85,6 +85,34 @@ export async function POST(request: Request) {
   if (data.alertEmail   !== undefined) { updateSet.alertEmail   = data.alertEmail;   insertValues.alertEmail   = data.alertEmail;   }
   if (data.alertChannel !== undefined) { updateSet.alertChannel = data.alertChannel; insertValues.alertChannel = data.alertChannel; }
 
+  /* Session / attribution capture — INSERT-only fields. Read from request
+   * headers + the AttributionCapture cookie. Setting these on the INSERT
+   * side of the upsert means existing rows keep their original values. */
+  const headers = request.headers;
+  const xff = headers.get("x-forwarded-for") ?? "";
+  const ipAddress =
+    xff.split(",")[0].trim() ||
+    headers.get("x-real-ip") ||
+    null;
+  const userAgent = headers.get("user-agent") ?? null;
+  const referrer  = headers.get("referer") ?? null;
+  const deviceType = userAgent ? deviceTypeFromUa(userAgent) : null;
+
+  const attribution = readAttributionCookie(headers.get("cookie"));
+
+  if (ipAddress)   insertValues.ipAddress  = ipAddress.slice(0, 45);
+  if (userAgent)   insertValues.userAgent  = userAgent;
+  if (referrer)    insertValues.referrer   = referrer.slice(0, 500);
+  if (deviceType)  insertValues.deviceType = deviceType;
+  if (attribution) {
+    if (attribution.utmSource)      insertValues.utmSource   = attribution.utmSource.slice(0, 100);
+    if (attribution.utmMedium)      insertValues.utmMedium   = attribution.utmMedium.slice(0, 100);
+    if (attribution.utmCampaign)    insertValues.utmCampaign = attribution.utmCampaign.slice(0, 100);
+    if (attribution.utmContent)     insertValues.utmContent  = attribution.utmContent.slice(0, 100);
+    if (attribution.firstPage)      insertValues.firstPage   = attribution.firstPage.slice(0, 500);
+    if (attribution.firstVisitedAt) insertValues.firstVisitedAt = new Date(attribution.firstVisitedAt);
+  }
+
   try {
     await db
       .insert(weddingPlans)
@@ -97,6 +125,47 @@ export async function POST(request: Request) {
   } catch (err) {
     console.error("[plan/save] failed:", err);
     return NextResponse.json({ error: "Save failed" }, { status: 500 });
+  }
+}
+
+function deviceTypeFromUa(ua: string): "mobile" | "tablet" | "desktop" {
+  const lc = ua.toLowerCase();
+  /* iPad announces both Mobile and iPad — check tablet first. */
+  if (/ipad|tablet/.test(lc)) return "tablet";
+  if (/android(?!.*mobile)/.test(lc)) return "tablet"; /* Android tablets often lack "mobile" */
+  if (/mobile|android|iphone|ipod/.test(lc)) return "mobile";
+  return "desktop";
+}
+
+function readAttributionCookie(cookieHeader: string | null): {
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmContent?: string;
+  firstPage?: string;
+  firstVisitedAt?: string;
+} | null {
+  if (!cookieHeader) return null;
+  const cookies = cookieHeader.split(/;\s*/);
+  const target = cookies.find((c) => c.startsWith("owv_attribution="));
+  if (!target) return null;
+  try {
+    const raw = decodeURIComponent(target.slice("owv_attribution=".length));
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const pick = (k: string): string | undefined => {
+      const v = parsed[k];
+      return typeof v === "string" && v.length > 0 ? v : undefined;
+    };
+    return {
+      utmSource:      pick("utmSource"),
+      utmMedium:      pick("utmMedium"),
+      utmCampaign:    pick("utmCampaign"),
+      utmContent:     pick("utmContent"),
+      firstPage:      pick("firstPage"),
+      firstVisitedAt: pick("firstVisitedAt"),
+    };
+  } catch {
+    return null;
   }
 }
 

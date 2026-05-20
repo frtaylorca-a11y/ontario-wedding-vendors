@@ -6,6 +6,7 @@ import { VenueSearch } from "./VenueSearch";
 import { VendorSlots } from "./VendorSlots";
 import { AddVendorSlideOver } from "./AddVendorSlideOver";
 import { OneQrActivationCard } from "./OneQrActivationCard";
+import { trackEvent } from "@/lib/analytics";
 import {
   DEFAULT_PLAN,
   CATERING_PER_GUEST,
@@ -41,6 +42,13 @@ export function PlannerDashboard({ sessionId, initialPlan, totalVenueCount }: Pr
   const [addVendorCategory, setAddVendorCategory] = useState<string | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const firstRender = useRef(true);
+
+  /* plan_started fires once per fresh session — when the dashboard mounts
+   * without any existing initialPlan from the server. */
+  useEffect(() => {
+    if (!initialPlan) trackEvent("plan_started");
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, []);
 
   function handleBookVendor(vendor: BookedVendor) {
     setState((s) => ({
@@ -208,6 +216,12 @@ export function PlannerDashboard({ sessionId, initialPlan, totalVenueCount }: Pr
                 region:            nextRegion,
                 budgetCategoryStates: nextStates,
               };
+            });
+            trackEvent("venue_selected", {
+              venue_id:    venue.id,
+              venue_name:  venue.name,
+              venue_type:  venue.venueType ?? undefined,
+              region:      venue.region    ?? undefined,
             });
           } else {
             setState((s) => ({

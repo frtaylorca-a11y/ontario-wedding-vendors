@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { trackEvent } from "@/lib/analytics";
 
 type Props = {
   /** Snapshot of plan readiness — drives the checklist */
@@ -53,6 +54,7 @@ export function OneQrActivationCard({ readiness, activated }: Props) {
       const res = await fetch("/api/oneqr/activate", { method: "POST" });
       const data = (await res.json()) as ActivateResponse;
       if (res.ok && data.slug) {
+        trackEvent("oneqr_activated", { slug: data.slug });
         setState({
           submitting: false,
           error:      null,

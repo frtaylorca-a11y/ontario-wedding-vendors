@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { Cormorant_Garamond, Inter } from "next/font/google";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { AnalyticsLoaders } from "@/components/analytics/AnalyticsLoaders";
+import { AttributionCapture } from "@/components/analytics/AttributionCapture";
+import { CookieConsent } from "@/components/analytics/CookieConsent";
 import { getSiteStats } from "@/lib/queries";
 import "./globals.css";
 
@@ -50,9 +53,16 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${display.variable} ${body.variable}`}>
       <body className="min-h-screen antialiased">
+        <AnalyticsLoaders
+          ga4Id={process.env.NEXT_PUBLIC_GA4_ID}
+          metaPixelId={process.env.NEXT_PUBLIC_META_PIXEL_ID}
+          clarityId={process.env.NEXT_PUBLIC_CLARITY_ID}
+        />
+        <AttributionCapture />
         <Header />
         {children}
         <Footer />
+        <CookieConsent />
       </body>
     </html>
   );

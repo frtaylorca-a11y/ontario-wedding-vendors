@@ -10,6 +10,7 @@ import {
   type ChecklistTasksBlob,
 } from "@/lib/checklist";
 import type { BookedVendor } from "@/lib/plan-state";
+import { trackEvent } from "@/lib/analytics";
 
 const LOCAL_STORAGE_KEY = "owv_checklist_state_v1";
 const SAVE_DEBOUNCE_MS = 800;
@@ -152,6 +153,8 @@ export function ChecklistDashboard({
     setTasks((s) => {
       const cur = s.states[key];
       const nextDone = !cur?.done;
+      /* Fire only on false → true (completion), not un-checking */
+      if (nextDone) trackEvent("checklist_task_completed", { task_key: key });
       return {
         ...s,
         states: {
