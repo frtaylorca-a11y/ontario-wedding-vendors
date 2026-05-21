@@ -1,10 +1,15 @@
 /**
- * Enrich WeddingWire vendor rows with Google Places data.
+ * Enrich external-source vendor rows with Google Places data.
  *
  * Reads every *.json file in the scraper's data/vendors/ directory and,
- * for each row where source === "weddingwire" AND place_id is null/empty,
- * runs a Text Search → Place Details pair and writes the enriched fields
- * back into the same JSON file.
+ * for each row where source is in ENRICH_SOURCES (currently "weddingwire"
+ * and "yellowpages") AND place_id is null/empty, runs a Text Search →
+ * Place Details pair and writes the enriched fields back into the same
+ * JSON file.
+ *
+ * The filename is historical — the script started as WW-only and the
+ * Yellow Pages source was added later. Same pipeline, same Google calls,
+ * same on-disk output shape; only the input filter widened.
  *
  * Pipeline per row:
  *   1. Text Search:
@@ -27,7 +32,7 @@
  *
  * Skips:
  *   - rows where place_id is already set
- *   - rows where source !== "weddingwire"
+ *   - rows whose source is not in ENRICH_SOURCES
  *   - rows where Google Text Search returns zero results
  *
  * Rate limit: 200ms between requests (each row makes 2 calls).
@@ -52,6 +57,13 @@ const DEFAULT_DIR =
 
 const DELAY_BETWEEN_REQUESTS_MS = 200;
 const COST_PER_ROW_USD = 0.034;
+
+/* External sources whose scraper JSON rows don't carry Google
+ * place_ids and therefore qualify for Google Places enrichment.
+ * Mirrors SYNTHETIC_ID_SOURCES in scripts/import-vendors.ts — if you
+ * add a new source there, add it here too so the same rows get the
+ * Google fill-in before they hit the database. */
+const ENRICH_SOURCES = new Set<string>(["weddingwire", "yellowpages"]);
 
 /* Loose row shape — match what the scraper actually writes */
 type VendorRow = Record<string, unknown> & {
@@ -257,7 +269,7 @@ async function main() {
       for (const r of rows) {
         if (
           r &&
-          (r.source ?? "").toString().toLowerCase() === "weddingwire" &&
+          ENRICH_SOURCES.has((r.source ?? "").toString().toLowerCase()) &&
           !r.place_id &&
           r.name && r.city
         ) {
@@ -268,7 +280,8 @@ async function main() {
   }
   const willProcess = limit != null ? Math.min(limit, candidateTotal) : candidateTotal;
   console.log(
-    `Found ${candidateTotal} WeddingWire candidate(s) across ${files.length} file(s).` +
+    `Found ${candidateTotal} enrichable candidate(s) across ${files.length} file(s) ` +
+      `(sources: ${[...ENRICH_SOURCES].join(", ")}).` +
       `${limit != null ? ` Limit: ${limit}.` : ""}` +
       `${dryRun ? " · DRY RUN" : ""}`,
   );
@@ -307,8 +320,8 @@ async function main() {
       if (!perCategory[category]) perCategory[category] = newStats();
       const cat = perCategory[category];
 
-      const isWw = (row.source ?? "").toString().toLowerCase() === "weddingwire";
-      if (!isWw) {
+      const sourceLc = (row.source ?? "").toString().toLowerCase();
+      if (!ENRICH_SOURCES.has(sourceLc)) {
         cat.skippedNotWw++; grandTotal.skippedNotWw++;
         continue;
       }

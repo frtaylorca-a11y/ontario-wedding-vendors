@@ -9,11 +9,14 @@
  *
  * Behaviour:
  *   - Skips vendors with vendor_readiness_score < 50 (configurable via SCORE_MIN)
- *   - Skips vendors with no place_id, EXCEPT when source === "weddingwire"
- *     AND both name + city are present — those get a synthetic place_id
- *     of "ww-" + slugify(name) so the (place_id) unique constraint still
- *     holds. WeddingWire listings don't carry Google place IDs but are
+ *   - Skips vendors with no place_id, EXCEPT when source is in the
+ *     SYNTHETIC_ID_SOURCES map AND both name + city are present —
+ *     those get a synthetic place_id of "<prefix>-" + slugify(name)
+ *     so the (place_id) unique constraint still holds. WeddingWire
+ *     and Yellow Pages listings don't carry Google place IDs but are
  *     otherwise high-signal, so this opens the door for them.
+ *       weddingwire → "ww-{slug}"
+ *       yellowpages → "yp-{slug}"
  *   - Skips rows from the "unknown.json" file (no actionable category)
  *   - Forces Pic Booth's slug to "pic-booth-st-catharines" (must match the
  *     hardcoded reference in PicBoothSitePartnerCard)
@@ -156,7 +159,18 @@ function cleanString(s: string | null | undefined): string | null {
   return t;
 }
 
-/** URL-safe slug for synthesizing WeddingWire place IDs. */
+/* Sources whose rows can carry a synthetic place_id. Each value is
+ * the 2-letter prefix used to namespace the synthetic ID so two
+ * different sources can't collide on slug. WeddingWire shipped first
+ * with "ww-"; Yellow Pages added later with "yp-". Both pipelines
+ * upsert on this synthetic ID exactly the same way as a real Google
+ * place_id. */
+const SYNTHETIC_ID_SOURCES: Record<string, string> = {
+  weddingwire: "ww",
+  yellowpages: "yp",
+};
+
+/** URL-safe slug for synthesizing place IDs (WeddingWire + Yellow Pages). */
 function slugify(s: string): string {
   return s
     .toLowerCase()
@@ -350,12 +364,15 @@ async function main() {
       if (!perCategory[cat]) perCategory[cat] = newStats();
       const catStats = perCategory[cat];
 
-      /* WeddingWire scrapes lack Google place_ids — synthesize one when we
-       * have enough identity (name + city) to keep the row unique. */
+      /* WeddingWire + Yellow Pages scrapes lack Google place_ids —
+       * synthesize one when we have enough identity (name + city) to
+       * keep the row unique. Prefix comes from SYNTHETIC_ID_SOURCES so
+       * each source's IDs stay distinct (ww-… vs yp-…). */
       if (!raw.place_id) {
         const sourceLc = (raw.source ?? "").toLowerCase();
-        if (sourceLc === "weddingwire" && raw.name?.trim() && raw.city?.trim()) {
-          raw.place_id = `ww-${slugify(raw.name)}`;
+        const prefix   = SYNTHETIC_ID_SOURCES[sourceLc];
+        if (prefix && raw.name?.trim() && raw.city?.trim()) {
+          raw.place_id = `${prefix}-${slugify(raw.name)}`;
         }
       }
 
