@@ -149,6 +149,13 @@ export default async function QuotesPage() {
           publicUrl={publicUrl}
           quotesSentAt={plan?.quotesSentAt ? plan.quotesSentAt.toISOString() : null}
           cachedTemplate={plan?.quoteEmailTemplate ?? null}
+          /* The whole vendor-outreach flow is gated until we have
+           * vendor emails populated. The shortlist + selection UI
+           * still renders (couples can save favourites and prep
+           * who they'd contact), but Generate + Send + Preview are
+           * replaced with a "Coming soon" banner. Flip this to false
+           * (or drop the prop) once vendors.email is populated. */
+          comingSoon
         />
       </div>
     </main>

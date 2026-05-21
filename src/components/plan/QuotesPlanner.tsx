@@ -68,6 +68,7 @@ export function QuotesPlanner({
   publicUrl,
   quotesSentAt: _quotesSentAt,
   cachedTemplate,
+  comingSoon = false,
 }: {
   shortlist:    ShortlistVendor[];
   partner1Name: string;
@@ -80,6 +81,11 @@ export function QuotesPlanner({
   publicUrl:    string | null;
   quotesSentAt: string | null;
   cachedTemplate: string | null;
+  /** When true, the shortlist + selection UI still renders, but the
+   *  Generate / Send / Preview blocks are replaced with a "Quote
+   *  requests coming soon" banner. Used while vendors.email is empty
+   *  across the directory and there's nobody to send to. */
+  comingSoon?:  boolean;
 }) {
   /* ── Selection state ───────────────────────────────────────────── */
   /* Pre-check vendors that (a) have an email, (b) aren't already in
@@ -234,6 +240,24 @@ export function QuotesPlanner({
     <div className="space-y-6">
       <ProgressBar step={step} />
 
+      {comingSoon && (
+        <div className="rounded-card border-2 border-rose bg-rose-pale p-5 lg:p-6">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-rose">
+            Coming soon
+          </p>
+          <h2 className="mt-2 font-display text-xl font-semibold leading-tight text-charcoal lg:text-2xl">
+            Quote requests are coming soon
+          </h2>
+          <p className="mt-2 max-w-[640px] text-sm text-text-mid">
+            Vendors are claiming their listings now — once they confirm
+            their inboxes, you&rsquo;ll be able to send a personalised
+            inquiry to every vendor on your shortlist with one click.
+            Until then, save your favourites and reach out via their
+            website or phone number on each vendor&rsquo;s page.
+          </p>
+        </div>
+      )}
+
       {/* Step 1 — Shortlist */}
       <Card>
         <StepHeader n={1} title="Pick who to contact" />
@@ -302,25 +326,31 @@ export function QuotesPlanner({
           </div>
         )}
 
-        <div className="mt-6 flex justify-end">
-          <button
-            type="button"
-            onClick={generate}
-            disabled={selectedWithEmail.length === 0 || generating}
-            className="rounded-pill bg-rose px-6 py-3 text-base font-bold text-white shadow-[0_8px_24px_rgba(185,100,118,0.32)] transition-all hover:bg-rose-hover disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {generating
-              ? "Generating…"
-              : template
-                ? `Re-generate email (${selectedWithEmail.length}) →`
-                : `Generate email (${selectedWithEmail.length}) →`}
-          </button>
-        </div>
-        {generateError && <p className="mt-3 text-right text-sm text-red-600">{generateError}</p>}
+        {!comingSoon && (
+          <div className="mt-6 flex justify-end">
+            <button
+              type="button"
+              onClick={generate}
+              disabled={selectedWithEmail.length === 0 || generating}
+              className="rounded-pill bg-rose px-6 py-3 text-base font-bold text-white shadow-[0_8px_24px_rgba(185,100,118,0.32)] transition-all hover:bg-rose-hover disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {generating
+                ? "Generating…"
+                : template
+                  ? `Re-generate email (${selectedWithEmail.length}) →`
+                  : `Generate email (${selectedWithEmail.length}) →`}
+            </button>
+          </div>
+        )}
+        {!comingSoon && generateError && (
+          <p className="mt-3 text-right text-sm text-red-600">{generateError}</p>
+        )}
       </Card>
 
-      {/* Step 2 — Email preview */}
-      {template && (
+      {/* Step 2 — Email preview. Hidden when comingSoon since Step 1's
+       * Generate button is hidden too, so there's never a template to
+       * preview in that state. */}
+      {!comingSoon && template && (
         <Card>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <StepHeader n={2} title="Preview the email" />

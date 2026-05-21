@@ -738,12 +738,13 @@ export default async function VendorPage({ params }: { params: Params }) {
                       value={<a href={`tel:${vendor.phone}`} className="text-rose hover:underline">{vendor.phone}</a>}
                     />
                   )}
-                  {vendor.email && (
-                    <DetailRow
-                      label="Email"
-                      value={<a href={`mailto:${vendor.email}`} className="text-rose hover:underline">{vendor.email}</a>}
-                    />
-                  )}
+                  {/* Email row removed while vendor outreach is gated.
+                    * Vendors.email is currently 0 rows populated and we
+                    * don't want couples reaching out directly via email
+                    * before vendors have claimed their listings — every
+                    * inquiry should flow through OWV's /contact form so
+                    * we can track + verify it. Restore when outreach
+                    * goes live (and after vendor emails are verified). */}
                   {effectiveWebsite && (
                     <DetailRow
                       label="Website"
@@ -896,14 +897,16 @@ export default async function VendorPage({ params }: { params: Params }) {
               Ready to book {vendor.name}?
             </h2>
             <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-              {/* Primary — always renders. Falls back to a generic
-               * inquiry mailto when the vendor has no email on file. */}
+              {/* Primary — always renders, always routes through OWV's
+               * own /contact form. We deliberately do NOT mailto: the
+               * vendor's email directly even when one is on file:
+               * scraped vendor emails haven't been verified, and we
+               * want every outbound inquiry to flow through our system
+               * so it can be tracked + forwarded. Once the vendor-
+               * outreach pipeline goes live this CTA may switch back
+               * to a direct mailto. */}
               <a
-                href={
-                  vendor.email
-                    ? `mailto:${vendor.email}?subject=${encodeURIComponent(`Wedding inquiry for ${vendor.name}`)}`
-                    : `/contact?vendor=${encodeURIComponent(vendor.slug)}`
-                }
+                href={`/contact?vendor=${encodeURIComponent(vendor.slug)}`}
                 className="inline-flex items-center gap-1.5 rounded-pill bg-white px-6 py-3 text-sm font-bold text-rose shadow-[0_8px_24px_rgba(0,0,0,0.18)] transition-all hover:bg-rose-pale"
               >
                 Request a quote
