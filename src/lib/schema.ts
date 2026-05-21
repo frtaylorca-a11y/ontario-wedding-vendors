@@ -596,6 +596,41 @@ export const vendorClaims = pgTable(
 export type VendorClaim = typeof vendorClaims.$inferSelect;
 export type NewVendorClaim = typeof vendorClaims.$inferInsert;
 
+/* AI-generated blog drafts. /api/blog/generate writes here; the
+ * admin reviews the preview and either flips publishedAt to a date
+ * (going live in BLOG_POSTS via a migration) or deletes the row. */
+export const blogDrafts = pgTable(
+  "blog_drafts",
+  {
+    id:              serial("id").primaryKey(),
+    slug:            varchar("slug",             { length: 255 }).notNull().unique(),
+    title:           varchar("title",            { length: 255 }).notNull(),
+    metaDescription: text("meta_description"),
+    contentMdx:      text("content_mdx").notNull(),
+    /* Capture the request that produced the draft so we can rerun
+     * generation when the competitor post changes or pricing updates. */
+    topic:           text("topic"),
+    targetKeyword:   varchar("target_keyword",   { length: 255 }),
+    targetRegion:    varchar("target_region",    { length: 100 }),
+    category:        varchar("category",         { length: 50  }),
+    competitorUrl:   varchar("competitor_url",   { length: 500 }),
+    /* [{ text, url, kind: 'vendor'|'venue'|'internal' }] */
+    internalLinks:   jsonb("internal_links"),
+    wordCount:       integer("word_count"),
+    /* null = draft; set to a date when the post is approved + lives
+     * in BLOG_POSTS (or its replacement). */
+    publishedAt:     timestamp("published_at"),
+    createdAt:       timestamp("created_at").defaultNow(),
+    updatedAt:       timestamp("updated_at").defaultNow(),
+  },
+  (t) => ({
+    publishedAtIdx: index("blog_drafts_published_at_idx").on(t.publishedAt, t.createdAt),
+  }),
+);
+
+export type BlogDraft = typeof blogDrafts.$inferSelect;
+export type NewBlogDraft = typeof blogDrafts.$inferInsert;
+
 export type Venue = typeof venues.$inferSelect;
 export type NewVenue = typeof venues.$inferInsert;
 export type Vendor = typeof vendors.$inferSelect;
