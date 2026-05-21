@@ -35,6 +35,8 @@ import { db } from "../src/lib/db";
 import { vendors, type NewVendor } from "../src/lib/schema";
 import { isSocialOnlyUrl } from "../src/lib/social-hosts";
 import { verdictFor as nameCategoryVerdict } from "./validate-vendor-names";
+import { extractAreaCode, ONTARIO_AREA_CODES } from "../src/lib/ontario-phone-codes";
+import { REGION_MAP } from "../src/lib/regions";
 
 const DEFAULT_DIR =
   "C:\\Users\\rtayl\\OneDrive\\Desktop\\ontario-venues-scraper\\data\\vendors";
@@ -478,6 +480,26 @@ async function main() {
           } else if (verdict.kind === "medium-mismatch") {
             console.log(
               `    ⚠ NAME MISMATCH (MED):  "${row.name}" imported as ${row.category} — name signals ${verdict.detected.join(", ")} (ambiguous, no auto-hide)`,
+            );
+          }
+        }
+
+        /* Location sanity warnings — phone area code + city.
+         * Logged as ⚠ LOC; doesn't block the import. The post-import
+         * validate-vendor-locations sweep (with Claude verification)
+         * is the authoritative decision-maker. */
+        const ac = extractAreaCode(row.phone);
+        if (ac && !ONTARIO_AREA_CODES.has(ac)) {
+          console.log(
+            `    ⚠ LOC (phone):  "${row.name}" — area code ${ac} is NOT an Ontario code (phone=${row.phone})`,
+          );
+        }
+        if (row.city) {
+          const cityNorm = row.city.toLowerCase().trim();
+          const citySlug = cityNorm.replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-");
+          if (!(cityNorm in REGION_MAP) && !(citySlug in REGION_MAP)) {
+            console.log(
+              `    ⚠ LOC (city):   "${row.name}" — city "${row.city}" not in known Ontario list`,
             );
           }
         }
