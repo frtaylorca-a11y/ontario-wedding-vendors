@@ -309,43 +309,58 @@ export default async function VendorsIndexPage() {
             <h2 className="sr-only">All vendor categories</h2>
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {CATEGORIES.map((c) => {
-                const count = counts[c.slug] ?? 0;
-                const cssVars = categoryColourVars(c.slug) as CSSProperties;
+                const count    = counts[c.slug] ?? 0;
+                const cssVars  = categoryColourVars(c.slug) as CSSProperties;
+                const imgSrc   = `/images/vendor-${urlSlug(c.slug)}.png`;
                 return (
                   <Link
                     key={c.slug}
                     href={`/vendors/${urlSlug(c.slug)}` as Route}
                     style={cssVars}
-                    className="group relative flex flex-col gap-3 overflow-hidden rounded-card border-[1.5px] border-border bg-white p-6 pt-7 transition-all duration-200 hover:-translate-y-1 hover:border-transparent hover:shadow-[0_12px_32px_rgba(var(--cat-rgb),0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cat-primary)] focus-visible:ring-offset-2"
+                    className="group relative flex flex-col overflow-hidden rounded-card border-[1.5px] border-border bg-white shadow-sm transition-all duration-500 ease-in-out hover:-translate-y-2 hover:border-transparent hover:shadow-[0_12px_32px_rgba(var(--cat-rgb),0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--cat-primary)] focus-visible:ring-offset-2"
                   >
-                    {/* Category-coloured top border — appears on hover only */}
-                    <span
-                      aria-hidden
-                      className="pointer-events-none absolute inset-x-0 top-0 h-[3px] origin-left scale-x-0 bg-[var(--cat-primary)] transition-transform duration-200 group-hover:scale-x-100"
-                    />
-                    <span className="flex h-12 w-12 items-center justify-center rounded-pill bg-[var(--cat-bg)] text-[var(--cat-primary)] transition-colors duration-200 group-hover:bg-[var(--cat-primary)] group-hover:text-white">
-                      {c.icon}
-                    </span>
-                    <div>
-                      <h3 className="font-display text-xl font-semibold leading-tight text-charcoal">
+                    {/* Image area — matches VendorCard / VenueCard
+                     * proportions (aspect-video) + hover choreography
+                     * (slow 700ms scale-110 zoom). Source is the
+                     * existing /images/vendor-{slug}.png set we use
+                     * as the per-category fallback inside VendorCard. */}
+                    <div className="relative aspect-video w-full overflow-hidden bg-bg-soft">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={imgSrc}
+                        alt=""
+                        loading="lazy"
+                        className="h-full w-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-110"
+                      />
+                      {/* 3px category accent bar at top edge */}
+                      <span
+                        aria-hidden
+                        className="pointer-events-none absolute inset-x-0 top-0 z-[2] h-[3px] bg-[var(--cat-primary)]"
+                      />
+                      {/* Icon badge floats over the image — top-left,
+                       * white-on-category-colour on hover. Replaces the
+                       * inline icon pill that lived in the body. */}
+                      <span className="absolute left-3 top-3 z-[2] flex h-10 w-10 items-center justify-center rounded-pill bg-white/95 text-[var(--cat-primary)] shadow-sm backdrop-blur-sm transition-colors duration-300 group-hover:bg-[var(--cat-primary)] group-hover:text-white">
+                        {c.icon}
+                      </span>
+                    </div>
+
+                    {/* Content area */}
+                    <div className="flex flex-1 flex-col p-5">
+                      <h3 className="font-display text-xl font-semibold leading-tight text-charcoal transition-colors duration-300 group-hover:text-[var(--cat-primary)]">
                         {c.label}
                       </h3>
                       <p className="mt-0.5 text-xs font-medium text-[var(--cat-primary)]">
                         {count.toLocaleString()} vendor{count === 1 ? "" : "s"} in Ontario
                       </p>
-                    </div>
-                    <p className="text-sm leading-snug text-text-mid">
-                      {c.tagline}
-                    </p>
-                    <span
-                      aria-hidden
-                      className="mt-auto inline-flex items-center gap-1 pt-2 text-xs font-bold tracking-[0.04em] text-[var(--cat-primary)]"
-                    >
-                      Browse {c.label.toLowerCase()}
-                      <span className="transition-transform duration-200 group-hover:translate-x-0.5">
-                        →
+                      <p className="mt-3 flex-1 text-sm leading-snug text-text-mid">
+                        {c.tagline}
+                      </p>
+                      <span className="mt-4 inline-flex items-center gap-1 border-t border-border-light pt-3 text-xs font-bold tracking-[0.04em] text-[var(--cat-primary)]">
+                        Browse {c.label.toLowerCase()}
+                        <ArrowRightIcon />
                       </span>
-                    </span>
+                    </div>
                   </Link>
                 );
               })}
@@ -354,5 +369,29 @@ export default async function VendorsIndexPage() {
         </div>
       </main>
     </>
+  );
+}
+
+/* Inline ArrowRight icon — mirrors the one in VendorCard / VenueCard
+ * so the three card surfaces (this /vendors index, the /vendors/[cat]
+ * grid, and the /venues grid) all share the same animated arrow on
+ * group-hover. Lucide stroke style for visual consistency. */
+function ArrowRightIcon() {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      width="14"
+      height="14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="transition-transform duration-300 ease-out group-hover:translate-x-1"
+    >
+      <path d="M5 12h14" />
+      <path d="m12 5 7 7-7 7" />
+    </svg>
   );
 }
