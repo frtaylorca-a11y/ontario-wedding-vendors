@@ -16,6 +16,7 @@ import { desc, eq, and, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { vendors, venues } from "@/lib/schema";
 import { ONTARIO_PRICING, getPricing, type PricingCategory, type PricingRegion } from "@/lib/ontario-pricing";
+import { pickPicBoothLink, picBoothPromptFragment } from "@/lib/cross-site-links";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ontarioweddingvendors.com";
 
@@ -42,7 +43,7 @@ export type BlogGenerateInput = {
 export type InternalLink = {
   text: string;
   url:  string;
-  kind: "vendor" | "venue" | "category";
+  kind: "vendor" | "venue" | "category" | "external";
 };
 
 export type BlogDraftResult = {
@@ -357,6 +358,19 @@ function buildUserPrompt({
     .map((l, i) => `  ${i + 1}. Anchor text: "${l.text}"  →  URL: ${l.url}  (${l.kind})`)
     .join("\n");
 
+  /* Cross-site link to Pic Booth — injected when the topic + competitor
+   * context signals photo-booth content. Specific URL picked from the
+   * CROSS_SITE_LINKS map by best-fit match against the topic + headings. */
+  const crossSiteHaystack = [
+    input.topic,
+    input.targetKeyword,
+    input.category === "photo_booth" ? "photo booth" : "",
+    competitorExcerpt,
+    competitorHeadings.join(" "),
+  ].join(" ");
+  const picBoothLink     = pickPicBoothLink(crossSiteHaystack);
+  const picBoothFragment = picBoothLink ? picBoothPromptFragment(picBoothLink) : "";
+
   const wordLine = input.targetWordCount
     ? [
         `Length target:   ${input.targetWordCount} words MINIMUM. Do not write shorter.`,
@@ -391,6 +405,7 @@ function buildUserPrompt({
     "",
     "Internal links you MUST embed naturally in the body (exactly as specified — do not change the URL):",
     links,
+    picBoothFragment,
     "",
     "Return the JSON exactly as specified in the system prompt. Do not include the title as an H1 inside the content field.",
   ].filter(Boolean).join("\n");
@@ -471,6 +486,20 @@ export async function generateBlogPost(input: BlogGenerateInput): Promise<BlogDr
         ? `${SITE_URL}/venues`
         : `${SITE_URL}/regions/${input.targetRegion}`,
       kind: "category",
+    });
+  }
+
+  /* Surface the Pic Booth cross-site link in internal_links so it's
+   * persisted + audit-visible. The link itself is enforced via the
+   * prompt fragment in buildUserPrompt. */
+  const picBoothLink = pickPicBoothLink(
+    `${input.topic} ${input.targetKeyword} ${input.category === "photo_booth" ? "photo booth" : ""}`,
+  );
+  if (picBoothLink) {
+    internalLinks.push({
+      text: picBoothLink.anchor,
+      url:  picBoothLink.url,
+      kind: "external",
     });
   }
 
