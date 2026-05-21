@@ -30,7 +30,7 @@ import { VendorCard } from "@/components/ui/VendorCard";
 import { VenueCard } from "@/components/ui/VenueCard";
 import { VendorSchema, BreadcrumbSchema, FaqSchema } from "@/components/seo/SchemaInjector";
 import { TrackPageView } from "@/components/analytics/TrackPageView";
-import { formatRating, normalizeRegionDisplay } from "@/lib/utils";
+import { formatRating, normalizeRegionDisplay, vendorHeroImageUrl } from "@/lib/utils";
 import type { Vendor } from "@/lib/schema";
 
 type Params = Promise<{ category: string; slug: string }>;
@@ -266,7 +266,14 @@ export default async function VendorPage({ params }: { params: Params }) {
   const category = vendor.category as VendorCategory;
   const label = CATEGORY_LABEL[category];
   const plural = CATEGORY_PLURAL[category];
-  const heroImage = CATEGORY_HERO_IMAGE[category];
+  /* Hero priority chain (resolver lives in src/lib/utils.ts):
+   *   1. heroImageCustom — R2 URL (vendor upload OR scraped IG/Yelp og:image)
+   *   2. heroImage       — Google Places photo_reference → Photo endpoint URL
+   *   3. category fallback /images/vendor-{cat}.png
+   * The page previously used only the category fallback regardless of
+   * what data was on the row — fixed here. */
+  const heroImage =
+    vendorHeroImageUrl(vendor, { maxwidth: 1600 }) ?? CATEGORY_HERO_IMAGE[category];
   const cityRegion = [vendor.city, regionLabel(vendor.region)].filter(Boolean).join(" · ");
 
   const [reviews, galleryPhotos, similar, recommendingVenues, planningResources] = await Promise.all([
