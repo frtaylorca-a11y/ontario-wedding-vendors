@@ -7,10 +7,15 @@
  *   Tier 3: generate-vendor-bios.ts      bio from name + rating + city
  *
  * Candidate filter (vendors who have a photo but nothing written):
- *   is_hidden          = false
- *   AND bio_enriched_at IS NULL
- *   AND description    IS NULL
- *   AND hero_image     IS NOT NULL
+ *   is_hidden       = false
+ *   AND description IS NULL
+ *   AND hero_image  IS NOT NULL
+ *
+ * Note: we do NOT also require bio_enriched_at IS NULL. The Tier-1
+ * scraper stamps bio_enriched_at to mark "we tried" even when the
+ * website returned thin content. Vendors stuck in that state
+ * ("enriched" but no description) are exactly the ones this script
+ * was designed for — they're a substantial chunk of the pool.
  *
  * The prompt is intentionally restrictive: Claude is told to use ONLY
  * the facts provided, never invent details. The output is short
@@ -22,7 +27,8 @@
  *   bio_enriched_at = NOW()
  *
  * Cost: ~$0.0002 / vendor (claude-haiku-4-5, ~250 input + ~80 output
- * tokens). 891 candidates ≈ $0.18.
+ * tokens). After the bio_enriched_at gate was dropped the pool is
+ * ~720 candidates: 510 fresh + 213 previously-stranded. ≈ $0.14.
  *
  * CLI:
  *   npx tsx scripts/generate-vendor-bios.ts                    # dry-run, 5 samples
@@ -110,7 +116,12 @@ async function loadCandidates(args: Args): Promise<Candidate[]> {
     .from(vendors)
     .where(and(
       eq(vendors.isHidden, false),
-      isNull(vendors.bioEnrichedAt),
+      /* Drop the bio_enriched_at gate intentionally. The Tier-1 scraper
+       * (enrich-vendor-bios.ts) sets bio_enriched_at to mark "we tried"
+       * even when the website returned thin content with no extractable
+       * bio. Without this loosening, 213 vendors are stranded: stamped
+       * as enriched but with description still NULL. They're exactly
+       * the rows the DB-only generator was designed to help. */
       isNull(vendors.description),
       isNotNull(vendors.heroImage),
     ))
