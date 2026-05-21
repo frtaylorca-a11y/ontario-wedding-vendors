@@ -26,9 +26,10 @@
  *   bio_source      = 'generated'
  *   bio_enriched_at = NOW()
  *
- * Cost: ~$0.0002 / vendor (claude-haiku-4-5, ~250 input + ~80 output
- * tokens). After the bio_enriched_at gate was dropped the pool is
- * ~720 candidates: 510 fresh + 213 previously-stranded. ≈ $0.14.
+ * Cost: ~$0.001 / vendor (claude-haiku-4-5, ~350 input + ~280 output
+ * tokens for the longer 100-150-word format). Pool now includes
+ * description=NULL rows + every prior bio_source='generated' row
+ * for the longer-bio rewrite — ~938 rows total. ≈ $0.94.
  *
  * CLI:
  *   npx tsx scripts/generate-vendor-bios.ts                    # dry-run, 5 samples
@@ -38,12 +39,12 @@
  */
 import "dotenv/config";
 import Anthropic from "@anthropic-ai/sdk";
-import { and, eq, isNotNull, isNull } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, or } from "drizzle-orm";
 import { db } from "../src/lib/db";
 import { vendors } from "../src/lib/schema";
 
 const PER_VENDOR_DELAY_MS = 250;
-const COST_PER_VENDOR_USD = 0.0002;
+const COST_PER_VENDOR_USD = 0.001;
 
 type Args = { limit: number; dryRun: boolean };
 
@@ -98,6 +99,7 @@ type Candidate = {
   priceTier:    string | null;
   specialties:  unknown;
   serviceAreas: unknown;
+  website:      string | null;
 };
 
 async function loadCandidates(args: Args): Promise<Candidate[]> {
@@ -111,18 +113,27 @@ async function loadCandidates(args: Args): Promise<Candidate[]> {
       reviewCount:  vendors.reviewCount,
       priceTier:    vendors.priceTier,
       specialties:  vendors.specialties,
+      website:      vendors.website,
       serviceAreas: vendors.serviceAreas,
     })
     .from(vendors)
     .where(and(
       eq(vendors.isHidden, false),
-      /* Drop the bio_enriched_at gate intentionally. The Tier-1 scraper
-       * (enrich-vendor-bios.ts) sets bio_enriched_at to mark "we tried"
-       * even when the website returned thin content with no extractable
-       * bio. Without this loosening, 213 vendors are stranded: stamped
-       * as enriched but with description still NULL. They're exactly
-       * the rows the DB-only generator was designed to help. */
-      isNull(vendors.description),
+      /* TWO populations selected:
+       *   a) description IS NULL — fresh vendors that have never had
+       *      a bio written. (Tier-3 generator's original job.)
+       *   b) bio_source = 'generated' — vendors whose existing bio
+       *      was produced by THIS script in an earlier short-form
+       *      run; we now want to replace those with the longer
+       *      100-150-word version. Includes both yesterday's 379
+       *      and today's 559 (~938 rows total).
+       *
+       * 'imported' / 'scraped' / 'web_search' bios are NOT touched —
+       * those came from richer sources than DB-facts. */
+      or(
+        isNull(vendors.description),
+        eq(vendors.bioSource, "generated"),
+      ),
       isNotNull(vendors.heroImage),
     ))
     /* High-signal vendors first. Vendors with strong rating + review
@@ -141,27 +152,34 @@ async function loadCandidates(args: Args): Promise<Candidate[]> {
     priceTier:    r.priceTier,
     specialties:  r.specialties,
     serviceAreas: r.serviceAreas,
+    website:      r.website ?? null,
   }));
 }
 
 /* ─── Prompt construction ──────────────────────────────────────── */
 
-const SYSTEM_PROMPT = `You write 2-3 sentence professional wedding-directory descriptions for Ontario wedding vendors. Strict rules:
+const SYSTEM_PROMPT = `You write professional wedding-directory descriptions for Ontario wedding vendors. Output is 100-150 words, organized into 2-3 short paragraphs. Strict rules:
 
-1. INVENTION BAN. Use ONLY the facts provided in the user message. If a field isn't in the input, don't write about it. Do NOT invent or imply specific services they offer (like "design consultation", "menu planning", "delivery", "logistics"), specific products they sell, processes they use, or years of operation. The ONLY things you may state about their services is the generic category itself (e.g. "wedding cake designer", "wedding photographer") — never list sub-services that weren't explicitly given.
+1. INVENTION BAN. Use ONLY the facts provided in the user message. If a field isn't in the input, don't write about it. Do NOT invent or imply specific services they offer (like "design consultation", "menu planning", "delivery", "logistics"), specific products they sell, processes they use, or years of operation. The ONLY things you may state about their services is the generic category itself (e.g. "wedding cake designer", "wedding photographer") — never list sub-services that weren't explicitly given. If you only have name + category + city, the bio will be shorter — that's fine. Better short and truthful than padded with speculation.
 2. THIRD PERSON ONLY. Never use "you", "your", "our", "we". The reader is browsing a directory — write about the vendor, not to the couple.
 3. Canadian English (colour, centre, organise).
-4. NO FILLER. Banned phrases include: "highly-rated", "exceptional", "world-class", "premier", "renowned", "boutique", "stunning", "passionate", "dedicated team", "go above and beyond", "every detail matters", "love stories", "magical day", "vision", "tailored", "personalised", "memorable", "trusted", "experienced", "talented", "creative team". Also avoid puffery generally — if you'd write it on a brochure cover, don't.
-5. 2-3 sentences MAXIMUM. Be direct. The shortest version that captures the facts wins.
+4. NO FILLER. Banned phrases include: "highly-rated", "exceptional", "world-class", "premier", "renowned", "boutique", "stunning", "passionate", "dedicated team", "go above and beyond", "every detail matters", "love stories", "magical day", "vision", "tailored", "personalised", "memorable", "trusted", "experienced", "talented", "creative team", "consistent quality", "consistent track record", "established credibility", "customer satisfaction". Also avoid puffery generally — if you'd write it on a brochure cover, don't.
+
+BANNED CTA SHAPES (the final sentence must NOT be one of these — the directory page has its own CTAs):
+  "Couples can reach out / contact / connect..."
+  "...encouraged to reach out directly..."
+  "...can be contacted to discuss..."
+  "Get in touch / book your date / inquire about..."
+Instead end on a concrete factual sentence — a service area, a category restatement, a rating callback. Anything declarative.
+5. STRUCTURE — 100-150 words across 2-3 short paragraphs:
+   Para 1: Who they are, what category of service they offer, where they're based. If they have meaningful social proof (4+ stars AND 20+ reviews), reference it in this paragraph.
+   Para 2: Who they serve — service areas, region. Only include this paragraph if service_areas data is provided OR the category implies a regional service. Skip when there's nothing concrete to say.
+   Para 3 (only if data allows): Listed specialties OR meaningful price positioning ('budget', 'premium', 'luxury' — never 'mid', which is the YP scraper's default). Skip the whole paragraph if there's nothing concrete.
 6. Be specific to their actual city + category. Name the city. Name the category in plain terms.
-7. Only reference rating numbers when they're given AND meaningful (>=20 reviews). Skip otherwise.
+7. The website URL is provided for context only — DO NOT write the URL into the bio. The directory page surfaces it separately. Same for phone, email, social handles.
 8. End on a concrete factual note. No emotional appeals. No closing CTA.
 
 Output ONLY the description text. No JSON, no quotes around it, no labels, no preamble.`;
-
-function arrayLen(x: unknown): number {
-  return Array.isArray(x) ? (x as unknown[]).filter((v) => typeof v === "string" && v.length > 0).length : 0;
-}
 
 function asStringList(x: unknown): string[] {
   return Array.isArray(x)
@@ -194,6 +212,10 @@ function buildUserPrompt(c: Candidate): string {
 
   const specLine    = specialties.length > 0    ? `Specialties: ${specialties.join(", ")}`    : null;
   const serviceLine = serviceAreas.length > 0   ? `Service areas: ${serviceAreas.join(", ")}` : null;
+  /* Website is provided for context only — the prompt explicitly
+   * forbids writing the URL into the bio. Its presence confirms the
+   * business has a real online presence; nothing more. */
+  const websiteLine = c.website ? `Website on file: yes` : null;
 
   const lines = [
     `Vendor: ${c.name}`,
@@ -202,8 +224,9 @@ function buildUserPrompt(c: Candidate): string {
     priceLine,
     specLine,
     serviceLine,
+    websiteLine,
     "",
-    "Write 2-3 sentences. Description text only — no labels, no quotes.",
+    "Write 100-150 words in 2-3 short paragraphs. Description text only — no labels, no quotes, no preamble.",
   ].filter(Boolean) as string[];
 
   return lines.join("\n");
@@ -218,7 +241,10 @@ async function generateOne(client: Anthropic, c: Candidate): Promise<string | nu
   try {
     res = (await client.messages.create({
       model:      "claude-haiku-4-5",
-      max_tokens: 250,
+      /* 600-token ceiling — 100-150 words of body ≈ 200-300 tokens,
+       * plus headroom for whatever Claude's tokenizer adds. Was 250
+       * (sized for the old 2-3 sentence output). */
+      max_tokens: 600,
       system:     SYSTEM_PROMPT,
       messages:   [{ role: "user", content: buildUserPrompt(c) }],
     })) as unknown as AnthropicResp;
