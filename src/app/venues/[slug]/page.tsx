@@ -168,12 +168,13 @@ export default async function VenuePage({ params }: { params: Params }) {
     "md:col-span-1 md:row-span-2",
     "md:col-span-1 md:row-span-2",
   ] as const;
+  /* SEO-tightened gallery alt text — venue name + venue + city + Ontario. */
   const bentoMediaItems = (galleryPhotos as GoogleVendorPhoto[])
     .slice(0, 6)
     .map((p, i) => ({
       id:    i + 1,
       type:  "image",
-      title: venue.name,
+      title: `${venue.name} — Wedding Venue in ${venue.city ?? "Ontario"} Ontario (photo ${i + 1})`,
       desc:  [venue.city, venue.venueType].filter(Boolean).join(" · "),
       url:   p.url,
       span:  BENTO_SPANS[i] ?? BENTO_SPANS[BENTO_SPANS.length - 1],

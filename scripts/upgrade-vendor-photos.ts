@@ -54,6 +54,14 @@ import Anthropic from "@anthropic-ai/sdk";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { db } from "../src/lib/db";
 import { vendors } from "../src/lib/schema";
+import {
+  buildVendorExif,
+  embedExif,
+  extFromContentType,
+  formatExifPreview,
+  vendorR2Key,
+  type ExifMeta,
+} from "../src/lib/image-seo";
 
 const BATCH_SIZE = 50;
 const DELAY_BETWEEN_REQUESTS_MS = 250;
@@ -93,21 +101,27 @@ function parseArgs(): Args {
 }
 
 type Candidate = {
-  id: number;
-  slug: string;
-  name: string;
-  category: string;
-  website: string;
+  id:          number;
+  slug:        string;
+  name:        string;
+  category:    string;
+  website:     string;
+  city:        string | null;
+  description: string | null;
+  specialties: string[];
 };
 
 async function loadCandidates(limit: number | null): Promise<Candidate[]> {
   const baseQuery = db
     .select({
-      id:       vendors.id,
-      slug:     vendors.slug,
-      name:     vendors.name,
-      category: vendors.category,
-      website:  vendors.website,
+      id:          vendors.id,
+      slug:        vendors.slug,
+      name:        vendors.name,
+      category:    vendors.category,
+      website:     vendors.website,
+      city:        vendors.city,
+      description: vendors.description,
+      specialties: vendors.specialties,
       heroImageSource: vendors.heroImageSource,
     })
     .from(vendors)
@@ -122,10 +136,21 @@ async function loadCandidates(limit: number | null): Promise<Candidate[]> {
 
   const rows = limit != null ? await baseQuery.limit(limit) : await baseQuery;
   return rows
-    .filter((r): r is Candidate & { heroImageSource: string } =>
+    .filter((r): r is typeof r & { website: string } =>
       r.website != null && r.website.length > 0,
     )
-    .map((r) => ({ id: r.id, slug: r.slug, name: r.name, category: r.category, website: r.website }));
+    .map((r) => ({
+      id:          r.id,
+      slug:        r.slug,
+      name:        r.name,
+      category:    r.category,
+      website:     r.website,
+      city:        r.city ?? null,
+      description: r.description ?? null,
+      specialties: Array.isArray(r.specialties)
+        ? (r.specialties as unknown[]).filter((s): s is string => typeof s === "string")
+        : [],
+    }));
 }
 
 function sleep(ms: number): Promise<void> {
@@ -330,11 +355,10 @@ async function uploadToR2(
   s3: S3Client,
   bucket: string,
   publicUrl: string,
-  slug: string,
+  key: string,
   buffer: Buffer,
   contentType: string,
 ): Promise<string> {
-  const key = `vendors/${slug}/hero.jpg`;
   await s3.send(
     new PutObjectCommand({
       Bucket:       bucket,
@@ -349,8 +373,23 @@ async function uploadToR2(
 
 /* ─── Main ──────────────────────────────────────────────────────────── */
 
+const CATEGORY_LABEL: Record<string, string> = {
+  photographer:    "Photographer",
+  videographer:    "Videographer",
+  dj:              "DJ",
+  florist:         "Florist",
+  photo_booth:     "Photo Booth",
+  catering:        "Caterer",
+  cake:            "Cake Designer",
+  hair_makeup:     "Hair & Makeup Artist",
+  officiant:       "Officiant",
+  limo:            "Limo & Transportation",
+  lighting_decor:  "Lighting & Decor",
+  wedding_planner: "Wedding Planner",
+};
+
 type Outcome =
-  | { kind: "updated"; url: string; pick: string; reason: string }
+  | { kind: "updated"; url: string; pick: string; reason: string; exif: string }
   | { kind: "no-image" }
   | { kind: "download-failed" }
   | { kind: "unsuitable"; reason: string }
@@ -375,10 +414,50 @@ async function processVendor(
     const verdict = await validateWithClaude(anthropic, dl.buffer, dl.contentType, vendor.category);
     if (!verdict.suitable) return { kind: "unsuitable", reason: verdict.reason };
 
+    /* Build the SEO EXIF bundle + R2 key from the row's enriched
+     * fields. The bundle drives both the dry-run preview output
+     * AND the actual metadata write below. */
+    const categoryLabel = CATEGORY_LABEL[vendor.category] ?? vendor.category;
+    const exifMeta: ExifMeta = buildVendorExif({
+      name:        vendor.name,
+      city:        vendor.city,
+      category:    vendor.category,
+      categoryLabel,
+      description: vendor.description,
+      specialties: vendor.specialties,
+    });
+    const ext = extFromContentType(dl.contentType);
+    const r2Key = vendorR2Key({
+      slug:     vendor.slug,
+      category: categoryLabel,
+      city:     vendor.city,
+      ext,
+    });
+    const exifPreview = formatExifPreview(exifMeta);
+
     if (dryRun) {
-      return { kind: "updated", url: `(dry-run) ${pick.url}`, pick: pick.reason, reason: verdict.reason };
+      return {
+        kind:   "updated",
+        url:    `(dry-run) → R2 key would be: ${r2Key}`,
+        pick:   pick.reason,
+        reason: verdict.reason,
+        exif:   exifPreview,
+      };
     }
-    const r2Url = await uploadToR2(r2.s3, r2.bucket, r2.publicUrl, vendor.slug, dl.buffer, dl.contentType);
+
+    /* Embed EXIF metadata into the bytes BEFORE upload. exiftool not
+     * installed = graceful skip, original bytes uploaded. */
+    const exifResult = await embedExif(dl.buffer, dl.contentType, exifMeta);
+    const finalBuffer =
+      exifResult.kind === "ok" ? exifResult.buffer : dl.buffer;
+    const exifStatus =
+      exifResult.kind === "ok"
+        ? `EXIF written (${exifResult.bytesIn} → ${exifResult.bytesOut} bytes)`
+        : exifResult.kind === "skipped-no-exiftool"
+          ? "EXIF skipped (exiftool not installed)"
+          : `EXIF skipped: ${exifResult.reason}`;
+
+    const r2Url = await uploadToR2(r2.s3, r2.bucket, r2.publicUrl, r2Key, finalBuffer, dl.contentType);
     await db
       .update(vendors)
       .set({
@@ -389,7 +468,13 @@ async function processVendor(
       })
       .where(eq(vendors.id, vendor.id));
 
-    return { kind: "updated", url: r2Url, pick: pick.reason, reason: verdict.reason };
+    return {
+      kind:   "updated",
+      url:    r2Url,
+      pick:   pick.reason,
+      reason: `${verdict.reason} · ${exifStatus}`,
+      exif:   exifPreview,
+    };
   } catch (err) {
     return { kind: "error", reason: err instanceof Error ? err.message : String(err) };
   }
@@ -432,7 +517,13 @@ async function main() {
       switch (r.kind) {
         case "updated":
           updated++;
-          console.log(`  ✓ ${c.slug} — pick=${r.pick} · ${r.reason.slice(0, 60)}`);
+          console.log(`  ✓ ${c.slug} — pick=${r.pick} · ${r.reason.slice(0, 80)}`);
+          /* Dry-run prints the full EXIF preview so operators can
+           * eyeball what WOULD be written before paying for real. */
+          if (dryRun) {
+            console.log(`    → ${r.url}`);
+            console.log(r.exif.replace(/^/gm, "    "));
+          }
           break;
         case "no-image":
           noImage++;

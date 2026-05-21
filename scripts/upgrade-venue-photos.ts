@@ -63,6 +63,14 @@ import Anthropic from "@anthropic-ai/sdk";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { db } from "../src/lib/db";
 import { venues } from "../src/lib/schema";
+import {
+  buildVenueExif,
+  embedExif,
+  extFromContentType,
+  formatExifPreview,
+  venueR2Key,
+  type ExifMeta,
+} from "../src/lib/image-seo";
 
 const BATCH_SIZE                = 50;
 const DELAY_BETWEEN_REQUESTS_MS = 250;
@@ -100,12 +108,15 @@ function parseArgs(): Args {
 }
 
 type Candidate = {
-  id:        number;
-  slug:      string;
-  name:      string;
-  venueType: string | null;
-  website:   string;
-  heroImage: string; /* Google photo_reference, always set by the load filter */
+  id:          number;
+  slug:        string;
+  name:        string;
+  venueType:   string | null;
+  website:     string;
+  heroImage:   string; /* Google photo_reference, always set by the load filter */
+  city:        string | null;
+  description: string | null;
+  capacityMax: number | null;
 };
 
 async function loadCandidates(limit: number | null): Promise<Candidate[]> {
@@ -118,6 +129,9 @@ async function loadCandidates(limit: number | null): Promise<Candidate[]> {
       website:         venues.website,
       heroImage:       venues.heroImage,
       heroImageSource: venues.heroImageSource,
+      city:            venues.city,
+      description:     venues.description,
+      capacityMax:     venues.capacityMax,
     })
     .from(venues)
     .where(
@@ -134,12 +148,15 @@ async function loadCandidates(limit: number | null): Promise<Candidate[]> {
   return rows
     .filter((r) => r.website != null && r.website.length > 0 && r.heroImage != null)
     .map((r) => ({
-      id:        r.id,
-      slug:      r.slug,
-      name:      r.name,
-      venueType: r.venueType,
-      website:   r.website!,
-      heroImage: r.heroImage!,
+      id:          r.id,
+      slug:        r.slug,
+      name:        r.name,
+      venueType:   r.venueType,
+      website:     r.website!,
+      heroImage:   r.heroImage!,
+      city:        r.city ?? null,
+      description: r.description ?? null,
+      capacityMax: r.capacityMax ?? null,
     }));
 }
 
@@ -391,25 +408,14 @@ function buildR2Client(): { s3: S3Client; bucket: string; publicUrl: string } {
   return { s3, bucket, publicUrl };
 }
 
-function r2ExtensionFor(contentType: string): string {
-  switch (contentType) {
-    case "image/png":  return "png";
-    case "image/webp": return "webp";
-    case "image/gif":  return "gif";
-    default:           return "jpg";
-  }
-}
-
 async function uploadToR2(
   s3:          S3Client,
   bucket:      string,
   publicUrl:   string,
-  slug:        string,
+  key:         string,
   buffer:      Buffer,
   contentType: string,
 ): Promise<string> {
-  const ext = r2ExtensionFor(contentType);
-  const key = `venues/${slug}/hero.${ext}`;
   await s3.send(
     new PutObjectCommand({
       Bucket:       bucket,
@@ -423,7 +429,7 @@ async function uploadToR2(
 }
 
 type Outcome =
-  | { kind: "website-wins";  url: string; pick: string; confidence: string; reason: string }
+  | { kind: "website-wins";  url: string; pick: string; confidence: string; reason: string; exif: string }
   | { kind: "google-wins";   confidence: string; reason: string }
   | { kind: "no-website-image" }
   | { kind: "download-failed"; which: "website" | "google" }
@@ -458,20 +464,42 @@ async function processVenue(
       return { kind: "google-wins", confidence: verdict.confidence, reason: verdict.reason };
     }
 
-    /* 4. Website won — upload + persist */
+    /* 4. Website won — build SEO key + EXIF, then upload + persist */
+    const exifMeta: ExifMeta = buildVenueExif({
+      name:        v.name,
+      city:        v.city,
+      venueType:   v.venueType,
+      capacityMax: v.capacityMax,
+      description: v.description,
+    });
+    const ext   = extFromContentType(websiteImg.contentType);
+    const r2Key = venueR2Key({ slug: v.slug, city: v.city, ext });
+    const exifPreview = formatExifPreview(exifMeta);
+
     if (dryRun) {
       return {
         kind:       "website-wins",
-        url:        `(dry-run) ${pick.url}`,
+        url:        `(dry-run) → R2 key would be: ${r2Key}`,
         pick:       pick.reason,
         confidence: verdict.confidence,
         reason:     verdict.reason,
+        exif:       exifPreview,
       };
     }
 
+    const exifResult = await embedExif(websiteImg.buffer, websiteImg.contentType, exifMeta);
+    const finalBuffer =
+      exifResult.kind === "ok" ? exifResult.buffer : websiteImg.buffer;
+    const exifStatus =
+      exifResult.kind === "ok"
+        ? `EXIF written (${exifResult.bytesIn} → ${exifResult.bytesOut} bytes)`
+        : exifResult.kind === "skipped-no-exiftool"
+          ? "EXIF skipped (exiftool not installed)"
+          : `EXIF skipped: ${exifResult.reason}`;
+
     const r2Url = await uploadToR2(
-      r2.s3, r2.bucket, r2.publicUrl, v.slug,
-      websiteImg.buffer, websiteImg.contentType,
+      r2.s3, r2.bucket, r2.publicUrl, r2Key,
+      finalBuffer, websiteImg.contentType,
     );
     await db
       .update(venues)
@@ -488,7 +516,8 @@ async function processVenue(
       url:        r2Url,
       pick:       pick.reason,
       confidence: verdict.confidence,
-      reason:     verdict.reason,
+      reason:     `${verdict.reason} · ${exifStatus}`,
+      exif:       exifPreview,
     };
   } catch (err) {
     return { kind: "error", reason: err instanceof Error ? err.message : String(err) };
@@ -534,7 +563,11 @@ async function main() {
       switch (r.kind) {
         case "website-wins":
           websiteWins++;
-          console.log(`  ✓ website wins ${v.slug} — pick=${r.pick} · conf=${r.confidence} · ${r.reason.slice(0, 60)}`);
+          console.log(`  ✓ website wins ${v.slug} — pick=${r.pick} · conf=${r.confidence} · ${r.reason.slice(0, 80)}`);
+          if (dryRun) {
+            console.log(`    → ${r.url}`);
+            console.log(r.exif.replace(/^/gm, "    "));
+          }
           break;
         case "google-wins":
           googleWins++;
