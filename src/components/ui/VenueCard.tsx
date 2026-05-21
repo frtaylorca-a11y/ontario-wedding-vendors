@@ -9,6 +9,7 @@ import {
   normalizeRegionDisplay,
   scoreTier,
   SCORE_TIER_LABEL,
+  venueHeroImageUrl,
 } from "@/lib/utils";
 
 const VENUE_TYPE_IMAGE: Record<string, string> = {
@@ -125,7 +126,13 @@ export function VenueCard({ venue }: { venue: Venue }) {
     : null;
 
   const href = `/venues/${venue.slug}` as Route;
-  const imageSrc = (typeKey && VENUE_TYPE_IMAGE[typeKey]) || FALLBACK_IMAGE;
+  /* Three-tier fallback, same shape as VendorCard:
+   *   1. Real photo (R2 upload OR Google photo_reference) via helper
+   *   2. /images/venue-{type}.png — per-type category image
+   *   3. FALLBACK_IMAGE (default winery)
+   * The card never renders an empty image slot. */
+  const realPhoto = venueHeroImageUrl(venue, { maxwidth: 800 });
+  const imageSrc  = realPhoto ?? ((typeKey && VENUE_TYPE_IMAGE[typeKey]) || FALLBACK_IMAGE);
 
   return (
     <article className="group relative flex flex-col overflow-hidden rounded-card border-[1.5px] border-border bg-white shadow-sm transition-all duration-500 ease-in-out hover:-translate-y-2 hover:border-transparent hover:shadow-[var(--shadow-hover)]">

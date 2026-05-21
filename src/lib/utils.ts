@@ -158,6 +158,35 @@ export function vendorHeroImageUrl(vendor: {
   return null;
 }
 
+/**
+ * Resolve a venue's hero image URL — same priority chain as vendors:
+ *   1. hero_image_custom (R2 URL, set by upgrade-venue-photos.ts when
+ *      the venue's own website image beat the Google photo in a
+ *      Claude Vision compare)
+ *   2. hero_image (Google photo_reference, set by backfill-venue-photos.ts)
+ *   3. null → caller renders the per-venue-type category image
+ *
+ * Mirrors vendorHeroImageUrl exactly so the same fallback pattern
+ * works in VenueCard. */
+export function venueHeroImageUrl(venue: {
+  heroImage?: string | null;
+  heroImageCustom?: string | null;
+}, opts?: { maxwidth?: number }): string | null {
+  if (venue.heroImageCustom) return venue.heroImageCustom;
+  if (venue.heroImage) {
+    const key = process.env.GOOGLE_PLACES_API_KEY ?? process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
+    if (!key) return null;
+    const w = opts?.maxwidth ?? 800;
+    return (
+      `https://maps.googleapis.com/maps/api/place/photo` +
+      `?maxwidth=${w}` +
+      `&photo_reference=${encodeURIComponent(venue.heroImage)}` +
+      `&key=${key}`
+    );
+  }
+  return null;
+}
+
 export function getEstimatedCapacity(
   venueType: string | null | undefined,
 ): { min: number; max: number; label: string } {

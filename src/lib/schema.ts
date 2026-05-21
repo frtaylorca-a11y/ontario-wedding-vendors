@@ -74,6 +74,27 @@ export const venues = pgTable(
     lastVerified: timestamp("last_verified"),
     enrichedAt: timestamp("enriched_at"),
 
+    /* Photo pipeline — mirrors the vendors table so VenueCard's
+     * fallback chain (heroImageCustom → heroImage → category fallback)
+     * works identically to VendorCard.
+     *   heroImageCustom      = R2 URL (best, permanent) — set by
+     *                          scripts/upgrade-venue-photos.ts after
+     *                          Claude Vision picks website over Google.
+     *   heroImage            = Google photo_reference (Stage 1
+     *                          bootstrap) — set by
+     *                          scripts/backfill-venue-photos.ts.
+     *   heroImageSource      = 'google' | 'website' | 'upload'
+     *   heroImageRefreshedAt = when the source last refreshed
+     *                          (Google URLs rotate)
+     *   heroImageValidated   = Claude Vision approved (only true once
+     *                          the website image won the comparison)
+     */
+    heroImage:               varchar("hero_image", { length: 500 }),
+    heroImageCustom:         varchar("hero_image_custom", { length: 500 }),
+    heroImageSource:         varchar("hero_image_source", { length: 20 }),
+    heroImageRefreshedAt:    timestamp("hero_image_refreshed_at"),
+    heroImageValidated:      boolean("hero_image_validated").default(false),
+
     source: varchar("source", { length: 100 }),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
