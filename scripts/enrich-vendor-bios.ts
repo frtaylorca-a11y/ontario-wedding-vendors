@@ -1,12 +1,15 @@
 /**
  * Replace generic ("highly-rated…", "wedding-ready…") or missing vendor
  * descriptions with authentic 2-3-sentence bios extracted from each
- * vendor's own website via Claude Haiku 4.5.
+ * vendor's own website via Claude Haiku 4.5. Also extracts:
+ *   - 3 FAQ Q&A pairs from FAQ pages
+ *   - Best-candidate email address from contact pages
  *
  * Pipeline per vendor:
- *   1. Fetch the homepage. Also try {base}/about and {base}/about-us.
- *      Strip HTML to plain text via cheerio. Pick the variant with the
- *      most extractable text (typically the about page).
+ *   1. Fetch the homepage + /about + /about-us + /faq + /faqs +
+ *      /frequently-asked-questions + /contact + /contact-us pages
+ *      in parallel. Strip HTML to plain text via cheerio for the
+ *      bio corpus; also keep the raw HTML for the email regex.
  *   2. Send the first 3,000 chars to claude-haiku-4-5 with a strict JSON
  *      extraction prompt — description, owner, years, service areas,
  *      specialties, awards, team size, style.
@@ -82,11 +85,12 @@ function parseArgs(): Args {
 }
 
 type Candidate = {
-  id: number;
-  slug: string;
-  name: string;
+  id:       number;
+  slug:     string;
+  name:     string;
   category: string;
-  website: string;
+  website:  string;
+  email:    string | null;
 };
 
 async function loadCandidates(limit: number | null): Promise<Candidate[]> {
@@ -97,6 +101,7 @@ async function loadCandidates(limit: number | null): Promise<Candidate[]> {
       name:     vendors.name,
       category: vendors.category,
       website:  vendors.website,
+      email:    vendors.email,
     })
     .from(vendors)
     .where(
@@ -117,7 +122,14 @@ async function loadCandidates(limit: number | null): Promise<Candidate[]> {
   const rows = limit != null ? await q.limit(limit) : await q;
   return rows
     .filter((r): r is Candidate => r.website != null && r.website.length > 0)
-    .map((r) => ({ id: r.id, slug: r.slug, name: r.name, category: r.category, website: r.website }));
+    .map((r) => ({
+      id:       r.id,
+      slug:     r.slug,
+      name:     r.name,
+      category: r.category,
+      website:  r.website!,
+      email:    r.email ?? null,
+    }));
 }
 
 /* ─── Web fetch ─────────────────────────────────────────────────────── */
@@ -184,46 +196,199 @@ function stripToText(html: string): string {
   return text;
 }
 
-async function pickBestVariant(website: string): Promise<string> {
-  /* Fetch homepage + about page + FAQ page in parallel. Combine all
-   * three into a single corpus so Claude sees:
-   *   - homepage voice + service proposition
-   *   - about-page personal story (longest of /about /about-us)
-   *   - FAQ content (longest of /faq /faqs /frequently-asked-questions)
-   * Cap the joined text at MAX_CHARS_FOR_CLAUDE. */
-  const home    = buildVariantUrl(website, "");
-  const aboutA  = buildVariantUrl(website, "about");
-  const aboutB  = buildVariantUrl(website, "about-us");
-  const faqA    = buildVariantUrl(website, "faq");
-  const faqB    = buildVariantUrl(website, "faqs");
-  const faqC    = buildVariantUrl(website, "frequently-asked-questions");
-  const urls = [home, aboutA, aboutB, faqA, faqB, faqC].filter((u): u is string => u != null);
+type SiteContent = {
+  /* Stitched plain-text corpus used by the bio + FAQ extractor. */
+  bioCorpus: string;
+  /* Concatenated RAW HTML from every fetched page — used by the
+   * email extractor (preserves mailto: hrefs + footer addresses). */
+  rawHtml:   string;
+};
+
+async function pickBestVariant(website: string): Promise<SiteContent> {
+  /* Fetch homepage + about + FAQ + contact pages in parallel. The
+   * about + FAQ variants feed the bio corpus; the contact variants
+   * are primarily for email extraction (their text is also folded
+   * into the bio corpus when present, so vendors who put their
+   * service description on /contact don't get a thin extract). */
+  const home     = buildVariantUrl(website, "");
+  const aboutA   = buildVariantUrl(website, "about");
+  const aboutB   = buildVariantUrl(website, "about-us");
+  const faqA     = buildVariantUrl(website, "faq");
+  const faqB     = buildVariantUrl(website, "faqs");
+  const faqC     = buildVariantUrl(website, "frequently-asked-questions");
+  const contactA = buildVariantUrl(website, "contact");
+  const contactB = buildVariantUrl(website, "contact-us");
+  const urls = [home, aboutA, aboutB, faqA, faqB, faqC, contactA, contactB]
+    .filter((u): u is string => u != null);
 
   const variants = await Promise.all(
     urls.map(async (u) => {
       const html = await fetchWithLimits(u);
-      if (!html) return { url: u, text: "" };
-      return { url: u, text: stripToText(html) };
+      if (!html) return { url: u, html: "", text: "" };
+      return { url: u, html, text: stripToText(html) };
     }),
   );
 
-  const homeText  = home ? variants.find((v) => v.url === home)?.text ?? "" : "";
-  const aboutText = [aboutA, aboutB]
-    .map((u) => (u ? variants.find((v) => v.url === u)?.text ?? "" : ""))
-    .sort((a, b) => b.length - a.length)[0] ?? "";
-  const faqText   = [faqA, faqB, faqC]
-    .map((u) => (u ? variants.find((v) => v.url === u)?.text ?? "" : ""))
-    .sort((a, b) => b.length - a.length)[0] ?? "";
+  const textFor = (u: string | null): string =>
+    u ? variants.find((v) => v.url === u)?.text ?? "" : "";
 
-  /* Stitch with section markers so Claude can keep voice/story/FAQ
-   * distinct when extracting fields. Missing sections just drop out
-   * of the corpus — no empty placeholders. */
+  const homeText    = textFor(home);
+  const aboutText   = [aboutA, aboutB].map(textFor).sort((a, b) => b.length - a.length)[0] ?? "";
+  const faqText     = [faqA, faqB, faqC].map(textFor).sort((a, b) => b.length - a.length)[0] ?? "";
+  const contactText = [contactA, contactB].map(textFor).sort((a, b) => b.length - a.length)[0] ?? "";
+
+  /* Stitch with section markers so Claude can keep voice/story/FAQ/
+   * contact distinct when extracting fields. Missing sections just
+   * drop out — no empty placeholders. */
   const parts = [
     homeText,
-    aboutText ? `--- /about ---\n\n${aboutText}` : "",
-    faqText   ? `--- /faq ---\n\n${faqText}`     : "",
+    aboutText   ? `--- /about ---\n\n${aboutText}`     : "",
+    faqText     ? `--- /faq ---\n\n${faqText}`         : "",
+    contactText ? `--- /contact ---\n\n${contactText}` : "",
   ].filter((p) => p.length > 0);
-  return parts.join("\n\n").slice(0, MAX_CHARS_FOR_CLAUDE);
+
+  /* Raw HTML concatenation — bounded but generous (we run regex over
+   * this, not Claude). Each variant gets up to 80KB; total cap 400KB.
+   * mailto: hrefs and footer email lines tend to be near the top of
+   * a page or right before </body>, so this window catches them. */
+  const rawHtml = variants
+    .map((v) => v.html.slice(0, 80_000))
+    .filter((h) => h.length > 0)
+    .join("\n")
+    .slice(0, 400_000);
+
+  return {
+    bioCorpus: parts.join("\n\n").slice(0, MAX_CHARS_FOR_CLAUDE),
+    rawHtml,
+  };
+}
+
+/* ─── Email extraction ─────────────────────────────────────────────── */
+
+const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+
+/* Skip these — generic / placeholder / tracking / never-deliverable.
+ * Matched as case-insensitive substrings of the FULL address. */
+const EMAIL_BLOCKLIST_SUBSTRINGS = [
+  "noreply@",
+  "no-reply@",
+  "donotreply@",
+  "do-not-reply@",
+  "info@wordpress",
+  "@example.com",
+  "@example.org",
+  "@domain.com",
+  "@sentry.io",
+  "@googletagmanager",
+  "@google-analytics",
+  "@cloudflare.com",
+  "@youremail",
+  "@yoursite",
+  "@yourdomain",
+  "@email.com",
+  "@test.com",
+  "@gmail.com>",   /* email-attribute placeholder pattern */
+  "wixpress.com",
+  "@sentry-next",
+];
+
+/* Common file-extension or attribute fragments that LOOK like emails
+ * inside an HTML attribute value but aren't really. */
+const EMAIL_FALSE_POSITIVE_FRAGMENTS = [
+  ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp",
+  ".css", ".js",  ".woff", ".ico",
+];
+
+function isBlockedEmail(email: string): boolean {
+  const lower = email.toLowerCase();
+  for (const f of EMAIL_BLOCKLIST_SUBSTRINGS) {
+    if (lower.includes(f)) return true;
+  }
+  for (const ext of EMAIL_FALSE_POSITIVE_FRAGMENTS) {
+    if (lower.endsWith(ext)) return true;
+  }
+  /* Strip JSX-like Sentry tracker artifacts (e.g. "abc@sentry.example"). */
+  if (lower.endsWith(".sentry") || lower.includes("@react.")) return true;
+  return false;
+}
+
+const EMAIL_PREFERRED_PREFIXES = [
+  "hello@",
+  "contact@",
+  "book@",
+  "bookings@",
+  "inquiries@",
+  "info@",
+];
+
+/* Pull the registered domain root from a URL — strips subdomain + TLD.
+ * "www.qiu.ca" → "qiu". Used to prefer addresses whose @domain matches
+ * the vendor's own site. */
+function vendorDomainRoot(website: string): string | null {
+  try {
+    const host = new URL(website).hostname.toLowerCase().replace(/^www\./, "");
+    const root = host.replace(/\.[a-z]{2,3}(?:\.[a-z]{2})?$/, "");
+    return root.length > 0 ? root : null;
+  } catch {
+    return null;
+  }
+}
+
+/* Extract the best candidate email from the concatenated raw HTML of
+ * every fetched page. Priority:
+ *   1. preferred prefix (hello@, contact@, book@, bookings@,
+ *      inquiries@, info@) AND domain matches vendor
+ *   2. preferred prefix on any domain
+ *   3. domain matches vendor (any local-part)
+ *   4. first non-blocked address found
+ * Returns null when nothing usable is found. */
+export function extractBestEmail(html: string, vendorWebsite: string): string | null {
+  if (!html) return null;
+  const matches = html.match(EMAIL_REGEX) ?? [];
+  if (matches.length === 0) return null;
+
+  /* Dedupe + lowercase + filter blocklist. */
+  const seen = new Set<string>();
+  const candidates: string[] = [];
+  for (const raw of matches) {
+    const e = raw.trim().replace(/\.+$/, "");  /* strip trailing period from sentence */
+    const lower = e.toLowerCase();
+    if (seen.has(lower)) continue;
+    seen.add(lower);
+    if (isBlockedEmail(lower)) continue;
+    if (lower.length > 200) continue;
+    candidates.push(lower);
+  }
+  if (candidates.length === 0) return null;
+
+  const root = vendorDomainRoot(vendorWebsite);
+
+  const hasPreferredPrefix = (e: string) =>
+    EMAIL_PREFERRED_PREFIXES.some((p) => e.startsWith(p));
+  const matchesVendorDomain = (e: string) => {
+    if (!root) return false;
+    /* "info@qiu.ca" or "info@qiuphoto.ca" both should hit when root='qiu'. */
+    const at = e.indexOf("@");
+    if (at === -1) return false;
+    const emailDomain = e.slice(at + 1).replace(/^www\./, "");
+    const emailRoot = emailDomain.replace(/\.[a-z]{2,3}(?:\.[a-z]{2})?$/, "");
+    return emailRoot.includes(root) || root.includes(emailRoot);
+  };
+
+  /* Tier 1 — preferred prefix on vendor's domain. */
+  for (const e of candidates) {
+    if (hasPreferredPrefix(e) && matchesVendorDomain(e)) return e;
+  }
+  /* Tier 2 — preferred prefix on any domain. */
+  for (const e of candidates) {
+    if (hasPreferredPrefix(e)) return e;
+  }
+  /* Tier 3 — vendor's domain, any local-part. */
+  for (const e of candidates) {
+    if (matchesVendorDomain(e)) return e;
+  }
+  /* Tier 4 — first non-blocked match. */
+  return candidates[0];
 }
 
 /* ─── Claude ───────────────────────────────────────────────────────── */
@@ -362,14 +527,41 @@ async function processVendor(
   anthropic: Anthropic,
   dryRun: boolean,
 ): Promise<Outcome> {
-  let content: string;
+  let site: SiteContent;
   try {
-    content = await pickBestVariant(vendor.website);
+    site = await pickBestVariant(vendor.website);
   } catch (err) {
     return { kind: "error", message: err instanceof Error ? err.message : String(err) };
   }
+  const content = site.bioCorpus;
   if (content.length < MIN_CHARS_FOR_CLAUDE) {
     return { kind: "no-content" };
+  }
+
+  /* Email extraction — runs over the concatenated raw HTML of every
+   * fetched page (home + about + faq + contact variants). Independent
+   * of the bio extraction below. Only persisted when the vendor has
+   * no email on file yet OR the extracted one matches the vendor's
+   * own domain (which is a stronger signal than whatever was scraped
+   * from Google Places). */
+  const extractedEmail = extractBestEmail(site.rawHtml, vendor.website);
+  if (extractedEmail && !dryRun) {
+    /* Only overwrite if the existing email is missing or if the new
+     * email better matches the vendor's domain. */
+    const shouldWrite =
+      !vendor.email ||
+      (vendorDomainRoot(vendor.website) &&
+        extractedEmail.includes(vendorDomainRoot(vendor.website)!) &&
+        !vendor.email.includes(vendorDomainRoot(vendor.website)!));
+    if (shouldWrite) {
+      await db
+        .update(vendors)
+        .set({ email: extractedEmail, updatedAt: new Date() })
+        .where(eq(vendors.id, vendor.id));
+      console.log(`  ✓ email found: ${extractedEmail}`);
+    }
+  } else if (extractedEmail && dryRun) {
+    console.log(`  · email found (dry-run, not written): ${extractedEmail}`);
   }
 
   /* Category relevance check — runs BEFORE bio extraction so wrong-
