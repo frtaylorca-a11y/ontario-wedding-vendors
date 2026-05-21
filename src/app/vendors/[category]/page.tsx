@@ -10,6 +10,7 @@ import { listVendors } from "@/lib/queries";
 import { VENDOR_CATEGORIES, type VendorCategory } from "@/types";
 import { VendorCard } from "@/components/ui/VendorCard";
 import { PicBoothSitePartnerCard } from "@/components/ui/PicBoothSitePartnerCard";
+import { PicBoothCategorySpotlight } from "@/components/ui/PicBoothCategorySpotlight";
 import { VendorFilterSidebar } from "@/components/vendors/VendorFilterSidebar";
 import { BreadcrumbSchema, ItemListSchema, FaqSchema } from "@/components/seo/SchemaInjector";
 import { Pagination } from "@/components/venues/Pagination";
@@ -415,7 +416,14 @@ export default async function VendorCategoryPage({
                 </div>
               )}
 
-              {/* Site Partner pinned card — page 1, photo_booth only */}
+              {/* Featured Local Provider spotlight — links to picbooth.ca.
+               * Rendered on photo_booth page 1 only. */}
+              {showSitePartner && page === 1 && (
+                <PicBoothCategorySpotlight />
+              )}
+
+              {/* Site Partner pinned card — directs to the internal
+               * Pic Booth vendor profile for OWV-side lead capture. */}
               {showSitePartner && page === 1 && (
                 <div className="mb-6">
                   <PicBoothSitePartnerCard />

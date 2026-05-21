@@ -19,6 +19,8 @@ import {
 } from "@/lib/google-reviews";
 import InteractiveBentoGallery from "@/components/ui/interactive-bento-gallery";
 import { FaqAccordion, type FaqItem } from "@/components/ui/FaqAccordion";
+import { PlanningResources } from "@/components/ui/PlanningResources";
+import { resolveVendorResources } from "@/lib/vendor-resources-resolver";
 import { ItemListSchema } from "@/components/seo/SchemaInjector";
 import { VENDOR_CATEGORIES, type VendorCategory } from "@/types";
 import { GoogleReviews } from "@/components/ui/GoogleReviews";
@@ -265,7 +267,7 @@ export default async function VendorPage({ params }: { params: Params }) {
   const heroImage = CATEGORY_HERO_IMAGE[category];
   const cityRegion = [vendor.city, regionLabel(vendor.region)].filter(Boolean).join(" · ");
 
-  const [reviews, galleryPhotos, similar, recommendingVenues] = await Promise.all([
+  const [reviews, galleryPhotos, similar, recommendingVenues, planningResources] = await Promise.all([
     getGoogleReviews(vendor.placeId),
     /* Cached additional photos for the bento gallery — populates
      * vendors.additional_photos on first visit, served from cache
@@ -291,6 +293,7 @@ export default async function VendorPage({ params }: { params: Params }) {
       limit: 3,
     }),
     getVenuesRecommendingVendor(vendor.id, 6),
+    resolveVendorResources(vendor.category as VendorCategory),
   ]);
 
   /* Build the bento gallery media-items array. Span pattern per the
@@ -619,6 +622,16 @@ export default async function VendorPage({ params }: { params: Params }) {
                   )}
                 </section>
               )}
+
+              {/* Planning Resources — how-to + cost cards, plus the
+               * Featured Local Provider card on photo_booth pages
+               * (except Pic Booth's own listing). */}
+              <PlanningResources
+                resources={planningResources}
+                showPicBoothCard={
+                  vendor.category === "photo_booth" && vendor.slug !== "pic-booth"
+                }
+              />
 
               {/* Similar vendors */}
               {similar.length > 0 && (
