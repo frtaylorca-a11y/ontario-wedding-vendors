@@ -3,8 +3,16 @@ import Image from "next/image";
 import type { Route } from "next";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { eq } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { venues as venuesTable } from "@/lib/schema";
 import { getVenueBySlug, getSimilarVenues } from "@/lib/queries";
-import { getGoogleReviews } from "@/lib/google-reviews";
+import {
+  getGoogleReviews,
+  loadCachedAdditionalPhotos,
+  type GoogleVendorPhoto,
+} from "@/lib/google-reviews";
+import InteractiveBentoGallery from "@/components/ui/interactive-bento-gallery";
 import { getZone } from "@/lib/zones";
 import { PicBoothCTA } from "@/components/ui/PicBoothCTA";
 import { PicBoothFeaturedPartner } from "@/components/ui/PicBoothFeaturedPartner";
@@ -121,7 +129,7 @@ export default async function VenuePage({ params }: { params: Params }) {
   const venue = await getVenueBySlug(slug);
   if (!venue || (venue.weddingReadinessScore ?? 0) < 50) notFound();
 
-  const [similarVenues, googleReviews] = await Promise.all([
+  const [similarVenues, googleReviews, galleryPhotos] = await Promise.all([
     getSimilarVenues({
       region: venue.region,
       lat: venue.lat,
@@ -130,7 +138,44 @@ export default async function VenuePage({ params }: { params: Params }) {
       limit: 3,
     }),
     getGoogleReviews(venue.placeId),
+    /* Cached additional photos for the bento gallery; populates
+     * venues.additional_photos on first visit. */
+    loadCachedAdditionalPhotos(
+      {
+        id:               venue.id,
+        placeId:          venue.placeId,
+        additionalPhotos: venue.additionalPhotos,
+      },
+      async (id, photos) => {
+        await db
+          .update(venuesTable)
+          .set({ additionalPhotos: photos, updatedAt: new Date() })
+          .where(eq(venuesTable.id, id));
+      },
+      6,
+    ),
   ]);
+
+  /* Bento gallery span pattern — same shape as the vendor page so
+   * the two pages read as a single design language. */
+  const BENTO_SPANS = [
+    "md:col-span-2 md:row-span-3",
+    "md:col-span-1 md:row-span-2",
+    "md:col-span-1 md:row-span-2",
+    "md:col-span-2 md:row-span-2",
+    "md:col-span-1 md:row-span-2",
+    "md:col-span-1 md:row-span-2",
+  ] as const;
+  const bentoMediaItems = (galleryPhotos as GoogleVendorPhoto[])
+    .slice(0, 6)
+    .map((p, i) => ({
+      id:    i + 1,
+      type:  "image",
+      title: venue.name,
+      desc:  [venue.city, venue.venueType].filter(Boolean).join(" · "),
+      url:   p.url,
+      span:  BENTO_SPANS[i] ?? BENTO_SPANS[BENTO_SPANS.length - 1],
+    }));
 
   /* Auto-FAQs — built from DB fields we always have or skip on null */
   const ratingBlurb =
@@ -382,6 +427,47 @@ export default async function VenuePage({ params }: { params: Params }) {
                   No editorial description on file yet — data below is pulled
                   from Google and the venue&rsquo;s own listings.
                 </p>
+              )}
+
+              {/* The Venue — InteractiveBentoGallery of Google Places
+               * photos. Renders only when 2+ photos are cached on
+               * venues.additional_photos. Same layout + span pattern
+               * as the vendor portfolio so the directory reads as
+               * one design system. */}
+              {bentoMediaItems.length >= 2 && (
+                <section
+                  className="mt-8 mb-8"
+                  aria-label="The Venue"
+                  style={{ background: "#ffffff" }}
+                >
+                  <div className="mx-auto max-w-4xl px-2">
+                    <div className="mb-2 flex items-baseline justify-between gap-3">
+                      <h2 className="font-display text-[2rem] font-semibold leading-tight text-charcoal">
+                        The Venue
+                      </h2>
+                      <span className="text-[0.7rem] text-text-muted">
+                        Powered by Google
+                      </span>
+                    </div>
+                  </div>
+                  <InteractiveBentoGallery
+                    mediaItems={bentoMediaItems}
+                    title=""
+                    description=""
+                  />
+                  {galleryPhotos.some((p) => p.attributions.length > 0) && (
+                    <p
+                      className="mx-auto mt-2 max-w-4xl px-4 text-[0.6rem] text-text-muted"
+                      // eslint-disable-next-line react/no-danger
+                      dangerouslySetInnerHTML={{
+                        __html: galleryPhotos
+                          .flatMap((p) => p.attributions)
+                          .filter((a, idx, arr) => arr.indexOf(a) === idx)
+                          .join(" · "),
+                      }}
+                    />
+                  )}
+                </section>
               )}
 
               {/* Social proof A — Google Reviews (hides if no place_id or no reviews) */}

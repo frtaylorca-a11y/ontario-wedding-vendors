@@ -95,6 +95,12 @@ export const venues = pgTable(
     heroImageRefreshedAt:    timestamp("hero_image_refreshed_at"),
     heroImageValidated:      boolean("hero_image_validated").default(false),
 
+    /* Cached additional Google Places photos — same shape and cache
+     * pattern as vendors.additionalPhotos. Fed into the
+     * InteractiveBentoGallery section on the venue detail page when
+     * the venue has 2+ photos available. */
+    additionalPhotos:        jsonb("additional_photos"),
+
     source: varchar("source", { length: 100 }),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
@@ -202,6 +208,14 @@ export const vendors = pgTable(
      * every visit. Empty array means "not cached yet"; null means
      * "not fetched yet" — distinct from "no reviews". */
     reviewExcerpts:      jsonb("review_excerpts"),
+
+    /* Cached additional Google Places photos for the
+     * InteractiveBentoGallery on the vendor detail page. Shape:
+     * [{ url: string, attributions: string[] }, ...]. URLs include
+     * the API key as a query string — they rotate every few weeks,
+     * so a periodic re-fetch script can refresh them. null until
+     * first fetched. */
+    additionalPhotos:    jsonb("additional_photos"),
 
     source: varchar("source", { length: 100 }),
     /* Wedding-readiness signal for vendors discovered through referrals + reviews */

@@ -3,12 +3,20 @@ import Image from "next/image";
 import type { Route } from "next";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { eq } from "drizzle-orm";
+import { db } from "@/lib/db";
+import { vendors as vendorsTable } from "@/lib/schema";
 import {
   getVendorBySlug,
   getSimilarVendors,
   getVenuesRecommendingVendor,
 } from "@/lib/queries";
-import { getGoogleReviews, getGoogleVendorPhotos } from "@/lib/google-reviews";
+import {
+  getGoogleReviews,
+  loadCachedAdditionalPhotos,
+  type GoogleVendorPhoto,
+} from "@/lib/google-reviews";
+import InteractiveBentoGallery from "@/components/ui/interactive-bento-gallery";
 import { VENDOR_CATEGORIES, type VendorCategory } from "@/types";
 import { GoogleReviews } from "@/components/ui/GoogleReviews";
 import { VendorCard } from "@/components/ui/VendorCard";
@@ -120,10 +128,25 @@ export default async function VendorPage({ params }: { params: Params }) {
   const heroImage = CATEGORY_HERO_IMAGE[category];
   const cityRegion = [vendor.city, regionLabel(vendor.region)].filter(Boolean).join(" · ");
 
-  const [reviews, googlePhotos, similar, recommendingVenues] = await Promise.all([
+  const [reviews, galleryPhotos, similar, recommendingVenues] = await Promise.all([
     getGoogleReviews(vendor.placeId),
-    /* Bumped 4 → 6 to fill the new 3-column portfolio grid. */
-    getGoogleVendorPhotos(vendor.placeId, 6),
+    /* Cached additional photos for the bento gallery — populates
+     * vendors.additional_photos on first visit, served from cache
+     * thereafter. Limit 6 per the bento layout below. */
+    loadCachedAdditionalPhotos(
+      {
+        id:               vendor.id,
+        placeId:          vendor.placeId,
+        additionalPhotos: vendor.additionalPhotos,
+      },
+      async (id, photos) => {
+        await db
+          .update(vendorsTable)
+          .set({ additionalPhotos: photos, updatedAt: new Date() })
+          .where(eq(vendorsTable.id, id));
+      },
+      6,
+    ),
     getSimilarVendors({
       category: vendor.category,
       region: vendor.region,
@@ -132,6 +155,29 @@ export default async function VendorPage({ params }: { params: Params }) {
     }),
     getVenuesRecommendingVendor(vendor.id, 6),
   ]);
+
+  /* Build the bento gallery media-items array. Span pattern per the
+   * brief: photo 1 large (col-span-2 row-span-3), photos 2/3/5/6
+   * narrow (col-span-1 row-span-2), photo 4 wide (col-span-2
+   * row-span-2). Gallery only renders when there are 2+ photos. */
+  const BENTO_SPANS = [
+    "md:col-span-2 md:row-span-3",
+    "md:col-span-1 md:row-span-2",
+    "md:col-span-1 md:row-span-2",
+    "md:col-span-2 md:row-span-2",
+    "md:col-span-1 md:row-span-2",
+    "md:col-span-1 md:row-span-2",
+  ] as const;
+  const bentoMediaItems = (galleryPhotos as GoogleVendorPhoto[])
+    .slice(0, 6)
+    .map((p, i) => ({
+      id:    i + 1,
+      type:  "image",
+      title: vendor.name,
+      desc:  [vendor.city, vendor.category.replace(/_/g, " ")].filter(Boolean).join(" · "),
+      url:   p.url,
+      span:  BENTO_SPANS[i] ?? BENTO_SPANS[BENTO_SPANS.length - 1],
+    }));
 
   /* Specialties + service areas live in jsonb columns populated by
    * enrich-vendor-bios.ts. Render only when the arrays carry content. */
@@ -231,47 +277,38 @@ export default async function VendorPage({ params }: { params: Params }) {
             <span aria-hidden>←</span> All Ontario {plural.toLowerCase()}
           </Link>
 
-          {/* Portfolio gallery — up to 6 Google Places photos in a
-           * 3-column grid (2 columns on small screens). Each tile is
-           * a click-through anchor to the full-size Google photo URL
-           * (opens in a new tab) — basic lightbox-lite without
-           * dragging in a client component. */}
-          {googlePhotos.length > 0 && (
-            <section className="mb-8" aria-label="Portfolio">
-              <div className="mb-3 flex items-baseline justify-between gap-3">
-                <h2 className="font-display text-lg font-semibold text-charcoal">
-                  Portfolio
-                </h2>
-                <span className="text-[0.7rem] text-text-muted">
-                  Powered by Google
-                </span>
+          {/* Portfolio — InteractiveBentoGallery (drag-reorder + click
+           * to open lightbox). Only renders when the vendor has 2+
+           * additional photos cached. With 0 or 1 photo we fall
+           * through to the single-image hero treatment carried by the
+           * top of the page. */}
+          {bentoMediaItems.length >= 2 && (
+            <section
+              className="mb-8"
+              aria-label="Portfolio"
+              style={{ background: "#ffffff" }}
+            >
+              <div className="mx-auto max-w-4xl px-2">
+                <div className="mb-2 flex items-baseline justify-between gap-3">
+                  <h2 className="font-display text-[2rem] font-semibold leading-tight text-charcoal">
+                    Portfolio
+                  </h2>
+                  <span className="text-[0.7rem] text-text-muted">
+                    Powered by Google
+                  </span>
+                </div>
               </div>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {googlePhotos.slice(0, 6).map((photo, i) => (
-                  <a
-                    key={i}
-                    href={photo.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`Open portfolio photo ${i + 1} in new tab`}
-                    className="group relative block aspect-square overflow-hidden rounded-card border border-border-light bg-bg-soft"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={photo.url}
-                      alt=""
-                      loading="lazy"
-                      className="h-full w-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-110"
-                    />
-                  </a>
-                ))}
-              </div>
-              {googlePhotos.some((p) => p.attributions.length > 0) && (
+              <InteractiveBentoGallery
+                mediaItems={bentoMediaItems}
+                title=""
+                description=""
+              />
+              {galleryPhotos.some((p) => p.attributions.length > 0) && (
                 <p
-                  className="mt-2 text-[0.6rem] text-text-muted"
+                  className="mx-auto mt-2 max-w-4xl px-4 text-[0.6rem] text-text-muted"
                   // eslint-disable-next-line react/no-danger
                   dangerouslySetInnerHTML={{
-                    __html: googlePhotos
+                    __html: galleryPhotos
                       .flatMap((p) => p.attributions)
                       .filter((a, idx, arr) => arr.indexOf(a) === idx)
                       .join(" · "),

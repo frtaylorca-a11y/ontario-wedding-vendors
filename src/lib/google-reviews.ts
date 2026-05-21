@@ -5,6 +5,56 @@ export type GoogleVendorPhoto = {
 };
 
 /**
+ * Server-side helper: load cached additional Google Places photos for
+ * the InteractiveBentoGallery, populating the cache on cold render.
+ *
+ * If `additionalPhotos` is already an array on the row, return it
+ * verbatim (no Google call). Otherwise hit Places Details, build the
+ * URLs, persist them to the row's `additional_photos` jsonb column,
+ * and return. Errors are swallowed so the page never breaks — the
+ * gallery just won't render.
+ *
+ * Both vendors and venues share this helper — pass the table import
+ * from "@/lib/schema". The row must have at minimum {id, placeId,
+ * additionalPhotos}; only those fields are read.
+ *
+ * The Google fetch is intentionally async-blocking on the page
+ * server-render. After the first visit, the cached column is used.
+ */
+type AdditionalPhotosRow = {
+  id:                number;
+  placeId:           string | null;
+  additionalPhotos:  unknown;
+};
+
+export async function loadCachedAdditionalPhotos(
+  row: AdditionalPhotosRow,
+  persist: (id: number, photos: GoogleVendorPhoto[]) => Promise<void>,
+  count = 6,
+): Promise<GoogleVendorPhoto[]> {
+  /* Already cached — return verbatim. */
+  if (Array.isArray(row.additionalPhotos)) {
+    return (row.additionalPhotos as unknown[])
+      .filter((p): p is GoogleVendorPhoto => {
+        if (!p || typeof p !== "object") return false;
+        const r = p as Record<string, unknown>;
+        return typeof r.url === "string" && Array.isArray(r.attributions);
+      })
+      .slice(0, count);
+  }
+
+  const fresh = await getGoogleVendorPhotos(row.placeId, count);
+  if (fresh.length > 0) {
+    try {
+      await persist(row.id, fresh);
+    } catch (err) {
+      console.error("[load-additional-photos] persist failed for id", row.id, err);
+    }
+  }
+  return fresh;
+}
+
+/**
  * Fetch up to N Google Places photos for a vendor (or venue). Returns proxied
  * URLs that take the photo_reference and pull from the Places Photo endpoint.
  * Cached 24h via Next data cache. Returns [] when: no placeId, no API key,
