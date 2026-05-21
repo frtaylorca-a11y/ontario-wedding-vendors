@@ -128,15 +128,18 @@ export function VenueCard({ venue }: { venue: Venue }) {
   const imageSrc = (typeKey && VENUE_TYPE_IMAGE[typeKey]) || FALLBACK_IMAGE;
 
   return (
-    <article className="group relative overflow-hidden rounded-card border-[1.5px] border-border bg-white transition-all duration-200 hover:-translate-y-1 hover:border-transparent hover:shadow-[var(--shadow-hover)]">
-      {/* Hero / image */}
-      <div className="relative h-48 overflow-hidden bg-bg-soft">
+    <article className="group relative flex flex-col overflow-hidden rounded-card border-[1.5px] border-border bg-white shadow-sm transition-all duration-500 ease-in-out hover:-translate-y-2 hover:border-transparent hover:shadow-[var(--shadow-hover)]">
+      {/* Hero / image — matches the VendorCard treatment so a mixed
+       * venue + vendor grid (saved listings, search results) reads
+       * as one harmonised set: slow 700ms zoom + scale-110, coordinated
+       * with the card's 500ms hover lift. */}
+      <div className="relative aspect-video w-full overflow-hidden bg-bg-soft">
         <Image
           src={imageSrc}
           alt=""
           fill
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
+          className="object-cover transition-transform duration-700 ease-in-out group-hover:scale-110"
         />
 
         {typeLabel && (
@@ -253,8 +256,9 @@ export function VenueCard({ venue }: { venue: Venue }) {
               </span>
             )}
           </div>
-          <span className="relative z-[1] text-xs font-bold tracking-[0.04em] text-rose">
-            View venue →
+          <span className="relative z-[1] inline-flex items-center gap-1 text-xs font-bold tracking-[0.04em] text-rose">
+            View venue
+            <ArrowRightIcon />
           </span>
         </div>
 
@@ -276,5 +280,30 @@ export function VenueCard({ venue }: { venue: Venue }) {
         )}
       </div>
     </article>
+  );
+}
+
+/* Inline ArrowRight icon — duplicated from VendorCard intentionally
+ * so the two card files stay self-contained and the icon's behaviour
+ * (group-hover translate-x-1) is locked to the parent article's
+ * `group` class without a shared component opt-in. Lucide stroke
+ * style for consistency with the rest of the directory. */
+function ArrowRightIcon() {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      width="14"
+      height="14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="transition-transform duration-300 ease-out group-hover:translate-x-1"
+    >
+      <path d="M5 12h14" />
+      <path d="m12 5 7 7-7 7" />
+    </svg>
   );
 }

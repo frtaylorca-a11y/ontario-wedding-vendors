@@ -21,9 +21,8 @@ const CATEGORY_LABEL: Record<string, string> = {
   wedding_planner: "Wedding Planner",
 };
 
-/* Warm-palette price tier pills — all three tones sit inside the
- * #FAF8F5 → #FDF8F0 cream range so they read as editorial accents,
- * not the loud emerald/blue/amber from the prior palette. */
+/* Warm-palette price tier pills — three tones sit inside the
+ * #FAF8F5 → #FDF8F0 cream range so they read as editorial accents. */
 const PRICE_TIER: Record<string, { label: string; style: CSSProperties }> = {
   budget:  { label: "$",   style: { background: "#F5F1EC", color: "#6B7280" } },
   mid:     { label: "$$",  style: { background: "#FAF8F5", color: "#4B5563", border: "1px solid #EDE9E3" } },
@@ -31,15 +30,15 @@ const PRICE_TIER: Record<string, { label: string; style: CSSProperties }> = {
 };
 
 const ICON_PROPS = {
-  viewBox: "0 0 24 24",
-  fill: "none",
-  strokeWidth: 1.5,
-  strokeLinecap: "round" as const,
+  viewBox:        "0 0 24 24",
+  fill:           "none",
+  strokeWidth:    1.5,
+  strokeLinecap:  "round" as const,
   strokeLinejoin: "round" as const,
-  className: "h-3.5 w-3.5 stroke-current",
+  className:      "h-3.5 w-3.5 stroke-current",
 };
 
-/** 12 mini-icons for the category pill — same shapes as the /vendors index, scaled down */
+/** 12 mini-icons for the category pill — same shapes as the /vendors index. */
 function CategoryIcon({ category }: { category: string }): ReactNode {
   switch (category) {
     case "photographer":
@@ -141,298 +140,200 @@ function categoryUrlSlug(category: string): string {
   return category.replace(/_/g, "-");
 }
 
+/* Per-category fallback image when the vendor row has no photo
+ * (no R2 custom upload + no Google photo_reference). Matches the
+ * filename convention used by VenueCard: /images/vendor-{slug}.png.
+ * Underscored category keys become hyphenated filename slugs
+ * (hair_makeup → vendor-hair-makeup.png). */
+function vendorCategoryFallbackImage(category: string): string {
+  return `/images/vendor-${categoryUrlSlug(category)}.png`;
+}
+
+/* ─── Unified vendor card ────────────────────────────────────────────
+ * One layout for every vendor: aspect-video image at top, content
+ * below. The image source is:
+ *   1. heroImageCustom (R2 URL — best-quality, permanent)
+ *   2. heroImage (Google photo_reference, resolved via API)
+ *   3. /images/vendor-{category}.png fallback
+ *
+ * On group-hover the image slow-zooms (scale-110 / 700ms) while the
+ * card lifts (-translate-y-2 / 500ms) and the "View" CTA arrow
+ * slides 4px right. Category accent colour drives the title-hover,
+ * the arrow colour, and the recommended-partner border. */
 export function VendorCard({
   vendor,
 }: {
   vendor: Vendor & { distanceKm?: number | null };
 }) {
   const categoryLabel = CATEGORY_LABEL[vendor.category] ?? vendor.category;
-  const priceTier = vendor.priceTier ? PRICE_TIER[vendor.priceTier] : null;
-  const ratingStr = formatRating(vendor.googleRating);
-  const cityRegion = [vendor.city, regionLabel(vendor.region)].filter(Boolean).join(" · ");
+  const priceTier     = vendor.priceTier ? PRICE_TIER[vendor.priceTier] : null;
+  const ratingStr     = formatRating(vendor.googleRating);
+  const cityRegion    = [vendor.city, regionLabel(vendor.region)].filter(Boolean).join(" · ");
 
-  const href = `/vendors/${categoryUrlSlug(vendor.category)}/${vendor.slug}` as Route;
-  const isPinned = vendor.isPinned === true;
+  const href      = `/vendors/${categoryUrlSlug(vendor.category)}/${vendor.slug}` as Route;
+  const isPinned  = vendor.isPinned === true;
   const distanceLabel =
     vendor.distanceKm != null && Number.isFinite(vendor.distanceKm)
       ? `${Math.round(vendor.distanceKm)} km from your venue`
       : null;
 
-  const photoUrl = vendorHeroImageUrl(vendor, { maxwidth: 800 });
+  /* Real photo → fall back to category image. Always truthy. */
+  const photoUrl =
+    vendorHeroImageUrl(vendor, { maxwidth: 800 }) ??
+    vendorCategoryFallbackImage(vendor.category);
 
-  /* CSS vars from the category's signature colour drive every accent on the card */
+  /* CSS vars from the category's signature colour drive every accent. */
   const cssVars = categoryColourVars(vendor.category) as CSSProperties;
 
-  /* ─── Photo-tile variant ─────────────────────────────────────────────
-   * Photo fills the whole card behind a black overlay (rgba(0,0,0,0.45)).
-   * Name / city / rating render white on top. The card body falls back to
-   * category gradient + white surface when no photo is available. */
-  if (photoUrl) {
-    return (
-      <article
-        style={cssVars}
-        className={`group relative h-72 overflow-hidden rounded-card border-[1.5px] bg-[var(--cat-primary)] transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_12px_32px_rgba(var(--cat-rgb),0.25)] ${
-          isPinned ? "border-rose hover:border-rose" : "border-border hover:border-[var(--cat-primary)]"
-        }`}
-      >
-        {/* Background photo — slow zoom on hover (700ms / scale 110%)
-         * tracks the parent `group` so the lift + zoom stay in sync. */}
+  return (
+    <article
+      style={cssVars}
+      className={`group relative flex flex-col overflow-hidden rounded-card border-[1.5px] bg-white shadow-sm transition-all duration-500 ease-in-out hover:-translate-y-2 hover:shadow-[var(--shadow-hover)] ${
+        isPinned ? "border-rose hover:border-rose" : "border-border hover:border-[var(--cat-primary)]"
+      }`}
+    >
+      {/* ─── Image area ──────────────────────────────────────────── */}
+      <div className="relative aspect-video w-full overflow-hidden bg-bg-soft">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={photoUrl}
           alt=""
-          className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-110"
           loading="lazy"
-        />
-        {/* Dark overlay — single solid black, no colour tint */}
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-0"
-          style={{ background: "rgba(0,0,0,0.45)" }}
+          className="h-full w-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-110"
         />
 
-        {/* 3px accent bar */}
+        {/* 3px category accent bar at the very top */}
         <span
           aria-hidden
-          className={`pointer-events-none absolute inset-x-0 top-0 z-[1] h-[3px] ${
+          className={`pointer-events-none absolute inset-x-0 top-0 z-[2] h-[3px] ${
             isPinned ? "bg-rose" : "bg-[var(--cat-primary)]"
           }`}
         />
 
-        {/* Top row: category pill (L) + price tier / save heart / pinned (R) */}
-        <div className="absolute inset-x-3 top-3 z-[2] flex items-start justify-between gap-2">
-          <span
-            className="inline-flex items-center gap-1.5 rounded-pill px-2.5 py-1 text-[0.7rem] font-bold uppercase tracking-[0.1em] text-white"
+        {/* Recommended Partner badge — top-left */}
+        {isPinned && (
+          <div className="absolute left-3 top-3 z-[2] inline-flex items-center gap-1 rounded-pill bg-rose-pale px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-[0.08em] text-rose shadow-sm">
+            <svg
+              aria-hidden
+              viewBox="0 0 24 24"
+              className="h-2.5 w-2.5 fill-none stroke-current"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </svg>
+            Recommended
+          </div>
+        )}
+
+        {/* Save heart — top-right, always on a white pill for legibility */}
+        <div className="absolute right-3 top-3 z-[2]">
+          <SaveVendorButton category={vendor.category} slug={vendor.slug} />
+        </div>
+
+        {/* Distance pill — bottom-left of image when computed */}
+        {distanceLabel && (
+          <div
+            className="absolute bottom-3 left-3 z-[2] inline-flex items-center gap-1 rounded-pill px-2 py-0.5 text-[0.65rem] font-medium text-white"
             style={{
-              background:       "rgba(0,0,0,0.35)",
-              backdropFilter:   "blur(4px)",
+              background:           "rgba(0,0,0,0.55)",
+              backdropFilter:       "blur(4px)",
               WebkitBackdropFilter: "blur(4px)",
-              border:           "1px solid rgba(255,255,255,0.2)",
-              textShadow:       "0 1px 8px rgba(0,0,0,0.6)",
+              textShadow:           "0 1px 4px rgba(0,0,0,0.4)",
             }}
           >
-            <CategoryIcon category={vendor.category} />
-            {categoryLabel}
-          </span>
-          <div className="flex flex-col items-end gap-1.5">
-            {isPinned && (
-              <div className="inline-flex items-center gap-1 rounded-pill bg-rose-pale px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-[0.08em] text-rose">
-                <svg aria-hidden viewBox="0 0 24 24" className="h-2.5 w-2.5 fill-none stroke-current" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                </svg>
-                Recommended Partner
-              </div>
-            )}
-            <SaveVendorButton category={vendor.category} slug={vendor.slug} />
-            {priceTier && (
-              <span
-                className="rounded-pill px-2.5 py-1 text-[0.78rem] font-bold"
-                style={priceTier.style}
-                title={`${vendor.priceTier} price tier`}
-              >
-                {priceTier.label}
-              </span>
-            )}
+            <svg
+              aria-hidden
+              viewBox="0 0 24 24"
+              className="h-2.5 w-2.5 fill-none stroke-current"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+            {distanceLabel}
           </div>
-        </div>
-
-        {/* Bottom: name + city + rating + distance — all white with text-shadow.
-         * Every text element gets the same drop shadow (0 1px 8px rgba(0,0,0,0.6))
-         * so the card stays readable on any underlying photo. */}
-        <div className="absolute inset-x-5 bottom-4 z-[2]">
-          {distanceLabel && (
-            <div
-              className="mb-2 inline-flex items-center gap-1 rounded-pill px-2 py-0.5 text-[0.65rem] font-medium text-white"
-              style={{
-                background:           "rgba(0,0,0,0.35)",
-                backdropFilter:       "blur(4px)",
-                WebkitBackdropFilter: "blur(4px)",
-                border:               "1px solid rgba(255,255,255,0.2)",
-                textShadow:           "0 1px 8px rgba(0,0,0,0.6)",
-              }}
-            >
-              <svg aria-hidden viewBox="0 0 24 24" className="h-2.5 w-2.5 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                <circle cx="12" cy="10" r="3" />
-              </svg>
-              {distanceLabel}
-            </div>
-          )}
-          <h3
-            className="font-display text-[1.5rem] leading-tight text-white"
-            style={{ fontWeight: 600, textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}
-          >
-            <Link
-              href={href}
-              className="rounded-sm transition-colors after:absolute after:inset-0 after:content-[''] hover:text-white/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
-            >
-              {vendor.name}
-            </Link>
-          </h3>
-          {cityRegion && (
-            <div
-              className="mt-1 text-xs text-white"
-              style={{ textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}
-            >
-              {cityRegion}
-            </div>
-          )}
-          <div className="mt-2 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              {ratingStr ? (
-                <>
-                  <span
-                    className="text-sm leading-none tracking-wider text-gold"
-                    style={{ textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}
-                  >
-                    {"★".repeat(Math.round(Number(ratingStr)))}
-                    <span className="text-white/40">
-                      {"★".repeat(5 - Math.round(Number(ratingStr)))}
-                    </span>
-                  </span>
-                  <span
-                    className="text-xs text-white"
-                    style={{ textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}
-                  >
-                    {ratingStr}
-                    {vendor.reviewCount != null && (
-                      <span className="text-white/85"> ({vendor.reviewCount})</span>
-                    )}
-                  </span>
-                </>
-              ) : (
-                <span
-                  className="text-xs text-white"
-                  style={{ textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}
-                >
-                  No reviews yet
-                </span>
-              )}
-            </div>
-            <span
-              className="relative z-[1] inline-flex items-center gap-1 text-xs font-bold tracking-[0.04em] text-white"
-              style={{ textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}
-            >
-              View
-              <ArrowRightIcon />
-            </span>
-          </div>
-        </div>
-      </article>
-    );
-  }
-
-  /* ─── No-photo fallback: category gradient + existing white-body layout ─── */
-  return (
-    <article
-      style={cssVars}
-      className={`group relative overflow-hidden rounded-card border-[1.5px] bg-white p-5 pt-6 transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[0_12px_32px_rgba(var(--cat-rgb),0.16)] ${
-        isPinned ? "border-rose hover:border-rose" : "border-border hover:border-[var(--cat-primary)]"
-      }`}
-    >
-      {isPinned && (
-        <div className="absolute right-3 top-3 z-[2] inline-flex items-center gap-1 rounded-pill bg-rose-pale px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-[0.08em] text-rose">
-          <svg aria-hidden viewBox="0 0 24 24" className="h-2.5 w-2.5 fill-none stroke-current" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-          </svg>
-          Recommended Partner
-        </div>
-      )}
-
-      <div className={`absolute z-[2] ${isPinned ? "right-3 top-9" : "right-3 top-3"}`}>
-        <SaveVendorButton category={vendor.category} slug={vendor.slug} />
+        )}
       </div>
 
-      <span
-        aria-hidden
-        className={`pointer-events-none absolute inset-x-0 top-0 h-[3px] ${
-          isPinned ? "bg-rose" : "bg-[var(--cat-primary)]"
-        }`}
-      />
-
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
+      {/* ─── Content area ─────────────────────────────────────────── */}
+      <div className="flex flex-1 flex-col p-5">
+        {/* Top row: category pill + price tier */}
+        <div className="flex items-start justify-between gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-pill bg-[var(--cat-bg)] px-2.5 py-1 text-[0.7rem] font-bold uppercase tracking-[0.1em] text-[var(--cat-primary)]">
             <CategoryIcon category={vendor.category} />
             {categoryLabel}
           </span>
-
-          <h3 className="mt-2 font-display text-[1.35rem] font-semibold leading-tight text-charcoal">
-            <Link
-              href={href}
-              className="rounded-sm transition-colors after:absolute after:inset-0 after:content-[''] hover:text-[var(--cat-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
+          {priceTier && (
+            <span
+              className="rounded-pill px-2.5 py-1 text-[0.78rem] font-bold"
+              style={priceTier.style}
+              title={`${vendor.priceTier} price tier`}
             >
-              {vendor.name}
-            </Link>
-          </h3>
-
-          {cityRegion && (
-            <div className="mt-1 text-xs text-text-muted">{cityRegion}</div>
+              {priceTier.label}
+            </span>
           )}
         </div>
 
-        {priceTier && (
-          <span
-            className="rounded-pill px-2.5 py-1 text-[0.78rem] font-bold"
-            style={priceTier.style}
-            title={`${vendor.priceTier} price tier`}
+        <h3 className="mt-2 font-display text-[1.3rem] font-semibold leading-tight text-charcoal transition-colors duration-300 group-hover:text-[var(--cat-primary)]">
+          <Link
+            href={href}
+            className="rounded-sm transition-colors after:absolute after:inset-0 after:content-[''] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
           >
-            {priceTier.label}
-          </span>
+            {vendor.name}
+          </Link>
+        </h3>
+
+        {cityRegion && (
+          <div className="mt-1 text-xs text-text-muted">{cityRegion}</div>
         )}
-      </div>
 
-      {vendor.description && (
-        <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-text-mid">
-          {vendor.description}
-        </p>
-      )}
+        {vendor.description && (
+          <p className="mt-3 line-clamp-2 flex-1 text-sm leading-relaxed text-text-mid">
+            {vendor.description}
+          </p>
+        )}
 
-      {distanceLabel && (
-        <div className="mt-3 inline-flex items-center gap-1 rounded-pill bg-bg-soft px-2 py-0.5 text-[0.65rem] font-medium text-text-mid">
-          <svg aria-hidden viewBox="0 0 24 24" className="h-2.5 w-2.5 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-            <circle cx="12" cy="10" r="3" />
-          </svg>
-          {distanceLabel}
-        </div>
-      )}
-
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border-light pt-3">
-        <div className="flex items-center gap-2">
-          {ratingStr ? (
-            <>
-              <span className="text-sm leading-none tracking-wider text-gold">
-                {"★".repeat(Math.round(Number(ratingStr)))}
-                <span className="text-border">
-                  {"★".repeat(5 - Math.round(Number(ratingStr)))}
+        {/* Footer row: rating + animated View CTA */}
+        <div className="mt-4 flex items-center justify-between gap-3 border-t border-border-light pt-3">
+          <div className="flex items-center gap-2">
+            {ratingStr ? (
+              <>
+                <span className="text-sm leading-none tracking-wider text-gold">
+                  {"★".repeat(Math.round(Number(ratingStr)))}
+                  <span className="text-border">
+                    {"★".repeat(5 - Math.round(Number(ratingStr)))}
+                  </span>
                 </span>
-              </span>
-              <span className="text-xs text-text-mid">
-                {ratingStr}
-                {vendor.reviewCount != null && (
-                  <span className="text-text-muted"> ({vendor.reviewCount})</span>
-                )}
-              </span>
-            </>
-          ) : (
-            <span className="text-xs text-text-muted">No reviews yet</span>
-          )}
+                <span className="text-xs text-text-mid">
+                  {ratingStr}
+                  {vendor.reviewCount != null && (
+                    <span className="text-text-muted"> ({vendor.reviewCount})</span>
+                  )}
+                </span>
+              </>
+            ) : (
+              <span className="text-xs text-text-muted">No reviews yet</span>
+            )}
+          </div>
+          <span className="relative z-[1] inline-flex items-center gap-1 text-xs font-bold tracking-[0.04em] text-[var(--cat-primary)]">
+            View
+            <ArrowRightIcon />
+          </span>
         </div>
-        <span className="relative z-[1] inline-flex items-center gap-1 text-xs font-bold tracking-[0.04em] text-[var(--cat-primary)]">
-          View
-          <ArrowRightIcon />
-        </span>
       </div>
     </article>
   );
 }
 
-/* Inline ArrowRight icon — replaces the static "→" character in both
- * VendorCard variants. Translates 4px right on the parent card's
- * group-hover state, paired with the photo's group-hover scale to
- * give the card a single coordinated "active" feel. Stroke style
- * matches lucide-react so the icon reads consistent with the rest
- * of the directory's iconography. */
+/* Inline ArrowRight icon — replaces the static "→" character. Slides
+ * 4px right on the parent card's group-hover state, paired with the
+ * photo zoom + card lift to give one coordinated "active" feel.
+ * Stroke style matches lucide-react so the icon reads consistent
+ * with the rest of the directory. */
 function ArrowRightIcon() {
   return (
     <svg
