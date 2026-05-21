@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Route } from "next";
+import { NewsletterSignup } from "@/components/ui/NewsletterSignup";
 
 type FooterLink = { label: string; href: Route };
 
@@ -72,6 +73,34 @@ function FooterColumn({ heading, links }: { heading: string; links: FooterLink[]
 export function Footer() {
   return (
     <footer style={{ background: "#2C2C2A" }}>
+      {/* Newsletter band — full width, above the link grid. Dark
+       * variant of the form so it reads on the charcoal footer. */}
+      <div
+        style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}
+        className="bg-[#2C2C2A]"
+      >
+        <div className="mx-auto grid max-w-[1280px] items-center gap-6 px-6 py-10 md:grid-cols-[1fr_auto] md:gap-10">
+          <div>
+            <p
+              className="font-display italic leading-snug text-white"
+              style={{ fontSize: "1.1rem" }}
+            >
+              Ontario wedding planning, in your inbox.
+            </p>
+            <p
+              className="mt-1 leading-relaxed"
+              style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.55)" }}
+            >
+              One short edition every Sunday — regional venue picks, vendor
+              pricing, and the planning tips couples actually use.
+            </p>
+          </div>
+          <div className="md:min-w-[420px]">
+            <NewsletterSignup variant="inline" />
+          </div>
+        </div>
+      </div>
+
       <div className="mx-auto max-w-[1280px] px-6 py-16">
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4 lg:gap-8">
           {/* Col 1 — Brand */}

@@ -4,6 +4,7 @@ import { listBlogPosts, type BlogPost } from "@/lib/blog";
 import { listDbBlogPosts, type DbBlogPost, DB_BLOG_FALLBACK_HERO } from "@/lib/blog-agent/db-posts";
 import { BreadcrumbSchema } from "@/components/seo/SchemaInjector";
 import { BlogIndexClient } from "@/components/blog/BlogIndexClient";
+import { NewsletterSignup } from "@/components/ui/NewsletterSignup";
 
 export const metadata: Metadata = {
   title: "Ontario Wedding Blog | Venue Guides & Vendor Pricing 2026",
@@ -89,6 +90,12 @@ export default async function BlogIndexPage() {
           </header>
 
           <BlogIndexClient posts={posts} />
+
+          {/* Newsletter — mounts below the post grid so readers
+            * who scrolled through the index see the offer in context. */}
+          <div className="mx-auto mt-16 max-w-[820px]">
+            <NewsletterSignup variant="card" />
+          </div>
         </div>
       </main>
     </>

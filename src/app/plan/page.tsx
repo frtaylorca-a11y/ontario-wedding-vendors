@@ -8,6 +8,7 @@ import { venues, weddingPlans } from "@/lib/schema";
 import { readPlanSessionId } from "@/lib/session";
 import { PlannerDashboard } from "@/components/plan/PlannerDashboard";
 import { PlannerTabs } from "@/components/plan/PlannerTabs";
+import { NewsletterSignup } from "@/components/ui/NewsletterSignup";
 import type { BudgetCategoryStates, PlanState } from "@/lib/plan-state";
 
 export const dynamic = "force-dynamic";
@@ -107,6 +108,18 @@ export default async function PlanPage() {
           initialPlan={initialPlan}
           totalVenueCount={(await getSiteStats().catch(() => null))?.venueCount}
         />
+
+        {/* Newsletter — appears below the dashboard. Region is passed
+          * through when the couple has set one so the future digest
+          * pipeline can segment. */}
+        <div className="mx-auto mt-12 max-w-[640px]">
+          <NewsletterSignup
+            variant="card"
+            region={initialPlan?.region ?? undefined}
+            heading="Get planning tips in your inbox"
+            subheading="One Sunday email with Ontario venue picks, vendor pricing benchmarks, and planning tips for the next 6 months."
+          />
+        </div>
       </div>
     </main>
   );
