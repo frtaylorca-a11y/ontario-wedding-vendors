@@ -304,28 +304,41 @@ const InteractiveBentoGallery: React.FC<InteractiveBentoGalleryProps> = ({ media
     const [items, setItems] = useState(mediaItems);
     const [isDragging, setIsDragging] = useState(false);
 
+    /* Caller can pass empty strings to suppress the built-in header
+     * — they're typically rendering their own heading outside the
+     * component (matches the project's Cormorant Garamond tokens
+     * rather than the gallery's default gradient). Without this gate
+     * an empty <h1> still adds ~2rem of vertical space above the grid. */
+    const showHeader = !!(title || description);
+
     return (
-        <div className="container mx-auto px-4 py-8 max-w-4xl">
-            <div className="mb-8 text-center">
-                <motion.h1
-                    className="text-2xl sm:text-3xl md:text-4xl font-bold bg-clip-text text-transparent
-                             bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900
-                             dark:from-white dark:via-gray-200 dark:to-white"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                >
-                    {title}
-                </motion.h1>
-                <motion.p
-                    className="mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-400"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.1 }}
-                >
-                    {description}
-                </motion.p>
-            </div>
+        <div className={`container mx-auto px-4 max-w-4xl ${showHeader ? "py-8" : "pb-8"}`}>
+            {showHeader && (
+                <div className="mb-8 text-center">
+                    {title && (
+                        <motion.h1
+                            className="text-2xl sm:text-3xl md:text-4xl font-bold bg-clip-text text-transparent
+                                     bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900
+                                     dark:from-white dark:via-gray-200 dark:to-white"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5 }}
+                        >
+                            {title}
+                        </motion.h1>
+                    )}
+                    {description && (
+                        <motion.p
+                            className="mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-400"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.5, delay: 0.1 }}
+                        >
+                            {description}
+                        </motion.p>
+                    )}
+                </div>
+            )}
             <AnimatePresence mode="wait">
                 {selectedItem ? (
                     <GalleryModal
