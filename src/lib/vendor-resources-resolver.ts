@@ -6,7 +6,7 @@
  * the Planning Resources cards. If neither slug resolves we hide the card
  * for that category rather than ship a broken link.
  */
-import { eq, sql } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { blogPosts } from "@/lib/schema";
 import { BLOG_POSTS } from "@/lib/blog";
@@ -31,7 +31,7 @@ async function firstExistingSlug(candidates: string[]): Promise<string | null> {
   const rows = await db
     .select({ slug: blogPosts.slug })
     .from(blogPosts)
-    .where(sql`${blogPosts.slug} = ANY(${candidates}) AND ${blogPosts.isPublished} = TRUE`);
+    .where(and(inArray(blogPosts.slug, candidates), eq(blogPosts.isPublished, true)));
   if (rows.length === 0) return null;
   /* Preserve candidate ORDER — pick the first candidate that survived. */
   const dbSet = new Set(rows.map((r) => r.slug));

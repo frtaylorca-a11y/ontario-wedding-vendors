@@ -20,7 +20,7 @@
  *   npx tsx scripts/hide-social-only-websites.ts --confirm  # apply
  */
 import "dotenv/config";
-import { and, eq, isNotNull, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { db } from "../src/lib/db";
 import { vendors } from "../src/lib/schema";
 import { isSocialOnlyUrl } from "../src/lib/social-hosts";
@@ -101,7 +101,12 @@ async function main() {
   /* Apply. Two separate UPDATE statements rather than a CASE expression
    * so the per-bucket counts in the log line up with the actual writes. */
 
-  /* Bucket 1 — keep visible. Strip URL + flag for re-search. */
+  /* Bucket 1 — keep visible. Strip URL + flag for re-search.
+   *
+   * Use Drizzle's inArray() helper rather than sql`= ANY(${ids})`.
+   * The latter shapes the JS array through Neon's HTTP adapter as a
+   * JSON array, which the Postgres planner doesn't recognise as an
+   * array literal — "op ANY/ALL (array) requires array on right side". */
   const visibleIds = candidates.filter((c) => classify(c) === "keep-visible").map((c) => c.id);
   if (visibleIds.length > 0) {
     await db
@@ -111,7 +116,7 @@ async function main() {
         needsWebsiteSearch: true,
         updatedAt:          new Date(),
       })
-      .where(sql`${vendors.id} = ANY(${visibleIds})`);
+      .where(inArray(vendors.id, visibleIds));
   }
 
   /* Bucket 2 — hide. */
@@ -126,7 +131,7 @@ async function main() {
         needsWebsiteSearch: true,
         updatedAt:          new Date(),
       })
-      .where(sql`${vendors.id} = ANY(${hiddenIds})`);
+      .where(inArray(vendors.id, hiddenIds));
   }
 
   console.log(`\nApplied · ${visibleIds.length} kept visible, ${hiddenIds.length} hidden.`);

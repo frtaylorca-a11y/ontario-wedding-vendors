@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { desc, gte, count, eq, and, sql } from "drizzle-orm";
+import { desc, gte, count, eq, and, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { blogPosts, blogScoutLog, contentDistributionLog } from "@/lib/schema";
 import { renderDailySummaryHtml, sendBrevoEmail } from "@/lib/blog-agent/email";
@@ -60,7 +60,7 @@ export async function GET(request: Request) {
       .where(
         and(
           eq(contentDistributionLog.status, "published"),
-          sql`${contentDistributionLog.blogPostId} = ANY(${todayPostIds})`,
+          inArray(contentDistributionLog.blogPostId, todayPostIds),
         ),
       );
     platformsPublished = Array.from(new Set(rows.map((r) => r.platform)));

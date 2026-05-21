@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { and, asc, desc, eq, getTableColumns, gte, ilike, isNotNull, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, gte, ilike, inArray, isNotNull, ne, or, sql } from "drizzle-orm";
 import { db } from "./db";
 import { venues, vendors, vendorRelationships } from "./schema";
 import type { Venue, Vendor } from "./schema";
@@ -581,7 +581,7 @@ export async function getVendorsBySlugs(slugs: string[]): Promise<Vendor[]> {
     .from(vendors)
     .where(
       and(
-        sql`${vendors.slug} = ANY(${slugs})`,
+        inArray(vendors.slug, slugs),
         or(eq(vendors.isHidden, false), sql`${vendors.isHidden} is null`)!,
       ),
     );
@@ -639,7 +639,7 @@ export async function getNearbyVendors(opts: {
   ];
   if (opts.region) conditions.push(eq(vendors.region, opts.region));
   if (opts.categories && opts.categories.length > 0) {
-    conditions.push(sql`${vendors.category} = ANY(${opts.categories})`);
+    conditions.push(inArray(vendors.category, opts.categories));
   }
   return db
     .select()

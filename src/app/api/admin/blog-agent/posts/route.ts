@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { desc, eq, sql } from "drizzle-orm";
+import { desc, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { blogPosts, contentDistributionLog } from "@/lib/schema";
 import { isAdminAuthorized } from "@/lib/admin-auth";
@@ -40,7 +40,7 @@ export async function GET(request: Request) {
         status:     contentDistributionLog.status,
       })
       .from(contentDistributionLog)
-      .where(sql`${contentDistributionLog.blogPostId} = ANY(${ids})`);
+      .where(inArray(contentDistributionLog.blogPostId, ids));
     for (const d of dist) {
       const pid = d.blogPostId;
       if (pid == null) continue;
