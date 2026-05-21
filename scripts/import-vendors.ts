@@ -34,6 +34,7 @@ import { basename, join, resolve } from "node:path";
 import { db } from "../src/lib/db";
 import { vendors, type NewVendor } from "../src/lib/schema";
 import { isSocialOnlyUrl } from "../src/lib/social-hosts";
+import { verdictFor as nameCategoryVerdict } from "./validate-vendor-names";
 
 const DEFAULT_DIR =
   "C:\\Users\\rtayl\\OneDrive\\Desktop\\ontario-venues-scraper\\data\\vendors";
@@ -463,6 +464,23 @@ async function main() {
         else                       { fileStats.updated++;  catStats.updated++;  total.updated++; }
         /* Mark Pic Booth as processed only on a successful write */
         if (isPicBoothName(row.name)) picBoothProcessed = true;
+
+        /* Name-category mismatch warning. Doesn't block the import or
+         * change the row — just logs the suspicion so operators can
+         * eyeball the queue, and to make the import + post-import
+         * validate-vendor-names sweep produce consistent output. */
+        if (row.category) {
+          const verdict = nameCategoryVerdict(row.name, row.category);
+          if (verdict.kind === "high-mismatch") {
+            console.log(
+              `    ⚠ NAME MISMATCH (HIGH): "${row.name}" imported as ${row.category} but name suggests ${verdict.detected.join(", ")}`,
+            );
+          } else if (verdict.kind === "medium-mismatch") {
+            console.log(
+              `    ⚠ NAME MISMATCH (MED):  "${row.name}" imported as ${row.category} — name signals ${verdict.detected.join(", ")} (ambiguous, no auto-hide)`,
+            );
+          }
+        }
       } catch (err) {
         fileStats.errors++; catStats.errors++; total.errors++;
         console.error(`    ${row.name} (${row.placeId}): ${err instanceof Error ? err.message : err}`);
