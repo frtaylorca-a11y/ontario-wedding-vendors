@@ -693,9 +693,22 @@ export const blogAgentSettings = pgTable("blog_agent_settings", {
   id:                serial("id").primaryKey(),
   autoPublish:       boolean("auto_publish").default(false),
   dailyRunEnabled:   boolean("daily_run_enabled").default(true),
+  /* Legacy bounds — kept for the JSON API contract, superseded by the
+   * smart targets below. Generator uses minWordCount as a floor. */
   minWordCount:      integer("min_word_count").default(700),
   maxWordCount:      integer("max_word_count").default(900),
   targetRegions:     jsonb("target_regions"),  /* string[] */
+  /* Addendum A — smart length targets by topic type. */
+  wordCountPillar:   integer("word_count_pillar").default(2200),
+  wordCountStandard: integer("word_count_standard").default(1700),
+  wordCountLocal:    integer("word_count_local").default(1000),
+  /* Addendum B — 3-then-2 cadence. While total published < launchBurstLimit
+   * the agent runs 3 posts/day; after that it falls back to 2/day. */
+  launchBurstLimit:  integer("launch_burst_limit").default(90),
+  /* Addendum D — cluster mode lets the operator force the scout into
+   * a single topical lane for faster authority. */
+  clusterMode:       boolean("cluster_mode").default(false),
+  currentCluster:    varchar("current_cluster", { length: 50 }),
   updatedAt:         timestamp("updated_at").defaultNow(),
 });
 

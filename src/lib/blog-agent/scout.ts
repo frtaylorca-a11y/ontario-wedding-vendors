@@ -213,10 +213,13 @@ export async function runScout(): Promise<ScoutItem[]> {
 
 /* Pick a topic with a run-of-day bias.
  * Morning: prioritize cost + how-to.
- * Afternoon: prioritize venue + inspiration. */
+ * Afternoon: prioritize venue + inspiration.
+ * Evening (first 90 posts only): local city + vendor-specific posts. */
+const CITY_VENDOR_RE = /\b(niagara|toronto|gta|hamilton|burlington|oakville|muskoka|notl)\b.*\b(photograph|dj|florist|venue|caterer|cake|hair|makeup|planner|photo booth|limo|barn|winery|estate)\b/i;
+
 export function pickTopic(
   candidates: ScoutItem[],
-  run: "morning" | "afternoon",
+  run: "morning" | "afternoon" | "evening",
 ): ScoutItem | null {
   if (candidates.length === 0) return null;
 
@@ -228,9 +231,12 @@ export function pickTopic(
       if (run === "morning") {
         if (COST_RE.test(c.title))  adj += 3;
         if (HOWTO_RE.test(c.title)) adj += 2;
-      } else {
+      } else if (run === "afternoon") {
         if (VENUE_RE.test(c.title)) adj += 3;
         if (TREND_RE.test(c.title)) adj += 2;
+      } else {
+        /* Evening — bias toward (city × vendor) combos. */
+        if (CITY_VENDOR_RE.test(c.title)) adj += 4;
       }
       return { c, adj };
     })

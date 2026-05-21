@@ -33,6 +33,10 @@ export type BlogGenerateInput = {
    * to generate a venue-focused or topic-focused post. */
   category:          PricingCategory | "venue" | null;
   internalLinkCount: number;  /* defaults to 2 */
+  /* Optional length target (Addendum A). When set, the generator
+   * instructs Claude to write at least this many words and pushes
+   * structure (H2 every 300-400 words, key-takeaways section). */
+  targetWordCount?:  number;
 };
 
 export type InternalLink = {
@@ -353,11 +357,23 @@ function buildUserPrompt({
     .map((l, i) => `  ${i + 1}. Anchor text: "${l.text}"  →  URL: ${l.url}  (${l.kind})`)
     .join("\n");
 
+  const wordLine = input.targetWordCount
+    ? [
+        `Length target:   ${input.targetWordCount} words MINIMUM. Do not write shorter.`,
+        "Structure rules:",
+        "  - H2 subheading every 300-400 words.",
+        "  - Short paragraphs (3-4 sentences max).",
+        "  - Bullet points for any list of 3+ items.",
+        "  - End the post with a ## Key Takeaways section (5-7 bullet points) before any final CTA paragraph.",
+      ].join("\n")
+    : "";
+
   return [
     `Topic:           ${input.topic}`,
     `Target keyword:  ${input.targetKeyword}`,
     `Target region:   ${labelRegion(input.targetRegion)}`,
     input.category ? `Vendor focus:    ${input.category}` : "Vendor focus:    (general — no single category)",
+    wordLine,
     "",
     "Competitor post structure (their H2 headings — for topic-coverage signal only, do NOT summarize):",
     competitorHeadings.length > 0
@@ -478,9 +494,16 @@ export async function generateBlogPost(input: BlogGenerateInput): Promise<BlogDr
     internalLinks,
   });
 
+  /* Longer posts need a higher token ceiling — 2200-word pillar posts
+   * easily blow past the 4K default. Allocate ~2× the target word
+   * count in tokens to leave room for JSON envelope + markdown. */
+  const maxTokens = input.targetWordCount
+    ? Math.min(16_000, Math.max(4_000, input.targetWordCount * 2))
+    : 4_000;
+
   const resp = (await client.messages.create({
     model:      "claude-sonnet-4-6",
-    max_tokens: 4_000,
+    max_tokens: maxTokens,
     system:     SYSTEM_PROMPT,
     messages:   [{ role: "user", content: userPrompt }],
   })) as unknown as AnthropicMessageResp;

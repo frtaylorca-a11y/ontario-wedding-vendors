@@ -7,7 +7,7 @@
  * and refusing to overwrite an existing slug. Re-running the morning
  * pipeline produces a different topic, not a duplicate.
  */
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, gte, count, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { blogPosts, blogAgentSettings } from "@/lib/schema";
 import { BLOG_POSTS } from "@/lib/blog";
@@ -40,10 +40,11 @@ const CATEGORY_RE = [
 ];
 
 /* Infer the BlogGenerateInput from a scouted title + run-of-day. */
-function inferGenerateInput(item: ScoutItem, run: "morning" | "afternoon"): BlogGenerateInput {
+function inferGenerateInput(item: ScoutItem, run: "morning" | "afternoon" | "evening"): BlogGenerateInput {
   const t = item.title;
-  /* Region — bias by the title; default niagara on morning, all on afternoon. */
-  let targetRegion: BlogGenerateInput["targetRegion"] = run === "morning" ? "niagara" : "all";
+  /* Region — bias by the title; default niagara on morning, all on
+   * afternoon, niagara again on evening (local-bias slot). */
+  let targetRegion: BlogGenerateInput["targetRegion"] = run === "afternoon" ? "all" : "niagara";
   if (/\bniagara|notl|st\.?\s*catharines\b/i.test(t)) targetRegion = "niagara";
   else if (/\btoronto|gta\b/i.test(t))                 targetRegion = "gta";
   else if (/\bhamilton|burlington|oakville\b/i.test(t)) targetRegion = "hamilton";
@@ -79,13 +80,21 @@ function buildKeyword(title: string, region: BlogGenerateInput["targetRegion"]):
 
 /* ─── Settings + cron gating ─────────────────────────────────────── */
 
-export async function getSettings(): Promise<{
-  autoPublish:     boolean;
-  dailyRunEnabled: boolean;
-  minWordCount:    number;
-  maxWordCount:    number;
-  targetRegions:   string[];
-}> {
+export type AgentSettings = {
+  autoPublish:       boolean;
+  dailyRunEnabled:   boolean;
+  minWordCount:      number;
+  maxWordCount:      number;
+  targetRegions:     string[];
+  wordCountPillar:   number;
+  wordCountStandard: number;
+  wordCountLocal:    number;
+  launchBurstLimit:  number;
+  clusterMode:       boolean;
+  currentCluster:    string | null;
+};
+
+export async function getSettings(): Promise<AgentSettings> {
   const [row] = await db
     .select()
     .from(blogAgentSettings)
@@ -96,15 +105,122 @@ export async function getSettings(): Promise<{
       autoPublish: false, dailyRunEnabled: true,
       minWordCount: 700, maxWordCount: 900,
       targetRegions: ["niagara", "gta", "hamilton"],
+      wordCountPillar: 2200, wordCountStandard: 1700, wordCountLocal: 1000,
+      launchBurstLimit: 90, clusterMode: false, currentCluster: null,
     };
   }
   return {
-    autoPublish:     row.autoPublish     ?? false,
-    dailyRunEnabled: row.dailyRunEnabled ?? true,
-    minWordCount:    row.minWordCount    ?? 700,
-    maxWordCount:    row.maxWordCount    ?? 900,
-    targetRegions:   Array.isArray(row.targetRegions) ? (row.targetRegions as string[]) : ["niagara"],
+    autoPublish:       row.autoPublish     ?? false,
+    dailyRunEnabled:   row.dailyRunEnabled ?? true,
+    minWordCount:      row.minWordCount    ?? 700,
+    maxWordCount:      row.maxWordCount    ?? 900,
+    targetRegions:     Array.isArray(row.targetRegions) ? (row.targetRegions as string[]) : ["niagara"],
+    wordCountPillar:   row.wordCountPillar   ?? 2200,
+    wordCountStandard: row.wordCountStandard ?? 1700,
+    wordCountLocal:    row.wordCountLocal    ?? 1000,
+    launchBurstLimit:  row.launchBurstLimit  ?? 90,
+    clusterMode:       row.clusterMode       ?? false,
+    currentCluster:    row.currentCluster    ?? null,
   };
+}
+
+/* ─── Daily cadence — Addendum B ─────────────────────────────────── */
+
+/* 3 posts/day until total published >= launchBurstLimit; 2/day after. */
+export async function maxDailyAllowed(settings: AgentSettings): Promise<number> {
+  const [{ value }] = await db
+    .select({ value: count() })
+    .from(blogPosts)
+    .where(eq(blogPosts.isPublished, true));
+  return Number(value) < settings.launchBurstLimit ? 3 : 2;
+}
+
+export async function countPostsToday(): Promise<number> {
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+  const [{ value }] = await db
+    .select({ value: count() })
+    .from(blogPosts)
+    .where(and(eq(blogPosts.isPublished, true), gte(blogPosts.publishedAt, startOfDay)));
+  return Number(value);
+}
+
+/* ─── Topic-length classification — Addendum A ───────────────────── */
+
+const PILLAR_RE = /\b(complete guide|ultimate|checklist|timeline|best venues|top \d+|everything you need|planning guide|comprehensive)\b/i;
+const STANDARD_RE = /\b(how to choose|how much does|cost of|questions to ask|tips for|what to look for|how to)\b/i;
+/* "Local/specific" — city + vendor combos: "wedding DJ Hamilton",
+ * "florist Niagara Falls". Detected when the title has BOTH a city
+ * marker AND a vendor-category word. */
+const CITY_RE = /\b(niagara|toronto|gta|hamilton|burlington|oakville|muskoka|notl|niagara-on-the-lake|st\.?\s*catharines|kitchener|waterloo|guelph|barrie|collingwood|ottawa|kingston|london|brantford)\b/i;
+const VENDOR_RE = /\b(photographer|videographer|dj|florist|caterer|officiant|hair|makeup|cake|limo|photo booth|planner|venue|barn|winery|estate)\b/i;
+
+export type LengthClass = "pillar" | "standard" | "local";
+
+export function classifyTopicLength(title: string): LengthClass {
+  if (PILLAR_RE.test(title))     return "pillar";
+  if (STANDARD_RE.test(title))   return "standard";
+  if (CITY_RE.test(title) && VENDOR_RE.test(title)) return "local";
+  return "standard";
+}
+
+export function targetWordCountFor(cls: LengthClass, settings: AgentSettings): number {
+  switch (cls) {
+    case "pillar":   return settings.wordCountPillar;
+    case "standard": return settings.wordCountStandard;
+    case "local":    return settings.wordCountLocal;
+  }
+}
+
+/* ─── Cluster matcher — Addendum D ───────────────────────────────── */
+
+/* Buckets: 'photography', 'venues', 'budget', 'planning', 'vendors',
+ * 'regional'. The match is regex-based and intentionally permissive
+ * — clusterMode is a topical bias, not a strict filter. */
+const CLUSTER_PATTERNS: Record<string, RegExp> = {
+  photography: /\b(photograph|videograph|engagement\s+photo)/i,
+  venues:      /\b(venue|barn|winery|estate|hotel|resort|hall|outdoor|garden|conservation)/i,
+  budget:      /\b(cost|price|pricing|budget|how much|cheap|affordable|expensive|save\s+money)/i,
+  planning:    /\b(plan|checklist|timeline|how to|guide|tips|questions|when to|red flag)/i,
+  vendors:     /\b(dj|florist|caterer|cake|hair|makeup|officiant|photo booth|limo|planner|coordinator|lighting|decor)/i,
+  regional:    /\b(niagara|toronto|gta|hamilton|burlington|oakville|muskoka|notl|st\.?\s*catharines|kitchener|waterloo|guelph|barrie|collingwood|ottawa|kingston|london)/i,
+};
+
+export function topicMatchesCluster(title: string, cluster: string): boolean {
+  const re = CLUSTER_PATTERNS[cluster.toLowerCase()];
+  if (!re) return true;  /* unknown cluster name — don't filter */
+  return re.test(title);
+}
+
+/* ─── Competitor depth check — Addendum A ────────────────────────── */
+
+/* Fetch the competitor URL and estimate word count from raw text.
+ * char_count / 5 is the common shorthand for word count. Returns
+ * 0 when we can't fetch (fail-open — caller uses class default). */
+export async function estimateCompetitorWordCount(url: string): Promise<number> {
+  if (!url) return 0;
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "user-agent":
+          "Mozilla/5.0 (compatible; OntarioWeddingVendorsBot/1.0; +https://ontarioweddingvendors.com)",
+        accept: "text/html,*/*;q=0.8",
+      },
+      signal: AbortSignal.timeout(12_000),
+    });
+    if (!res.ok) return 0;
+    const html = await res.text();
+    const text = html
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&[a-z]+;/gi, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    return Math.floor(text.length / 5);
+  } catch {
+    return 0;
+  }
 }
 
 /* ─── Existing-title dedupe (used by scout pre-filter too) ───────── */
@@ -139,10 +255,22 @@ export type DailyAgentResult = {
   };
 };
 
-export async function runDailyAgent(run: "morning" | "afternoon"): Promise<DailyAgentResult> {
+export async function runDailyAgent(run: "morning" | "afternoon" | "evening"): Promise<DailyAgentResult> {
   const settings = await getSettings();
   if (!settings.dailyRunEnabled) {
     return { ok: false, reason: "daily_run_enabled is false", autoPublished: false, scoutLogged: 0 };
+  }
+
+  /* Addendum B — cadence cap. */
+  const maxDaily   = await maxDailyAllowed(settings);
+  const todayCount = await countPostsToday();
+  if (todayCount >= maxDaily) {
+    return {
+      ok: false,
+      reason: `daily cap reached (${todayCount}/${maxDaily} posts published today)`,
+      autoPublished: false,
+      scoutLogged: 0,
+    };
   }
 
   /* 1. Scout. */
@@ -151,11 +279,20 @@ export async function runDailyAgent(run: "morning" | "afternoon"): Promise<Daily
     return { ok: false, reason: "scout found no usable topics", autoPublished: false, scoutLogged: 0 };
   }
 
+  /* Addendum D — cluster filter. When cluster_mode is on, restrict the
+   * candidate pool to topics that look like they belong to the active
+   * cluster. Falls back to the unfiltered pool if filtering would
+   * empty the pool. */
+  const clusterCandidates = settings.clusterMode && settings.currentCluster
+    ? candidates.filter((c) => topicMatchesCluster(c.title, settings.currentCluster!))
+    : candidates;
+  const workingPool = clusterCandidates.length > 0 ? clusterCandidates : candidates;
+
   /* 2. Pick — try the top candidate, then walk down the list if the
    *    generator fails (most commonly: competitor URL 403/timeout). */
   let lastError: string | null = null;
-  for (let i = 0; i < Math.min(candidates.length, 5); i++) {
-    const item = pickTopic(candidates.slice(i), run);
+  for (let i = 0; i < Math.min(workingPool.length, 5); i++) {
+    const item = pickTopic(workingPool.slice(i), run);
     if (!item) break;
 
     const input = inferGenerateInput(item, run);
@@ -163,6 +300,12 @@ export async function runDailyAgent(run: "morning" | "afternoon"): Promise<Daily
       lastError = "no competitor URL on candidate";
       continue;
     }
+
+    /* Addendum A — smart word count. Floor = max(typeTarget, competitor + 200). */
+    const lengthClass     = classifyTopicLength(item.title);
+    const classTarget     = targetWordCountFor(lengthClass, settings);
+    const competitorWords = await estimateCompetitorWordCount(input.competitorUrl);
+    input.targetWordCount = Math.max(classTarget, competitorWords + 200);
 
     try {
       const draft = await generateBlogPost(input);

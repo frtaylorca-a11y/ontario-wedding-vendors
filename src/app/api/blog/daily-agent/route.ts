@@ -31,9 +31,9 @@ async function handle(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const url = new URL(request.url);
-  const run = (url.searchParams.get("run") ?? "morning") as "morning" | "afternoon";
-  if (run !== "morning" && run !== "afternoon") {
-    return NextResponse.json({ error: "run must be morning or afternoon" }, { status: 400 });
+  const run = (url.searchParams.get("run") ?? "morning") as "morning" | "afternoon" | "evening";
+  if (run !== "morning" && run !== "afternoon" && run !== "evening") {
+    return NextResponse.json({ error: "run must be morning, afternoon, or evening" }, { status: 400 });
   }
   const result = await runDailyAgent(run);
   return NextResponse.json(result, { status: result.ok ? 200 : 202 });

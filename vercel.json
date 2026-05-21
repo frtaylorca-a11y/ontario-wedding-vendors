@@ -2,18 +2,27 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
     {
+      "comment": "Morning post (6am ET) — cost + how-to priority",
       "path": "/api/blog/daily-agent?run=morning",
       "schedule": "0 11 * * *"
     },
     {
+      "comment": "Afternoon post (11am ET) — venue + inspiration priority",
       "path": "/api/blog/daily-agent?run=afternoon",
+      "schedule": "0 16 * * *"
+    },
+    {
+      "comment": "Evening post (3pm ET) — runs only when daily cap allows (first 90 posts)",
+      "path": "/api/blog/daily-agent?run=evening",
       "schedule": "0 20 * * *"
     },
     {
+      "comment": "Daily summary email (5pm ET)",
       "path": "/api/blog/daily-summary",
       "schedule": "0 22 * * *"
     },
     {
+      "comment": "Sunday weekly digest (9am ET)",
       "path": "/api/blog/weekly-digest",
       "schedule": "0 14 * * 0"
     }
