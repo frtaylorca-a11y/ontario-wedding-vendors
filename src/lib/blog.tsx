@@ -2475,3 +2475,50 @@ export function listBlogPosts(): BlogPost[] {
     (a, b) => b.publishedAt.localeCompare(a.publishedAt),
   );
 }
+
+/* Three category groups used by the blog index filter chips and by
+ * related-post fall-back ranking. The post objects keep their
+ * specific category strings ("Niagara guide", "Vendor pricing", etc.)
+ * for display — this is the bucket abstraction over them. */
+export type CategoryGroup = "venues" | "cost" | "regional";
+
+export const CATEGORY_GROUP_LABELS: Record<CategoryGroup, string> = {
+  venues:   "Venues",
+  cost:     "Cost Guides",
+  regional: "Regional Guides",
+};
+
+export function getCategoryGroup(category: string): CategoryGroup {
+  const c = category.toLowerCase();
+  if (c.includes("vendor pricing") || c.includes("cost"))  return "cost";
+  if (c.includes("venue guide"))                           return "venues";
+  /* Everything else is a regional guide (Niagara, Muskoka, Toronto,
+   * Cottage country, Golden Horseshoe, etc.) */
+  return "regional";
+}
+
+/* Picks up to N posts related to the given slug. Ranking:
+ *   1. exact-category match, most-recent first
+ *   2. same category-group match, most-recent first
+ *   3. most-recent posts overall
+ * Always returns up to `limit`, never includes the current post. */
+export function getRelatedPosts(slug: string, limit = 3): BlogPost[] {
+  const current = getBlogPost(slug);
+  if (!current) return [];
+
+  const all = listBlogPosts().filter((p) => p.slug !== slug);
+  const sameCategory = all.filter((p) => p.category === current.category);
+  const currentGroup = getCategoryGroup(current.category);
+  const sameGroup    = all.filter(
+    (p) => p.category !== current.category && getCategoryGroup(p.category) === currentGroup,
+  );
+  const ordered: BlogPost[] = [];
+  const seen = new Set<string>();
+  for (const p of [...sameCategory, ...sameGroup, ...all]) {
+    if (seen.has(p.slug)) continue;
+    seen.add(p.slug);
+    ordered.push(p);
+    if (ordered.length >= limit) break;
+  }
+  return ordered;
+}

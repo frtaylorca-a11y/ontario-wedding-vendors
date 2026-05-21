@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Claim your wedding business listing | Ontario Wedding Vendors",
   description:
-    "Claim your free wedding venue or vendor listing on Ontario's most complete wedding directory. See your stats, control your profile, and receive quote requests from couples.",
+    "Claim your free Ontario wedding venue or vendor listing. See profile stats, control your details, and receive direct quote requests from engaged couples.",
   alternates: { canonical: "/claim-listing" },
 };
 

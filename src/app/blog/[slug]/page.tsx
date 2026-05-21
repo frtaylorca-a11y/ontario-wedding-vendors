@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BLOG_POSTS, getBlogPost } from "@/lib/blog";
 import { BreadcrumbSchema } from "@/components/seo/SchemaInjector";
+import { RelatedPosts } from "@/components/blog/RelatedPosts";
 
 type Params = Promise<{ slug: string }>;
 
@@ -120,6 +121,8 @@ export default async function BlogPostPage({ params }: { params: Params }) {
           <div className="blog-prose">
             {post.body}
           </div>
+
+          <RelatedPosts currentSlug={slug} />
 
           <footer className="mt-12 border-t border-border-light pt-6">
             <Link

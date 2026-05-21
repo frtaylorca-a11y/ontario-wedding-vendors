@@ -491,3 +491,20 @@ export async function getAllVenueSlugs(): Promise<{ slug: string; updatedAt: Dat
     .where(gte(venues.weddingReadinessScore, 50))
     .orderBy(asc(venues.slug));
 }
+
+/* For sitemap generation — every open vendor with a category gets its
+ * own /vendors/[category]/[slug] page, so each one is a unique URL
+ * worth surfacing to search engines. Skips google_closed='yes'. */
+export async function getAllVendorSlugs(): Promise<
+  { slug: string; category: string; updatedAt: Date | null }[]
+> {
+  return db
+    .select({
+      slug:      vendors.slug,
+      category:  vendors.category,
+      updatedAt: vendors.updatedAt,
+    })
+    .from(vendors)
+    .where(or(eq(vendors.googleClosed, "no"), sql`${vendors.googleClosed} is null`)!)
+    .orderBy(asc(vendors.slug));
+}
