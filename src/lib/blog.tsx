@@ -37,7 +37,7 @@ export const BLOG_POSTS: BlogPost[] = [
     excerpt:
       "From vineyard estates in Niagara-on-the-Lake to riverside resorts in Niagara Falls, here are the venues couples are booking in 2026 — with capacity, catering style, and what to expect at each.",
     category: "Niagara guide",
-    publishedAt: "2026-05-20",
+    publishedAt: "2026-05-12",
     readMinutes: 8,
     heroImage: "/images/hero-niagara-vineyard.png",
     metaDescription:
@@ -181,7 +181,7 @@ export const BLOG_POSTS: BlogPost[] = [
     excerpt:
       "Ontario wedding photographers run $2,200–$6,500 for a full day in 2026. Here's what each tier actually includes — and the three line items that swing pricing most.",
     category: "Vendor pricing",
-    publishedAt: "2026-05-18",
+    publishedAt: "2026-01-27",
     readMinutes: 6,
     heroImage: "/images/vendor-photographer.png",
     metaDescription:
@@ -334,7 +334,7 @@ export const BLOG_POSTS: BlogPost[] = [
     excerpt:
       "Niagara-on-the-Lake punches well above its weight for weddings — historic estates, Lake Ontario shoreline, and the highest concentration of wineries in Canada. Here's the working list.",
     category: "Niagara guide",
-    publishedAt: "2026-05-15",
+    publishedAt: "2025-12-09",
     readMinutes: 7,
     heroImage: "/images/hero-niagara-vineyard.png",
     metaDescription:
@@ -476,7 +476,7 @@ export const BLOG_POSTS: BlogPost[] = [
     excerpt:
       "Falls-view ballrooms, riverside resorts, and convention-scale receptions — what to expect when you book a wedding in Niagara Falls itself.",
     category: "Niagara guide",
-    publishedAt: "2026-05-19",
+    publishedAt: "2026-04-21",
     readMinutes: 7,
     heroImage: "/images/venue-hotel.png",
     metaDescription:
@@ -622,7 +622,7 @@ export const BLOG_POSTS: BlogPost[] = [
     excerpt:
       "Lakefront resorts, restored boathouses, and forest clearings — Muskoka weddings cost more than Niagara and book 18 months out. Here's why couples still pick it.",
     category: "Cottage country",
-    publishedAt: "2026-05-17",
+    publishedAt: "2026-02-10",
     readMinutes: 8,
     heroImage: "/images/venue-outdoor.png",
     metaDescription:
@@ -774,7 +774,7 @@ export const BLOG_POSTS: BlogPost[] = [
     excerpt:
       "Escarpment estates, conservation-area ceremony sites, and downtown Hamilton industrial loft spaces — Golden Horseshoe weddings cost 25–35% less than Toronto for comparable scale.",
     category: "Golden Horseshoe",
-    publishedAt: "2026-05-16",
+    publishedAt: "2026-01-13",
     readMinutes: 7,
     heroImage: "/images/venue-estate.png",
     metaDescription:
@@ -913,7 +913,7 @@ export const BLOG_POSTS: BlogPost[] = [
     excerpt:
       "A wedding DJ in Ontario runs $1,200–$3,000 in 2026 for the standard 6-hour reception. Here's what each tier actually delivers and where the money goes.",
     category: "Vendor pricing",
-    publishedAt: "2026-05-14",
+    publishedAt: "2025-11-11",
     readMinutes: 5,
     heroImage: "/images/vendor-dj.png",
     metaDescription:
@@ -1074,7 +1074,7 @@ export const BLOG_POSTS: BlogPost[] = [
     excerpt:
       "Wedding florals run $1,500–$6,000 in Ontario for 2026. The three categories that drive 80% of the cost — and where to save without losing the look.",
     category: "Vendor pricing",
-    publishedAt: "2026-05-13",
+    publishedAt: "2025-10-13",
     readMinutes: 6,
     heroImage: "/images/vendor-florist.png",
     metaDescription:
@@ -1247,7 +1247,7 @@ export const BLOG_POSTS: BlogPost[] = [
     excerpt:
       "Ontario wedding videography runs $1,500–$9,000 in 2026. Here's what each tier actually delivers — and the three add-ons that quietly double the bill.",
     category: "Vendor pricing",
-    publishedAt: "2026-05-19",
+    publishedAt: "2026-03-31",
     readMinutes: 7,
     heroImage: "/images/vendor-videographer.png",
     metaDescription:
@@ -1399,7 +1399,7 @@ export const BLOG_POSTS: BlogPost[] = [
     excerpt:
       "Ravine, Two Sisters, Peller, Inniskillin — and the things every couple wishes someone had told them before booking a NOTL winery wedding.",
     category: "Niagara guide",
-    publishedAt: "2026-05-18",
+    publishedAt: "2026-02-24",
     readMinutes: 9,
     heroImage: "/images/venue-winery.png",
     metaDescription:
@@ -1541,7 +1541,7 @@ export const BLOG_POSTS: BlogPost[] = [
     excerpt:
       "Lakeside ceremonies, on-water portraits, weekend takeovers — here are the Muskoka resorts and lakefront venues couples are booking for 2026.",
     category: "Muskoka guide",
-    publishedAt: "2026-05-17",
+    publishedAt: "2026-03-10",
     readMinutes: 8,
     heroImage: "/images/region-muskoka.png",
     metaDescription:
@@ -1674,7 +1674,7 @@ export const BLOG_POSTS: BlogPost[] = [
     excerpt:
       "Conservation areas, farm properties, vineyards, golf clubs — where to host outside in Ontario, and the weather-contingency mistakes every couple wants to avoid.",
     category: "Venue guide",
-    publishedAt: "2026-05-16",
+    publishedAt: "2025-12-23",
     readMinutes: 8,
     heroImage: "/images/venue-outdoor.png",
     metaDescription:
@@ -1822,7 +1822,7 @@ export const BLOG_POSTS: BlogPost[] = [
     excerpt:
       "Catering is the biggest single line on most Ontario wedding budgets — here's a per-head breakdown, the four service styles, and the five fees couples forget to budget for.",
     category: "Vendor pricing",
-    publishedAt: "2026-05-15",
+    publishedAt: "2025-11-25",
     readMinutes: 8,
     heroImage: "/images/vendor-catering.png",
     metaDescription:
@@ -1991,7 +1991,7 @@ export const BLOG_POSTS: BlogPost[] = [
     excerpt:
       "Distilleries, rooftops, hotel ballrooms, waterfront — every category of Toronto-area venue, with capacity, price ranges, and the parking notes nobody wants to talk about.",
     category: "Toronto guide",
-    publishedAt: "2026-05-14",
+    publishedAt: "2025-10-28",
     readMinutes: 9,
     heroImage: "/images/region-toronto.png",
     metaDescription:
@@ -2142,7 +2142,7 @@ export const BLOG_POSTS: BlogPost[] = [
     excerpt:
       "Stretch limo, party bus, vintage Bentley, guest shuttle — Ontario wedding transportation costs from $600 to $3,000, and how to size the booking.",
     category: "Vendor pricing",
-    publishedAt: "2026-05-13",
+    publishedAt: "2025-09-29",
     readMinutes: 6,
     heroImage: "/images/vendor-limo.png",
     metaDescription:
@@ -2302,7 +2302,7 @@ export const BLOG_POSTS: BlogPost[] = [
     excerpt:
       "Heated barns, restored timber, working farms — the Ontario barn venues couples are booking in 2026, what&rsquo;s typically included, and the decorating decisions that carry the room.",
     category: "Venue guide",
-    publishedAt: "2026-05-12",
+    publishedAt: "2025-09-15",
     readMinutes: 8,
     heroImage: "/images/venue-barn.png",
     metaDescription:
