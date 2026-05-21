@@ -21,6 +21,8 @@ import InteractiveBentoGallery from "@/components/ui/interactive-bento-gallery";
 import { FaqAccordion, type FaqItem } from "@/components/ui/FaqAccordion";
 import { PlanningResources } from "@/components/ui/PlanningResources";
 import { resolveVendorResources } from "@/lib/vendor-resources-resolver";
+import { SocialPresence, FindThemOnline, type VendorSocial } from "@/components/ui/VendorSocialLinks";
+import { googleMapsUrl } from "@/lib/google-maps";
 import { ItemListSchema } from "@/components/seo/SchemaInjector";
 import { VENDOR_CATEGORIES, type VendorCategory } from "@/types";
 import { GoogleReviews } from "@/components/ui/GoogleReviews";
@@ -336,6 +338,20 @@ export default async function VendorPage({ params }: { params: Params }) {
   const priceLabel = vendor.priceTier ? (PRICE_TIER_LABEL[vendor.priceTier] ?? vendor.priceTier) : null;
   const igHandle = vendor.instagramHandle ? normalizeIgHandle(vendor.instagramHandle) : null;
 
+  /* Bundle the social fields for the SocialPresence + FindThemOnline
+   * components. Both render progressively — null/missing channels
+   * are skipped, the whole section hides when nothing is set. */
+  const social: VendorSocial = {
+    vendorName:      vendor.name,
+    instagramHandle: vendor.instagramHandle ?? null,
+    yelpUrl:         vendor.yelpUrl ?? null,
+    pinterestUrl:    vendor.pinterestUrl ?? null,
+    website:         vendor.website ?? null,
+    googleRating:    vendor.googleRating ?? null,
+    reviewCount:     vendor.reviewCount ?? null,
+  };
+  const gMapsUrl = googleMapsUrl(vendor.placeId);
+
   /* Breadcrumb now carries a city item between the category and the
    * vendor name when a city is on file. Routes through the city
    * landing page at /vendors/[category]/[city-slug]. */
@@ -582,8 +598,20 @@ export default async function VendorPage({ params }: { params: Params }) {
                 </p>
               )}
 
-              {/* Google reviews — hides when no place_id or no reviews */}
-              <GoogleReviews reviews={reviews} venueName={vendor.name} />
+              {/* Social presence pill row — IG / Yelp / Pinterest /
+                * Website. Only renders when at least one channel exists. */}
+              <SocialPresence social={social} />
+
+              {/* Google reviews. The component now falls back to a
+                * rating + count callout when no excerpts are cached,
+                * and hides entirely when neither is available. */}
+              <GoogleReviews
+                reviews={reviews}
+                venueName={vendor.name}
+                googleRating={vendor.googleRating ?? null}
+                reviewCount={vendor.reviewCount ?? null}
+                googleMapsUrl={gMapsUrl}
+              />
 
               {/* Venues this vendor works with */}
               {recommendingVenues.length > 0 && (
@@ -732,27 +760,58 @@ export default async function VendorPage({ params }: { params: Params }) {
                 </dl>
               </div>
 
-              {/* Claim this listing — only when not yet claimed */}
+              {/* Claim this listing — only when not yet claimed.
+               * Expanded panel with the bullet list per the spec; sits
+               * in the sidebar so it's persistently visible alongside
+               * the vendor details. */}
               {!vendor.claimed && (
                 <div className="mt-6 rounded-card border border-rose bg-rose-pale p-5">
                   <h3 className="font-display text-lg font-semibold text-charcoal">
                     Is this your business?
                   </h3>
-                  <p className="mt-1 text-sm text-text-mid">
-                    Claim your free listing to manage your profile and receive
-                    quote requests from couples.
+                  <p className="mt-2 text-sm text-text-mid">
+                    This profile was built from public information. Claim it free to:
                   </p>
+                  <ul className="mt-3 space-y-1.5 text-sm text-text-mid">
+                    <li className="flex items-start gap-2">
+                      <span className="mt-0.5 text-rose" aria-hidden>✓</span>
+                      Add your own photos
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="mt-0.5 text-rose" aria-hidden>✓</span>
+                      Update your description
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="mt-0.5 text-rose" aria-hidden>✓</span>
+                      Receive quote requests
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="mt-0.5 text-rose" aria-hidden>✓</span>
+                      See profile analytics
+                    </li>
+                  </ul>
                   <Link
                     href={`/claim-listing?business=${encodeURIComponent(vendor.name)}` as Route}
-                    className="mt-3 inline-flex items-center gap-1.5 rounded-pill bg-rose px-4 py-2 text-xs font-bold text-white shadow-[0_4px_14px_rgba(185,100,118,0.3)] transition-all hover:bg-rose-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
+                    className="mt-4 inline-flex items-center gap-1.5 rounded-pill bg-rose px-4 py-2 text-xs font-bold text-white shadow-[0_4px_14px_rgba(185,100,118,0.3)] transition-all hover:bg-rose-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
                   >
                     Claim this listing
                     <span aria-hidden>→</span>
                   </Link>
+                  <p className="mt-2 text-[0.7rem] text-text-muted">
+                    Free forever · Takes 2 minutes
+                  </p>
                 </div>
               )}
             </aside>
           </div>
+        </div>
+
+        {/* Find them online — full card grid. Only renders for vendors
+         * with NO traditional website but WITH one or more social
+         * channels (Instagram/Yelp/Pinterest). Acts as the substitute
+         * for the "Visit website" CTA when we don't have a website. */}
+        <div className="mx-auto mt-12 max-w-[1180px] px-6">
+          <FindThemOnline social={social} />
         </div>
 
         {/* Vendor FAQ — rendered when the vendor's own website had a
@@ -769,51 +828,89 @@ export default async function VendorPage({ params }: { params: Params }) {
           </div>
         )}
 
-        {/* Full-width "Ready to book…" CTA band — only renders when
-         * there's at least one actionable destination. Buttons are
-         * gated individually: Request a quote → mailto if email set;
-         * Visit website → vendor.website when present. Book a
-         * consultation is a future hook (no calendlyUrl column yet)
-         * and stays hidden until that field lands. */}
-        {(vendor.email || vendor.website) && (
-          <section
-            className="mt-16 px-6 py-14"
-            style={{ background: "var(--rose, #B96476)" }}
-          >
-            <div className="mx-auto max-w-[820px] text-center">
-              <h2
-                className="font-display text-3xl font-semibold leading-tight text-white md:text-4xl"
-                style={{ fontStyle: "italic" }}
+        {/* Full-width "Ready to book…" CTA band. The primary "Request a
+         * quote" button always renders — it routes through OWV's own
+         * quote flow regardless of what other channels the vendor has.
+         * Secondary buttons surface based on data available:
+         *   - Visit website     when vendor.website is set
+         *   - View on Instagram when vendor.instagramHandle is set
+         *   - Read Yelp reviews when vendor.yelpUrl is set
+         *   - Call [phone]      when vendor.phone is set
+         */}
+        <section
+          className="mt-16 px-6 py-14"
+          style={{ background: "var(--rose, #B96476)" }}
+        >
+          <div className="mx-auto max-w-[920px] text-center">
+            <h2
+              className="font-display text-3xl font-semibold leading-tight text-white md:text-4xl"
+              style={{ fontStyle: "italic" }}
+            >
+              Ready to book {vendor.name}?
+            </h2>
+            <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+              {/* Primary — always renders. Falls back to a generic
+               * inquiry mailto when the vendor has no email on file. */}
+              <a
+                href={
+                  vendor.email
+                    ? `mailto:${vendor.email}?subject=${encodeURIComponent(`Wedding inquiry for ${vendor.name}`)}`
+                    : `/contact?vendor=${encodeURIComponent(vendor.slug)}`
+                }
+                className="inline-flex items-center gap-1.5 rounded-pill bg-white px-6 py-3 text-sm font-bold text-rose shadow-[0_8px_24px_rgba(0,0,0,0.18)] transition-all hover:bg-rose-pale"
               >
-                Ready to book {vendor.name}?
-              </h2>
-              <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-                {vendor.email && (
-                  <a
-                    href={`mailto:${vendor.email}?subject=${encodeURIComponent(
-                      `Wedding inquiry for ${vendor.name}`,
-                    )}`}
-                    className="inline-flex items-center gap-1.5 rounded-pill bg-white px-6 py-3 text-sm font-bold text-rose shadow-[0_8px_24px_rgba(0,0,0,0.18)] transition-all hover:bg-rose-pale"
-                  >
-                    Request a quote
-                    <span aria-hidden>→</span>
-                  </a>
-                )}
-                {vendor.website && (
-                  <a
-                    href={vendor.website}
-                    target="_blank"
-                    rel="noopener nofollow"
-                    className="inline-flex items-center gap-1.5 rounded-pill border-2 border-white px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-white/10"
-                  >
-                    Visit their website
-                    <span aria-hidden>↗</span>
-                  </a>
-                )}
-              </div>
+                Request a quote
+                <span aria-hidden>→</span>
+              </a>
+
+              {vendor.website && (
+                <a
+                  href={vendor.website}
+                  target="_blank"
+                  rel="noopener nofollow"
+                  className="inline-flex items-center gap-1.5 rounded-pill border-2 border-white px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-white/10"
+                >
+                  Visit website
+                  <span aria-hidden>↗</span>
+                </a>
+              )}
+
+              {social.instagramHandle && (
+                <a
+                  href={`https://instagram.com/${social.instagramHandle.replace(/^@/, "")}`}
+                  target="_blank"
+                  rel="noopener nofollow"
+                  className="inline-flex items-center gap-1.5 rounded-pill border-2 border-white px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-white/10"
+                >
+                  View on Instagram
+                  <span aria-hidden>↗</span>
+                </a>
+              )}
+
+              {social.yelpUrl && (
+                <a
+                  href={social.yelpUrl}
+                  target="_blank"
+                  rel="noopener nofollow"
+                  className="inline-flex items-center gap-1.5 rounded-pill border-2 border-white px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-white/10"
+                >
+                  Read Yelp reviews
+                  <span aria-hidden>↗</span>
+                </a>
+              )}
+
+              {vendor.phone && (
+                <a
+                  href={`tel:${vendor.phone.replace(/[^+\d]/g, "")}`}
+                  className="inline-flex items-center gap-1.5 rounded-pill border-2 border-white px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-white/10"
+                >
+                  Call {vendor.phone}
+                  <span aria-hidden>→</span>
+                </a>
+              )}
             </div>
-          </section>
-        )}
+          </div>
+        </section>
       </main>
     </>
   );

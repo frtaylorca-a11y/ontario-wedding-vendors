@@ -12,11 +12,56 @@ function truncate(text: string, max = 200): { body: string; truncated: boolean }
 export function GoogleReviews({
   reviews,
   venueName,
+  googleRating,
+  reviewCount,
+  googleMapsUrl,
 }: {
-  reviews: GoogleReview[];
-  venueName: string;
+  reviews:        GoogleReview[];
+  venueName:      string;
+  /** Used for the no-excerpts fallback row. When set + reviews are
+   *  empty, we render a thin "X stars across N reviews — see them on
+   *  Google →" callout instead of hiding the whole section. */
+  googleRating?:  string | null;
+  reviewCount?:   number | null;
+  googleMapsUrl?: string | null;
 }) {
-  if (reviews.length === 0) return null;
+  /* No live excerpts AND no aggregate rating → nothing to show. */
+  const hasAggregate =
+    googleRating != null && googleRating !== "" &&
+    reviewCount  != null && reviewCount  > 0;
+  if (reviews.length === 0 && !hasAggregate) return null;
+
+  /* Aggregate-only fallback: live API didn't return cached reviews
+   * (rate limit, cache miss, no reviews on the listing) but the
+   * vendor row carries the verified rating + count. Surface those
+   * with a direct link out to Google. */
+  if (reviews.length === 0 && hasAggregate) {
+    return (
+      <section className="mt-10">
+        <h2 className="font-display text-2xl font-semibold text-charcoal">
+          What couples say
+        </h2>
+        <p className="mt-3 text-sm text-text-mid">
+          <span className="font-bold text-charcoal">{googleRating}★</span> across{" "}
+          <span className="font-bold text-charcoal">{reviewCount!.toLocaleString()}</span>{" "}
+          Google reviews.
+        </p>
+        {googleMapsUrl && (
+          <p className="mt-3 text-xs">
+            <a
+              href={googleMapsUrl}
+              target="_blank"
+              rel="noopener nofollow"
+              className="font-bold text-rose hover:underline"
+            >
+              See all reviews on Google →
+            </a>{" "}
+            <span className="text-text-muted">· Powered by Google</span>
+          </p>
+        )}
+      </section>
+    );
+  }
 
   return (
     <section className="mt-10">
