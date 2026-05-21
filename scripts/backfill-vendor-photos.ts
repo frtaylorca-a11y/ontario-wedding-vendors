@@ -5,13 +5,22 @@
  * Stage 2 (scripts/upgrade-vendor-photos.ts) later replaces "good enough"
  * Google photos with curated website images stored permanently in R2.
  *
- * Filter (matches the user's spec):
- *   hero_image IS NULL
- *   AND place_id IS NOT NULL
- *   AND place_id NOT LIKE 'picbooth%'   — Pic Booth uses a hand-set hero
- *   AND place_id NOT LIKE 'ref-%'       — referral mention, no Google data
- *   AND place_id NOT LIKE 'web-%'       — venue-website mention
- *   AND place_id NOT LIKE 'ww-%'        — WeddingWire scrape
+ * Filter — only visible vendors with a REAL Google place_id (no synthetic
+ * scraper-source prefixes). Calling Place Details with a 'yp-*' or 'ww-*'
+ * id wastes the API call and money — Google will 404 on synthetic ids.
+ *
+ *   hero_image  IS NULL
+ *   AND is_hidden = false
+ *   AND place_id  IS NOT NULL
+ *   AND place_id  NOT LIKE 'yp-%'        — Yellow Pages synthetic
+ *   AND place_id  NOT LIKE 'ww-%'        — WeddingWire synthetic
+ *   AND place_id  NOT LIKE 'picbooth%'   — Pic Booth uses a hand-set hero
+ *   AND place_id  NOT LIKE 'ref-%'       — referral mention, no Google data
+ *   AND place_id  NOT LIKE 'web-%'       — venue-website mention
+ *
+ * Real candidate pool as of last diagnostic (2026-05-21):
+ *   ~1,154 visible vendors with a real place_id and no photo yet
+ *   (3,467 with hero_image IS NULL minus 2,313 yp-* synthetic = 1,154).
  *
  * For each matched vendor, GET
  *   https://maps.googleapis.com/maps/api/place/details/json
@@ -29,6 +38,7 @@
  * (network / non-OK HTTP / parse error) tallies.
  *
  * Cost: ~$0.017 per Place Details call (Basic Data, photos field).
+ * For the ~1,154 real-place-id pool: ~$19.62 total.
  *
  * Usage:
  *   npx tsx scripts/backfill-vendor-photos.ts                  # all matched
@@ -92,11 +102,13 @@ async function loadCandidates(limit: number | null): Promise<Candidate[]> {
     .where(
       and(
         isNull(vendors.heroImage),
+        eq(vendors.isHidden, false),
         isNotNull(vendors.placeId),
-        not(sql`${vendors.placeId} LIKE 'picbooth%'`),
-        not(sql`${vendors.placeId} LIKE 'ref-%'`),
-        not(sql`${vendors.placeId} LIKE 'web-%'`),
-        not(sql`${vendors.placeId} LIKE 'ww-%'`),
+        not(sql`${vendors.placeId} LIKE 'yp-%'`),       /* Yellow Pages synthetic */
+        not(sql`${vendors.placeId} LIKE 'ww-%'`),       /* WeddingWire synthetic  */
+        not(sql`${vendors.placeId} LIKE 'picbooth%'`),  /* Pic Booth hand-set     */
+        not(sql`${vendors.placeId} LIKE 'ref-%'`),      /* referral mention       */
+        not(sql`${vendors.placeId} LIKE 'web-%'`),      /* venue-website mention  */
       ),
     )
     .orderBy(vendors.id);
