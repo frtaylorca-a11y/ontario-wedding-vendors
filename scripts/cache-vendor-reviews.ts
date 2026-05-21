@@ -220,6 +220,10 @@ async function main() {
             .update(vendors)
             .set({ reviewExcerpts: r.reviews, updatedAt: new Date() })
             .where(eq(vendors.id, c.id));
+          /* Caching real reviews can flip the row into indexability —
+           * recompute the flag for this vendor immediately. */
+          const { recomputeVendorIsIndexable } = await import("../src/lib/queries");
+          await recomputeVendorIsIndexable(c.id);
         }
         cached++;
       } else if (r.kind === "no-reviews") {

@@ -355,13 +355,16 @@ async function processVendor(
       })
       .where(eq(vendors.id, vendor.id));
 
-    /* Bump the composite ranking immediately — the new description,
-     * specialties, service-areas, and bio-recency all feed into
-     * display_rank_score. Per-row recompute keeps the cost local
-     * (one row, single UPDATE) instead of triggering a full-table
-     * pass after every vendor. */
-    const { recomputeVendorDisplayRankScore } = await import("../src/lib/queries");
+    /* Bump the composite ranking + flip is_indexable=true now that
+     * the row carries a real description with a fresh
+     * bio_enriched_at timestamp. Both flags are per-row updates so
+     * the cost stays local to this vendor. */
+    const {
+      recomputeVendorDisplayRankScore,
+      recomputeVendorIsIndexable,
+    } = await import("../src/lib/queries");
     await recomputeVendorDisplayRankScore(vendor.id);
+    await recomputeVendorIsIndexable(vendor.id);
   }
 
   return { kind: "enriched" };

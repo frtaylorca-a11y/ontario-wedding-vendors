@@ -73,6 +73,59 @@ export async function recomputeVendorDisplayRankScore(vendorId: number): Promise
     .where(eq(vendors.id, vendorId));
 }
 
+/* ─── Indexability gate ──────────────────────────────────────────────
+ * A vendor's detail page is healthy enough to be indexed by Google
+ * when ANY of these are true:
+ *   1. The row has a real description AND has been through the
+ *      bio-enrichment pipeline (bio_enriched_at IS NOT NULL).
+ *      Catches enriched copy that doesn't trip the generic-phrase
+ *      filter even when description is set.
+ *   2. Cached Google reviews are present and non-empty. An empty
+ *      array means "we checked Google and got zero reviews back" —
+ *      different from "haven't checked yet" — but neither counts as
+ *      indexable content on its own.
+ *   3. The row has a strong Google signal (4.0+ stars, 10+ reviews)
+ *      AND a hero image. A vendor with no bio but 4.8 stars and 200
+ *      reviews still belongs in the index.
+ *
+ * Empty-shell pages (no description, no reviews, no rating) get
+ * is_indexable=false and a robots:noindex,follow meta on their
+ * detail page so Google leaves them out of the SERP — but the page
+ * stays directly accessible at its URL.
+ */
+export const IS_INDEXABLE_SQL = sql<boolean>`(
+  (${vendors.description} IS NOT NULL
+    AND ${vendors.description} <> ''
+    AND ${vendors.bioEnrichedAt} IS NOT NULL)
+  OR (${vendors.reviewExcerpts} IS NOT NULL
+    AND jsonb_array_length(${vendors.reviewExcerpts}) > 0)
+  OR (${vendors.googleRating} >= 4.0
+    AND ${vendors.reviewCount} >= 10
+    AND ${vendors.heroImage} IS NOT NULL)
+)`;
+
+/* Bulk recompute is_indexable for every vendor row. */
+export async function recomputeAllIsIndexable(): Promise<number> {
+  const res = await db
+    .update(vendors)
+    .set({
+      isIndexable: IS_INDEXABLE_SQL,
+      updatedAt:   new Date(),
+    })
+    .where(isNotNull(vendors.id))
+    .returning({ id: vendors.id });
+  return res.length;
+}
+
+/* Per-row recompute. Called from the import + enrichment + review-
+ * caching paths after they mutate the row's contributing columns. */
+export async function recomputeVendorIsIndexable(vendorId: number): Promise<void> {
+  await db
+    .update(vendors)
+    .set({ isIndexable: IS_INDEXABLE_SQL })
+    .where(eq(vendors.id, vendorId));
+}
+
 /**
  * Site-wide live counts for trust bars, meta descriptions, and copy.
  * React's `cache()` dedupes within a single render pass — so Header,
@@ -597,10 +650,12 @@ export async function getAllVenueSlugs(): Promise<{ slug: string; updatedAt: Dat
     .orderBy(asc(venues.slug));
 }
 
-/* For sitemap generation — every open, non-hidden vendor with a
- * category gets its own /vendors/[category]/[slug] page, so each
- * one is a unique URL worth surfacing to search engines. Skips
- * google_closed='yes' and is_hidden=true rows. */
+/* For sitemap generation — only open, non-hidden, AND
+ * indexable vendors. The is_indexable gate keeps thin-content
+ * pages (no description, no reviews, no rating signal) out of
+ * the sitemap so they're not indexed by Google. The page itself
+ * stays directly accessible at its URL — only the sitemap +
+ * page-level robots meta tag gate on this flag. */
 export async function getAllVendorSlugs(): Promise<
   { slug: string; category: string; updatedAt: Date | null }[]
 > {
@@ -615,6 +670,7 @@ export async function getAllVendorSlugs(): Promise<
       and(
         or(eq(vendors.googleClosed, "no"), sql`${vendors.googleClosed} is null`)!,
         or(eq(vendors.isHidden, false), sql`${vendors.isHidden} is null`)!,
+        eq(vendors.isIndexable, true),
       ),
     )
     .orderBy(asc(vendors.slug));

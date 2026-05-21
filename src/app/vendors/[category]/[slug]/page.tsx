@@ -199,10 +199,18 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const title = `${vendor.name} — Wedding ${label} in ${city}, Ontario`;
   const desc  = buildMetaDescription(vendor, `Wedding ${label}`);
 
+  /* Thin-content gate: when the row hasn't earned indexability,
+   * the page still serves but search engines skip it. follow=true
+   * keeps anchor-linked pages reachable from this one. */
+  const indexable = vendor.isIndexable === true;
+
   return {
     title,
     description: desc,
     alternates: { canonical: `/vendors/${category.replace(/_/g, "-")}/${vendor.slug}` },
+    robots: indexable
+      ? { index: true,  follow: true }
+      : { index: false, follow: true },
     openGraph: {
       title,
       description: desc,

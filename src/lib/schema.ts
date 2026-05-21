@@ -224,6 +224,15 @@ export const vendors = pgTable(
      * DISPLAY_RANK_SCORE_SQL in src/lib/queries.ts for the formula. */
     displayRankScore:    integer("display_rank_score"),
 
+    /* Whether this vendor's detail page is healthy enough to be
+     * indexed by Google. Public listings always include the row;
+     * sitemap.xml + the page's robots meta tag both gate on this
+     * flag so empty-shell pages don't drag the domain's quality
+     * signal down. Recomputed by import + bio-enrichment + the
+     * cache-vendor-reviews script. See IS_INDEXABLE_SQL in
+     * src/lib/queries.ts for the OR formula. */
+    isIndexable:         boolean("is_indexable").default(false),
+
     source: varchar("source", { length: 100 }),
     /* Wedding-readiness signal for vendors discovered through referrals + reviews */
     vendorReadinessScore: integer("vendor_readiness_score"),

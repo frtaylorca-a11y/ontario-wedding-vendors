@@ -454,13 +454,18 @@ async function main() {
   console.log(`  Skipped (Pic Booth dup):${total.skippedPicBoothDup}`);
   console.log(`  Errors:   ${total.errors}`);
 
-  /* Refresh the composite display ranking after every import so the
-   * listing pages reflect the new data. One bulk UPDATE — cheaper
-   * than per-row recompute during the insert loop. */
+  /* Refresh the composite display ranking + the index-eligibility
+   * flag after every import so listings + sitemap reflect the new
+   * data in one pass. Two bulk UPDATEs — cheaper than per-row
+   * recomputes inside the insert loop. */
+  const { recomputeAllDisplayRankScores, recomputeAllIsIndexable } =
+    await import("../src/lib/queries");
   console.log("\nRecomputing display_rank_score for all vendors…");
-  const { recomputeAllDisplayRankScores } = await import("../src/lib/queries");
-  const updated = await recomputeAllDisplayRankScores();
-  console.log(`  Updated ${updated.toLocaleString()} rows.`);
+  const rankUpdated = await recomputeAllDisplayRankScores();
+  console.log(`  Updated ${rankUpdated.toLocaleString()} rows.`);
+  console.log("Recomputing is_indexable for all vendors…");
+  const indexUpdated = await recomputeAllIsIndexable();
+  console.log(`  Updated ${indexUpdated.toLocaleString()} rows.`);
 }
 
 main().catch((err) => {
