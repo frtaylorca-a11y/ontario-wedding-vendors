@@ -977,10 +977,17 @@ export const BLOG_POSTS: BlogPost[] = [
         <h2>Pic Booth — Niagara &amp; GTA</h2>
         <p>
           Worth noting: if you&rsquo;re booking a photo booth alongside your
-          DJ in Niagara or the GTA, our site partner <em>Pic Booth</em> runs
-          standalone (open-air sailcloth + enclosed luxury cabinets) at
+          DJ in Niagara or the GTA,{" "}
+          <a
+            href="https://picbooth.ca/wedding-photo-booth/"
+            target="_blank"
+            rel="noopener"
+          >
+            Pic Booth&rsquo;s wedding photo booth packages
+          </a>{" "}
+          run standalone (open-air sailcloth + enclosed luxury cabinets) at
           $800–$1,800. They&rsquo;re a JUNO Awards photo booth provider —
-          appears at the top of{" "}
+          also listed in{" "}
           <a href="/vendors/photo-booth">the photo booth directory</a> with
           full disclosure.
         </p>
