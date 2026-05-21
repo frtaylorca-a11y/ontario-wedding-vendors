@@ -9,6 +9,13 @@ export function cn(...inputs: ClassValue[]): string {
  * Generates a URL slug from a venue/vendor name and city.
  *   generateSlug("White Oaks Resort & Spa", "Niagara-on-the-Lake")
  *   → "white-oaks-resort-spa-niagara-on-the-lake"
+ *
+ * Doubled-city guard:
+ *   When the business name ALREADY contains the city ("Kurtz Orchards
+ *   Weddings Niagara on the Lake"), naive concatenation produces
+ *   "...niagara-on-the-lake-niagara-on-the-lake". Detect that — when
+ *   the name-slug ends with the city-slug as a complete hyphen-aligned
+ *   tail, strip those tokens from the name before appending the city.
  */
 export function generateSlug(name: string, city: string): string {
   const nameSlug = name
@@ -30,7 +37,25 @@ export function generateSlug(name: string, city: string): string {
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-");
 
-  return citySlug ? `${nameSlug}-${citySlug}` : nameSlug;
+  if (!citySlug) return nameSlug;
+
+  /* Tail-match on hyphen-aligned tokens. citySlug "niagara-on-the-lake"
+   * splits to ["niagara","on","the","lake"] (4 tokens). If the last 4
+   * tokens of nameSlug equal that exactly, drop them — appending the
+   * citySlug below restores the suffix without duplication. We use
+   * token equality (not String.endsWith) so "fort-erie-mens-niagara"
+   * doesn't accidentally match the "niagara" tail of "niagara-falls". */
+  const nameTokens = nameSlug.split("-");
+  const cityTokens = citySlug.split("-");
+  let trimmedName = nameSlug;
+  if (
+    nameTokens.length >= cityTokens.length &&
+    nameTokens.slice(-cityTokens.length).join("-") === citySlug
+  ) {
+    trimmedName = nameTokens.slice(0, -cityTokens.length).join("-").replace(/-+$/, "");
+  }
+
+  return trimmedName ? `${trimmedName}-${citySlug}` : citySlug;
 }
 
 export function citySlug(city: string | null | undefined): string {
