@@ -1,4 +1,5 @@
-import type { Metadata } from "next";
+import Link from "next/link";
+import type { Metadata, Route } from "next";
 import { listBlogPosts } from "@/lib/blog";
 import { BreadcrumbSchema } from "@/components/seo/SchemaInjector";
 import { BlogIndexClient } from "@/components/blog/BlogIndexClient";
@@ -24,17 +25,28 @@ export default function BlogIndexPage() {
 
       <main className="bg-bg-warm">
         <div className="mx-auto max-w-[1180px] px-6 py-12 lg:py-16">
-          <header className="mb-10 max-w-[760px]">
-            <div className="text-xs font-bold uppercase tracking-[0.14em] text-rose">
-              Blog
-            </div>
-            <h1 className="mt-3 font-display text-5xl font-semibold leading-tight text-charcoal md:text-6xl">
+          <header className="mx-auto mb-12 max-w-[820px] text-center">
+            <span className="inline-flex items-center rounded-full bg-rose-pale px-3 py-1 text-[0.65rem] font-bold uppercase tracking-[0.18em] text-rose">
+              From the blog
+            </span>
+            <h1 className="mt-5 font-display text-5xl font-semibold leading-tight text-charcoal md:text-6xl">
               Plan a smarter <em className="italic text-rose">Ontario wedding</em>
             </h1>
-            <p className="mt-4 text-text-mid md:text-lg">
+            <p className="mx-auto mt-4 max-w-[640px] text-text-mid md:text-lg">
               Region guides, venue picks, vendor pricing benchmarks — written
               by the team that runs the directory, not a content mill.
             </p>
+            {/* Commercial CTA below the header — the blog funnels into
+             * the directory, so the natural next click for a couple
+             * landing here is the venue browser. */}
+            <div className="mt-7">
+              <Link
+                href={"/venues" as Route}
+                className="inline-flex items-center gap-1.5 text-sm font-bold text-rose hover:underline"
+              >
+                Find your venue →
+              </Link>
+            </div>
           </header>
 
           <BlogIndexClient posts={posts} />
