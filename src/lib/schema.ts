@@ -211,6 +211,12 @@ export const vendors = pgTable(
      * confidence mismatches are hidden automatically; medium-confidence
      * ones only set this flag so an operator can review. */
     needsManualReview:   boolean("needs_manual_review").default(false),
+    /* Set true when a vendor is imported with a website but no hero
+     * image yet. The Stage-1 photo backfill clears the flag once it
+     * lands a Google Places photo_reference. Vendors with no website
+     * AND no photo get is_hidden=true at import — they never carry
+     * this flag because they're not in the public pool to begin with. */
+    needsPhotoBackfill:  boolean("needs_photo_backfill").default(false),
 
     /* Cached Google Reviews — array of {author, rating, text, time}
      * shaped objects, fetched via Places Details ?fields=reviews and

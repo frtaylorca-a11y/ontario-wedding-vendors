@@ -202,10 +202,13 @@ async function main() {
           await db
             .update(vendors)
             .set({
-              heroImage: r.photoRef,
-              heroImageSource: "google",
+              heroImage:            r.photoRef,
+              heroImageSource:      "google",
               heroImageRefreshedAt: new Date(),
-              updatedAt: new Date(),
+              /* Clear the backfill-needed flag now that we've landed
+               * an image for this row. */
+              needsPhotoBackfill:   false,
+              updatedAt:            new Date(),
             })
             .where(eq(vendors.id, c.id));
         }

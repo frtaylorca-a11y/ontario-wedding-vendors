@@ -225,6 +225,11 @@ function toRow(raw: ScrapedVendor): NewVendor | null {
     isHidden:              hasNoWebsite,
     hiddenReason:          hasNoWebsite ? "no_website" : null,
     needsWebsiteSearch:    hasNoWebsite,
+    /* When website IS present but hero_image is still NULL at import
+     * time (always true for fresh rows — the photo backfill runs as
+     * Stage-1 after import), flag this row for the next backfill pass.
+     * No-website rows are already hidden, so they don't get flagged. */
+    needsPhotoBackfill:    !hasNoWebsite,
     priceTier:             cleanString(raw.price_tier),
     priceFrom:             raw.price_from ?? null,
     priceTo:               raw.price_to ?? null,
