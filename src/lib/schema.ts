@@ -228,6 +228,15 @@ export const vendors = pgTable(
      * AND no photo get is_hidden=true at import — they never carry
      * this flag because they're not in the public pool to begin with. */
     needsPhotoBackfill:  boolean("needs_photo_backfill").default(false),
+    /* Cached HTTP health check on vendors.website — populated by
+     *   scripts/check-vendor-websites.ts (nightly) and
+     *   /api/vendor/check-url?vendorId=...&url=...
+     * Values: null=unchecked, 'ok'=2xx/3xx, 'broken'=4xx/5xx/timeout/
+     * blank, 'blocked'=403/429/451 (real site, just rejects our UA).
+     * The vendor detail page hides the website everywhere when this
+     * is 'broken'. */
+    websiteStatus:       varchar("website_status", { length: 50 }),
+    lastWebsiteCheck:    timestamp("last_website_check"),
 
     /* Cached Google Reviews — array of {author, rating, text, time}
      * shaped objects, fetched via Places Details ?fields=reviews and

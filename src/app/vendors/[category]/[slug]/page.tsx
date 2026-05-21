@@ -338,6 +338,13 @@ export default async function VendorPage({ params }: { params: Params }) {
   const priceLabel = vendor.priceTier ? (PRICE_TIER_LABEL[vendor.priceTier] ?? vendor.priceTier) : null;
   const igHandle = vendor.instagramHandle ? normalizeIgHandle(vendor.instagramHandle) : null;
 
+  /* Website is treated as absent when the nightly health check has
+   * marked it broken. The link stays hidden from every surface on
+   * the page (sidebar, SocialPresence pill, CTA band, FindThemOnline)
+   * so we don't ship dead URLs into Google's index or user clicks. */
+  const effectiveWebsite =
+    vendor.websiteStatus === "broken" ? null : (vendor.website ?? null);
+
   /* Bundle the social fields for the SocialPresence + FindThemOnline
    * components. Both render progressively — null/missing channels
    * are skipped, the whole section hides when nothing is set. */
@@ -346,7 +353,7 @@ export default async function VendorPage({ params }: { params: Params }) {
     instagramHandle: vendor.instagramHandle ?? null,
     yelpUrl:         vendor.yelpUrl ?? null,
     pinterestUrl:    vendor.pinterestUrl ?? null,
-    website:         vendor.website ?? null,
+    website:         effectiveWebsite,
     googleRating:    vendor.googleRating ?? null,
     reviewCount:     vendor.reviewCount ?? null,
   };
@@ -727,12 +734,12 @@ export default async function VendorPage({ params }: { params: Params }) {
                       value={<a href={`mailto:${vendor.email}`} className="text-rose hover:underline">{vendor.email}</a>}
                     />
                   )}
-                  {vendor.website && (
+                  {effectiveWebsite && (
                     <DetailRow
                       label="Website"
                       value={
                         <a
-                          href={vendor.website}
+                          href={effectiveWebsite}
                           target="_blank"
                           rel="noopener nofollow"
                           className="text-rose hover:underline"
@@ -893,9 +900,9 @@ export default async function VendorPage({ params }: { params: Params }) {
                 <span aria-hidden>→</span>
               </a>
 
-              {vendor.website && (
+              {effectiveWebsite && (
                 <a
-                  href={vendor.website}
+                  href={effectiveWebsite}
                   target="_blank"
                   rel="noopener nofollow"
                   className="inline-flex items-center gap-1.5 rounded-pill border-2 border-white px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-white/10"
