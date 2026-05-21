@@ -41,6 +41,7 @@ import * as cheerio from "cheerio";
 import Anthropic from "@anthropic-ai/sdk";
 import { db } from "../src/lib/db";
 import { vendors } from "../src/lib/schema";
+import { classifyCategoryRelevance, actionForVerdict } from "../src/lib/category-relevance";
 
 const DELAY_BETWEEN_REQUESTS_MS = 300;
 const FETCH_TIMEOUT_MS = 10_000;
@@ -352,6 +353,8 @@ type Outcome =
   | { kind: "enriched" }
   | { kind: "no-content" }
   | { kind: "no-extract" }
+  | { kind: "category-mismatch-hidden";  actualCategory: string | null; reason: string }
+  | { kind: "category-mismatch-flagged"; actualCategory: string | null; reason: string }
   | { kind: "error"; message: string };
 
 async function processVendor(
@@ -367,6 +370,51 @@ async function processVendor(
   }
   if (content.length < MIN_CHARS_FOR_CLAUDE) {
     return { kind: "no-content" };
+  }
+
+  /* Category relevance check — runs BEFORE bio extraction so wrong-
+   * category vendors get hidden without burning the bio-extraction
+   * call. The classifier reads the first ~1000 chars; on high-
+   * confidence mismatch we hide + flag; medium-confidence we flag
+   * only; low / relevant we proceed. */
+  const verdict = await classifyCategoryRelevance({
+    vendorName:     vendor.name,
+    category:       vendor.category,
+    websiteContent: content,
+  });
+  const action = actionForVerdict(verdict);
+
+  if (action.kind === "hide") {
+    console.log(
+      `  MISMATCH: ${vendor.name} listed as ${vendor.category} but website suggests ${action.actualCategory ?? "?"}`,
+    );
+    if (!dryRun) {
+      await db
+        .update(vendors)
+        .set({
+          isHidden:          true,
+          hiddenReason:      "wrong_category_detected",
+          needsManualReview: true,
+          updatedAt:         new Date(),
+        })
+        .where(eq(vendors.id, vendor.id));
+    }
+    return {
+      kind:           "category-mismatch-hidden",
+      actualCategory: action.actualCategory,
+      reason:         action.reason,
+    };
+  }
+
+  if (action.kind === "flag") {
+    if (!dryRun) {
+      await db
+        .update(vendors)
+        .set({ needsManualReview: true, updatedAt: new Date() })
+        .where(eq(vendors.id, vendor.id));
+    }
+    /* Flagged-but-not-hidden vendors still get a bio — they're plausibly
+     * relevant, just worth a manual eyeball. Fall through to extraction. */
   }
 
   let bio: ExtractedBio | null;
@@ -416,14 +464,19 @@ async function processVendor(
 }
 
 type CatStats = {
-  enriched:   number;
-  noContent:  number;
-  noExtract:  number;
-  errored:    number;
+  enriched:               number;
+  noContent:              number;
+  noExtract:              number;
+  errored:                number;
+  categoryMismatchHidden:  number;
+  categoryMismatchFlagged: number;
 };
 
 function newStats(): CatStats {
-  return { enriched: 0, noContent: 0, noExtract: 0, errored: 0 };
+  return {
+    enriched: 0, noContent: 0, noExtract: 0, errored: 0,
+    categoryMismatchHidden: 0, categoryMismatchFlagged: 0,
+  };
 }
 
 async function main() {
@@ -469,6 +522,16 @@ async function main() {
         cat.noExtract++; totals.noExtract++;
         failureSamples.push({ slug: c.slug, reason: "no-extract" });
         break;
+      case "category-mismatch-hidden":
+        cat.categoryMismatchHidden++; totals.categoryMismatchHidden++;
+        failureSamples.push({
+          slug:   c.slug,
+          reason: `mismatch HIDE — ${r.actualCategory ?? "?"} (${r.reason.slice(0, 50)})`,
+        });
+        break;
+      case "category-mismatch-flagged":
+        cat.categoryMismatchFlagged++; totals.categoryMismatchFlagged++;
+        break;
       case "error":
         cat.errored++; totals.errored++;
         failureSamples.push({ slug: c.slug, reason: r.message.slice(0, 80) });
@@ -479,7 +542,9 @@ async function main() {
     if ((i + 1) % 20 === 0) {
       console.log(
         `  ── ${i + 1}/${candidates.length} · enriched=${totals.enriched} ` +
-          `no-content=${totals.noContent} no-extract=${totals.noExtract} errored=${totals.errored}`,
+          `no-content=${totals.noContent} no-extract=${totals.noExtract} ` +
+          `mismatch:hidden=${totals.categoryMismatchHidden} ` +
+          `mismatch:flagged=${totals.categoryMismatchFlagged} errored=${totals.errored}`,
       );
     }
 
@@ -500,10 +565,13 @@ async function main() {
   }
 
   console.log("\n=== Grand totals ===");
-  console.log(`Enriched:   ${totals.enriched}${dryRun ? " (dry run — no writes)" : ""}`);
-  console.log(`No content: ${totals.noContent}`);
-  console.log(`No extract: ${totals.noExtract}`);
-  console.log(`Errored:    ${totals.errored}`);
+  console.log(`Enriched:                  ${totals.enriched}${dryRun ? " (dry run — no writes)" : ""}`);
+  console.log(`No content:                ${totals.noContent}`);
+  console.log(`No extract:                ${totals.noExtract}`);
+  console.log(`Category mismatches detected: ${totals.categoryMismatchHidden + totals.categoryMismatchFlagged} vendors`);
+  console.log(`  → hidden (high confidence):    ${totals.categoryMismatchHidden}`);
+  console.log(`  → flagged for review (medium): ${totals.categoryMismatchFlagged}`);
+  console.log(`Errored:                   ${totals.errored}`);
   console.log(`Actual cost: ~$${(candidates.length * COST_PER_VENDOR_USD).toFixed(2)}`);
 
   if (failureSamples.length > 0 && failureSamples.length <= 25) {

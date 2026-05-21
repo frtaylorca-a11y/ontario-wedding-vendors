@@ -206,6 +206,11 @@ export const vendors = pgTable(
     isHidden:            boolean("is_hidden").default(false),
     hiddenReason:        varchar("hidden_reason", { length: 100 }),
     needsWebsiteSearch:  boolean("needs_website_search").default(false),
+    /* Flagged by the category relevance check (claude-haiku reads the
+     * vendor's website and compares it to vendors.category). High-
+     * confidence mismatches are hidden automatically; medium-confidence
+     * ones only set this flag so an operator can review. */
+    needsManualReview:   boolean("needs_manual_review").default(false),
 
     /* Cached Google Reviews — array of {author, rating, text, time}
      * shaped objects, fetched via Places Details ?fields=reviews and

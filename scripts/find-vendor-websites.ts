@@ -66,6 +66,7 @@ import { and, eq, isNull, isNotNull, or } from "drizzle-orm";
 import Anthropic from "@anthropic-ai/sdk";
 import { db } from "../src/lib/db";
 import { vendors } from "../src/lib/schema";
+import { classifyCategoryRelevance, actionForVerdict } from "../src/lib/category-relevance";
 
 const DELAY_BETWEEN_REQUESTS_MS = 500;
 const FETCH_TIMEOUT_MS          = 8_000;
@@ -335,7 +336,7 @@ function meaningfulNameTokens(name: string): string[] {
 }
 
 type ValidationResult =
-  | { kind: "ok"; matched: string }
+  | { kind: "ok"; matched: string; pageText: string }
   | { kind: "social-only" }
   | { kind: "no-match"; pageText: string }
   | { kind: "fetch-failed" };
@@ -355,11 +356,11 @@ async function validateMatch(url: string, vendor: Candidate): Promise<Validation
    * photographer might omit the city. Either signal is enough. */
   const tokens = meaningfulNameTokens(vendor.name);
   for (const t of tokens) {
-    if (pageText.includes(t)) return { kind: "ok", matched: `name:${t}` };
+    if (pageText.includes(t)) return { kind: "ok", matched: `name:${t}`, pageText };
   }
   if (vendor.city) {
     const city = vendor.city.toLowerCase();
-    if (pageText.includes(city)) return { kind: "ok", matched: `city:${vendor.city}` };
+    if (pageText.includes(city)) return { kind: "ok", matched: `city:${vendor.city}`, pageText };
   }
 
   return { kind: "no-match", pageText: pageText.slice(0, 120) };
@@ -381,6 +382,8 @@ type Outcome =
   | { kind: "social-only";     url: string }
   | { kind: "validation-failed"; url: string; preview: string }
   | { kind: "fetch-failed";    url: string }
+  | { kind: "category-mismatch-hidden";  url: string; actualCategory: string | null; reason: string }
+  | { kind: "category-mismatch-flagged"; url: string; actualCategory: string | null; reason: string }
   | { kind: "no-result";       reason: string }
   | { kind: "error";           reason: string };
 
@@ -409,6 +412,45 @@ async function processVendor(
     if (validation.kind === "fetch-failed") return { kind: "fetch-failed",      url: verdict.url };
     if (validation.kind === "no-match")     return { kind: "validation-failed", url: verdict.url, preview: validation.pageText };
 
+    /* Category relevance check — name/city matched, but does the page
+     * actually describe a business in this category? Pass the same
+     * pageText (title + og + meta description, ~200-600 chars) the
+     * validator just used. classifyCategoryRelevance gates on a 40-char
+     * minimum, so very thin pages return low-confidence relevant. */
+    const verdictRelevance = await classifyCategoryRelevance({
+      vendorName:     v.name,
+      category:       v.category,
+      websiteContent: validation.pageText,
+    });
+    const action = actionForVerdict(verdictRelevance);
+
+    if (action.kind === "hide") {
+      console.log(
+        `  MISMATCH: ${v.name} (${v.category}) found at ${verdict.url} but website suggests ${action.actualCategory ?? "?"}`,
+      );
+      if (!args.dryRun) {
+        await db
+          .update(vendors)
+          .set({
+            /* Don't store the URL — we don't want this 'website' surfacing
+             * in any UI when the vendor is mis-categorized. The relevance
+             * verdict is the authoritative signal that this match is wrong. */
+            isHidden:           true,
+            hiddenReason:       "wrong_category_detected",
+            needsManualReview:  true,
+            needsWebsiteSearch: false,
+            updatedAt:          new Date(),
+          })
+          .where(eq(vendors.id, v.id));
+      }
+      return {
+        kind:           "category-mismatch-hidden",
+        url:            verdict.url,
+        actualCategory: action.actualCategory,
+        reason:         action.reason,
+      };
+    }
+
     if (args.dryRun) {
       return {
         kind:       "would-commit",
@@ -431,9 +473,21 @@ async function processVendor(
         isHidden:           false,
         hiddenReason:       null,
         needsWebsiteSearch: false,
+        /* Medium-confidence mismatch — commit the website but flag for
+         * manual review. The vendor stays visible. */
+        needsManualReview:  action.kind === "flag" ? true : false,
         updatedAt:          new Date(),
       })
       .where(eq(vendors.id, v.id));
+
+    if (action.kind === "flag") {
+      return {
+        kind:           "category-mismatch-flagged",
+        url:            verdict.url,
+        actualCategory: action.actualCategory,
+        reason:         action.reason,
+      };
+    }
 
     return {
       kind:       "committed",
@@ -474,6 +528,8 @@ async function main() {
   let fetchFailed      = 0;
   let noResult         = 0;
   let errored          = 0;
+  let mismatchHidden   = 0;
+  let mismatchFlagged  = 0;
   const issues: Array<{ slug: string; outcome: string }> = [];
 
   for (let i = 0; i < candidates.length; i++) {
@@ -505,6 +561,18 @@ async function main() {
         fetchFailed++;
         issues.push({ slug: v.slug, outcome: `fetch-failed: ${r.url}` });
         break;
+      case "category-mismatch-hidden":
+        mismatchHidden++;
+        issues.push({
+          slug: v.slug,
+          outcome: `MISMATCH-HIDE: ${r.url} → ${r.actualCategory ?? "?"} (${r.reason.slice(0, 50)})`,
+        });
+        break;
+      case "category-mismatch-flagged":
+        mismatchFlagged++;
+        committed++;  /* still committed the website; counts as a save */
+        console.log(`  ✓ ${v.slug} → ${r.url} · FLAGGED for review (${r.actualCategory ?? "?"})`);
+        break;
       case "no-result":
         noResult++;
         break;
@@ -535,6 +603,8 @@ async function main() {
   console.log(`Social-media-only URL:      ${socialOnly}`);
   console.log(`Validation failed:          ${validationFailed}`);
   console.log(`Fetch failed:               ${fetchFailed}`);
+  console.log(`Category mismatch (hide):   ${mismatchHidden}`);
+  console.log(`Category mismatch (flag):   ${mismatchFlagged}`);
   console.log(`No result:                  ${noResult}`);
   console.log(`Errored:                    ${errored}`);
   console.log(`Actual cost:                ~$${(candidates.length * COST_PER_VENDOR_USD).toFixed(2)}`);
