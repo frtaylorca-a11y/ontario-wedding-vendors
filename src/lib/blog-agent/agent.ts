@@ -18,6 +18,7 @@ import {
   type ScoutItem,
 } from "@/lib/blog-agent/scout";
 import { generateBlogPost, type BlogGenerateInput } from "@/lib/blog-generate";
+import { generateAndUploadHeroImage } from "@/lib/blog-agent/hero-image";
 
 const ONTARIO_REGION_RE  = /\b(niagara|toronto|gta|hamilton|burlington|oakville|muskoka)\b/i;
 const COST_RE     = /\b(cost|price|pricing|budget|how much)\b/i;
@@ -129,6 +130,13 @@ export type DailyAgentResult = {
   wordCount?:   number;
   autoPublished: boolean;
   scoutLogged:  number;
+  /* Image-pipeline outcome — null when no attempt was made. */
+  heroImage?: {
+    status:     "ok" | "skipped" | "failed";
+    url?:       string;
+    reason?:    string;
+    exifStatus?: string;
+  };
 };
 
 export async function runDailyAgent(run: "morning" | "afternoon"): Promise<DailyAgentResult> {
@@ -173,6 +181,7 @@ export async function runDailyAgent(run: "morning" | "afternoon"): Promise<Daily
       const willPublish = settings.autoPublish;
       const tags = buildTags(item.title, input.targetRegion, input.category);
 
+      const excerpt = buildExcerpt(draft.content);
       const [row] = await db
         .insert(blogPosts)
         .values({
@@ -180,7 +189,7 @@ export async function runDailyAgent(run: "morning" | "afternoon"): Promise<Daily
           title:            draft.title,
           content:          draft.content,
           metaDescription:  draft.metaDescription || null,
-          excerpt:          buildExcerpt(draft.content),
+          excerpt,
           category:         input.category ?? null,
           tags,
           publishedAt:      willPublish ? new Date() : null,
@@ -195,6 +204,36 @@ export async function runDailyAgent(run: "morning" | "afternoon"): Promise<Daily
 
       await markScoutItemUsed(item.sourceName, item.title, draft.slug);
 
+      /* Image pipeline — best-effort. A skip or failure does NOT roll
+       * back the post. */
+      let heroResult: DailyAgentResult["heroImage"];
+      try {
+        const r = await generateAndUploadHeroImage({
+          postSlug: draft.slug,
+          title:    draft.title,
+          excerpt,
+        });
+        if (r.kind === "ok") {
+          await db
+            .update(blogPosts)
+            .set({
+              heroImageUrl:         r.url,
+              heroImageAlt:         r.alt,
+              heroImagePrompt:      r.prompt,
+              heroImageGeneratedAt: new Date(),
+              updatedAt:            new Date(),
+            })
+            .where(eq(blogPosts.id, row.id));
+          heroResult = { status: "ok", url: r.url, exifStatus: r.exifStatus };
+        } else {
+          heroResult = { status: "skipped", reason: r.reason };
+        }
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : String(err);
+        console.warn(`[daily-agent] hero image failed for ${draft.slug}:`, reason);
+        heroResult = { status: "failed", reason };
+      }
+
       return {
         ok:            true,
         topic:         item.title,
@@ -203,6 +242,7 @@ export async function runDailyAgent(run: "morning" | "afternoon"): Promise<Daily
         wordCount:     draft.wordCount,
         autoPublished: willPublish,
         scoutLogged:   candidates.length,
+        heroImage:     heroResult,
       };
     } catch (err) {
       lastError = err instanceof Error ? err.message : String(err);
