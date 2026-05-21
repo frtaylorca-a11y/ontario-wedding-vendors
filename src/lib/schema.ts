@@ -175,6 +175,34 @@ export const vendors = pgTable(
     isFeatured: boolean("is_featured").default(false),
     featuredUntil: timestamp("featured_until"),
 
+    /* Visibility gating — public-facing vendor queries filter
+     * isHidden=true rows. Used to suppress vendors that don't meet
+     * the "real business with a real online presence" bar, primarily
+     * those without a website on file. Once a website lands (manual
+     * edit, find-vendor-websites.ts AI search, etc.), the row is
+     * un-hidden in the same write.
+     *   isHidden            true = excluded from /vendors listings,
+     *                       individual /vendors/[cat]/[slug] pages
+     *                       still resolve directly (caller decides
+     *                       whether to 404)
+     *   hiddenReason        free-text label for why ('no_website',
+     *                       'duplicate', 'low_quality', etc.)
+     *   needsWebsiteSearch  flag the row for find-vendor-websites.ts.
+     *                       Set true alongside isHidden=true on
+     *                       no-website vendors; the AI search clears
+     *                       it on a successful match.
+     */
+    isHidden:            boolean("is_hidden").default(false),
+    hiddenReason:        varchar("hidden_reason", { length: 100 }),
+    needsWebsiteSearch:  boolean("needs_website_search").default(false),
+
+    /* Cached Google Reviews — array of {author, rating, text, time}
+     * shaped objects, fetched via Places Details ?fields=reviews and
+     * stored here so the vendor detail page doesn't hit Google on
+     * every visit. Empty array means "not cached yet"; null means
+     * "not fetched yet" — distinct from "no reviews". */
+    reviewExcerpts:      jsonb("review_excerpts"),
+
     source: varchar("source", { length: 100 }),
     /* Wedding-readiness signal for vendors discovered through referrals + reviews */
     vendorReadinessScore: integer("vendor_readiness_score"),

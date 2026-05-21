@@ -122,7 +122,8 @@ export default async function VendorPage({ params }: { params: Params }) {
 
   const [reviews, googlePhotos, similar, recommendingVenues] = await Promise.all([
     getGoogleReviews(vendor.placeId),
-    getGoogleVendorPhotos(vendor.placeId, 4),
+    /* Bumped 4 → 6 to fill the new 3-column portfolio grid. */
+    getGoogleVendorPhotos(vendor.placeId, 6),
     getSimilarVendors({
       category: vendor.category,
       region: vendor.region,
@@ -131,6 +132,15 @@ export default async function VendorPage({ params }: { params: Params }) {
     }),
     getVenuesRecommendingVendor(vendor.id, 6),
   ]);
+
+  /* Specialties + service areas live in jsonb columns populated by
+   * enrich-vendor-bios.ts. Render only when the arrays carry content. */
+  const specialtiesList: string[] = Array.isArray(vendor.specialties)
+    ? (vendor.specialties as unknown[]).filter((x): x is string => typeof x === "string" && x.trim().length > 0)
+    : [];
+  const serviceAreasList: string[] = Array.isArray(vendor.serviceAreas)
+    ? (vendor.serviceAreas as unknown[]).filter((x): x is string => typeof x === "string" && x.trim().length > 0)
+    : [];
 
   const ratingStr = formatRating(vendor.googleRating);
   const priceLabel = vendor.priceTier ? (PRICE_TIER_LABEL[vendor.priceTier] ?? vendor.priceTier) : null;
@@ -221,32 +231,44 @@ export default async function VendorPage({ params }: { params: Params }) {
             <span aria-hidden>←</span> All Ontario {plural.toLowerCase()}
           </Link>
 
-          {/* Google Places photos strip — horizontal scroll, up to 4 thumbnails */}
+          {/* Portfolio gallery — up to 6 Google Places photos in a
+           * 3-column grid (2 columns on small screens). Each tile is
+           * a click-through anchor to the full-size Google photo URL
+           * (opens in a new tab) — basic lightbox-lite without
+           * dragging in a client component. */}
           {googlePhotos.length > 0 && (
-            <section className="mb-8" aria-label="Photos">
+            <section className="mb-8" aria-label="Portfolio">
               <div className="mb-3 flex items-baseline justify-between gap-3">
                 <h2 className="font-display text-lg font-semibold text-charcoal">
-                  Photos
+                  Portfolio
                 </h2>
                 <span className="text-[0.7rem] text-text-muted">
                   Powered by Google
                 </span>
               </div>
-              <div className="flex gap-3 overflow-x-auto pb-2 [-webkit-overflow-scrolling:touch]">
-                {googlePhotos.map((photo, i) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {googlePhotos.slice(0, 6).map((photo, i) => (
+                  <a
                     key={i}
-                    src={photo.url}
-                    alt=""
-                    loading="lazy"
-                    className="h-44 w-72 flex-shrink-0 rounded-card border border-border-light bg-bg-soft object-cover"
-                  />
+                    href={photo.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Open portfolio photo ${i + 1} in new tab`}
+                    className="group relative block aspect-square overflow-hidden rounded-card border border-border-light bg-bg-soft"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={photo.url}
+                      alt=""
+                      loading="lazy"
+                      className="h-full w-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-110"
+                    />
+                  </a>
                 ))}
               </div>
               {googlePhotos.some((p) => p.attributions.length > 0) && (
                 <p
-                  className="mt-1 text-[0.6rem] text-text-muted"
+                  className="mt-2 text-[0.6rem] text-text-muted"
                   // eslint-disable-next-line react/no-danger
                   dangerouslySetInnerHTML={{
                     __html: googlePhotos
@@ -299,6 +321,51 @@ export default async function VendorPage({ params }: { params: Params }) {
                 </p>
               )}
 
+              {/* Specialties chips — render only when enrich-vendor-bios
+               * has populated the jsonb array on this row. */}
+              {specialtiesList.length > 0 && (
+                <div className="mt-6">
+                  <div className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-text-muted">
+                    Specialties
+                  </div>
+                  <ul className="mt-2 flex flex-wrap gap-2">
+                    {specialtiesList.map((s) => (
+                      <li
+                        key={s}
+                        className="inline-flex items-center rounded-pill border border-rose bg-rose-pale px-3 py-1 text-xs font-medium text-rose"
+                      >
+                        {s}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Service areas — single line, • separated. Specific
+               * cities first; we default to "Ontario" only when the
+               * AI extraction couldn't pin down a city. */}
+              {serviceAreasList.length > 0 && (
+                <p className="mt-5 inline-flex items-center gap-1.5 text-sm text-text-mid">
+                  <svg
+                    aria-hidden
+                    viewBox="0 0 24 24"
+                    className="h-3.5 w-3.5 flex-shrink-0 fill-none stroke-rose"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                    <circle cx="12" cy="10" r="3" />
+                  </svg>
+                  <span>
+                    <span className="text-text-muted">Serving</span>{" "}
+                    <span className="font-medium text-charcoal">
+                      {serviceAreasList.join(" · ")}
+                    </span>
+                  </span>
+                </p>
+              )}
+
               {/* Google reviews — hides when no place_id or no reviews */}
               <GoogleReviews reviews={reviews} venueName={vendor.name} />
 
@@ -316,6 +383,27 @@ export default async function VendorPage({ params }: { params: Params }) {
                       <VenueCard key={v.id} venue={v} />
                     ))}
                   </div>
+                </section>
+              )}
+
+              {/* Meet the owner — only renders when enrich-vendor-bios
+               * has populated owner_name. Years in business is a
+               * companion field — both come from the same about-page
+               * extraction so they tend to be present together. */}
+              {vendor.ownerName && (
+                <section className="mt-10 rounded-card border border-border-light bg-bg-soft p-6">
+                  <div className="text-[0.65rem] font-bold uppercase tracking-[0.18em] text-rose">
+                    Meet the team
+                  </div>
+                  <h2 className="mt-2 font-display text-2xl font-semibold text-charcoal">
+                    Meet <em className="italic text-rose">{vendor.ownerName}</em>
+                  </h2>
+                  {vendor.yearsInBusiness != null && (
+                    <p className="mt-2 text-sm text-text-mid">
+                      <span className="font-bold text-charcoal">{vendor.yearsInBusiness} years</span> serving
+                      Ontario couples.
+                    </p>
+                  )}
                 </section>
               )}
 
@@ -341,10 +429,37 @@ export default async function VendorPage({ params }: { params: Params }) {
                   Vendor details
                 </h2>
 
+                {/* Verified by Google badge — renders only when the
+                 * row has a Google rating, which is the surest signal
+                 * the place_id actually resolved to a Google listing. */}
+                {vendor.googleRating != null && (
+                  <div className="mt-3 inline-flex items-center gap-1.5 rounded-pill bg-[#EAF2EC] px-2.5 py-1 text-[0.7rem] font-bold uppercase tracking-[0.08em] text-green">
+                    <svg
+                      aria-hidden
+                      viewBox="0 0 24 24"
+                      className="h-2.5 w-2.5 fill-none stroke-current"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                      <polyline points="22 4 12 14.01 9 11.01" />
+                    </svg>
+                    Verified by Google
+                  </div>
+                )}
+
                 <dl className="mt-5 space-y-4 text-sm">
                   <DetailRow label="Category" value={label} />
                   <DetailRow label="Region" value={regionLabel(vendor.region)} />
                   {vendor.city && <DetailRow label="City" value={vendor.city} />}
+                  {vendor.ownerName && <DetailRow label="Owner" value={vendor.ownerName} />}
+                  {vendor.yearsInBusiness != null && (
+                    <DetailRow
+                      label="Years in business"
+                      value={`${vendor.yearsInBusiness} years`}
+                    />
+                  )}
                   {priceLabel && <DetailRow label="Price tier" value={priceLabel} />}
                   {vendor.phone && (
                     <DetailRow
@@ -413,6 +528,52 @@ export default async function VendorPage({ params }: { params: Params }) {
             </aside>
           </div>
         </div>
+
+        {/* Full-width "Ready to book…" CTA band — only renders when
+         * there's at least one actionable destination. Buttons are
+         * gated individually: Request a quote → mailto if email set;
+         * Visit website → vendor.website when present. Book a
+         * consultation is a future hook (no calendlyUrl column yet)
+         * and stays hidden until that field lands. */}
+        {(vendor.email || vendor.website) && (
+          <section
+            className="mt-16 px-6 py-14"
+            style={{ background: "var(--rose, #B96476)" }}
+          >
+            <div className="mx-auto max-w-[820px] text-center">
+              <h2
+                className="font-display text-3xl font-semibold leading-tight text-white md:text-4xl"
+                style={{ fontStyle: "italic" }}
+              >
+                Ready to book {vendor.name}?
+              </h2>
+              <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+                {vendor.email && (
+                  <a
+                    href={`mailto:${vendor.email}?subject=${encodeURIComponent(
+                      `Wedding inquiry for ${vendor.name}`,
+                    )}`}
+                    className="inline-flex items-center gap-1.5 rounded-pill bg-white px-6 py-3 text-sm font-bold text-rose shadow-[0_8px_24px_rgba(0,0,0,0.18)] transition-all hover:bg-rose-pale"
+                  >
+                    Request a quote
+                    <span aria-hidden>→</span>
+                  </a>
+                )}
+                {vendor.website && (
+                  <a
+                    href={vendor.website}
+                    target="_blank"
+                    rel="noopener nofollow"
+                    className="inline-flex items-center gap-1.5 rounded-pill border-2 border-white px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-white/10"
+                  >
+                    Visit their website
+                    <span aria-hidden>↗</span>
+                  </a>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
       </main>
     </>
   );

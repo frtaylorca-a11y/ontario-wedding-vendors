@@ -45,7 +45,7 @@ import { vendors } from "../src/lib/schema";
 const DELAY_BETWEEN_REQUESTS_MS = 300;
 const FETCH_TIMEOUT_MS = 10_000;
 const MAX_BYTES        = 5 * 1024 * 1024;
-const MAX_CHARS_FOR_CLAUDE = 3_000;
+const MAX_CHARS_FOR_CLAUDE = 8_000;
 const MIN_CHARS_FOR_CLAUDE =   200;
 const COST_PER_VENDOR_USD = 0.004;
 
@@ -184,11 +184,15 @@ function stripToText(html: string): string {
 }
 
 async function pickBestVariant(website: string): Promise<string> {
-  /* Try homepage + /about + /about-us in parallel; keep the longest text. */
-  const paths = ["", "about", "about-us"];
-  const urls = paths
-    .map((p) => buildVariantUrl(website, p))
-    .filter((u): u is string => u != null);
+  /* Fetch homepage + /about + /about-us in parallel. Combine the
+   * homepage with the about page (whichever variant is longest) so
+   * Claude sees both surfaces — the homepage carries the hero
+   * proposition, the about page carries the personal story. Cap
+   * the joined text at MAX_CHARS_FOR_CLAUDE. */
+  const home   = buildVariantUrl(website, "");
+  const aboutA = buildVariantUrl(website, "about");
+  const aboutB = buildVariantUrl(website, "about-us");
+  const urls = [home, aboutA, aboutB].filter((u): u is string => u != null);
 
   const variants = await Promise.all(
     urls.map(async (u) => {
@@ -198,8 +202,20 @@ async function pickBestVariant(website: string): Promise<string> {
     }),
   );
 
-  variants.sort((a, b) => b.text.length - a.text.length);
-  return variants[0]?.text ?? "";
+  const homeText  = home ? variants.find((v) => v.url === home)?.text ?? "" : "";
+  const aboutText = [aboutA, aboutB]
+    .map((u) => (u ? variants.find((v) => v.url === u)?.text ?? "" : ""))
+    .sort((a, b) => b.length - a.length)[0] ?? "";
+
+  /* When both are available, stitch them together with a clear
+   * marker so Claude can distinguish home-page voice from
+   * about-page personal copy. When only one is available, use that
+   * alone. */
+  const combined = homeText && aboutText
+    ? `${homeText}\n\n--- /about ---\n\n${aboutText}`
+    : homeText || aboutText;
+
+  return combined.slice(0, MAX_CHARS_FOR_CLAUDE);
 }
 
 /* ─── Claude ───────────────────────────────────────────────────────── */
@@ -210,14 +226,16 @@ type ExtractedBio = {
   yearsInBusiness: number | null;
   serviceAreas:    string[];
   specialties:     string[];
-  awards:          string[];
+  press:           string[];
   teamSize:        number | null;
   style:           string | null;
 };
 
 const SYSTEM_PROMPT =
-  "Extract key business information from this wedding vendor website. " +
-  "Be factual and specific. Only include information actually present on the page.";
+  "You write editorial descriptions for wedding vendor profiles on Ontario Wedding Vendors. " +
+  "Your goal is a richer narrative than a typical directory blurb — readers should finish feeling like they have a sense of the vendor's voice, approach, and what makes them distinct. " +
+  "Use the vendor's own language and terminology where possible. Avoid generic adjectives. " +
+  "Be factual and specific. Only include information actually present on the page content provided.";
 
 async function extractBio(
   anthropic: Anthropic,
@@ -225,23 +243,25 @@ async function extractBio(
 ): Promise<ExtractedBio | null> {
   const trimmed = content.slice(0, MAX_CHARS_FOR_CLAUDE);
   const userPrompt =
-    `Website content: ${trimmed}\n\n` +
-    `Extract as JSON:\n` +
+    `Website content (homepage + about page combined, stripped HTML, up to ${MAX_CHARS_FOR_CLAUDE} chars):\n` +
+    `"""\n${trimmed}\n"""\n\n` +
+    `Extract the editorial profile as JSON:\n` +
     `{\n` +
-    `  "description": "2-3 sentence genuine description using their own language and story",\n` +
-    `  "ownerName": "owner/founder name if mentioned, else null",\n` +
-    `  "yearsInBusiness": number or null,\n` +
-    `  "serviceAreas": ["city1", "city2"],\n` +
-    `  "specialties": ["specialty1", "specialty2"],\n` +
-    `  "awards": ["award1"],\n` +
-    `  "teamSize": number or null,\n` +
-    `  "style": "their described style/approach, else null"\n` +
-    `}\n` +
+    `  "description":    "<150-250 word narrative in THIRD PERSON. Open with what they actually do — their style, approach, or what they specialise in. Include at least one concrete detail (years in business, signature style, a short quote from their site, a specific service area, a published feature, anything specific to them). Close with what kind of couple they'd be a good fit for, IF the site signals that. Use THEIR own language and terminology. Banned words/phrases — never use: 'highly-rated', 'wedding-ready', 'fully wedding-ready', 'exceptional', 'passionate', 'dedicated', 'talented', 'professional'.>",\n` +
+    `  "ownerName":      "<owner or founder name if on the page, else null>",\n` +
+    `  "yearsInBusiness": <integer or null>,\n` +
+    `  "serviceAreas":   ["<specific cities mentioned on the site — Toronto, Mississauga, Niagara, Burlington, Hamilton, etc. Only return 'Ontario' as a last resort when no specific cities are present.>"],\n` +
+    `  "specialties":    ["<style / niche / approach the vendor uses to describe themselves — e.g. 'candid documentary', 'South Asian weddings', 'editorial', 'fine art'>"],\n` +
+    `  "press":          ["<publications or shows that have featured them — 'Wedding Bells', 'Today's Bride', 'CTV', etc. Only include if explicitly mentioned. NOT for awards — see note below.>"],\n` +
+    `  "teamSize":       <integer or null — only if explicitly stated>,\n` +
+    `  "style":          "<their described shooting / working style if stated, else null>"\n` +
+    `}\n\n` +
+    `Note: previously this field was called 'awards' — many vendors are featured in press but very few list real industry awards. Press features count; vague self-claimed 'best of' ribbons do not.\n\n` +
     `Reply with ONLY the JSON object — no preamble, no code fence.`;
 
   const res = await anthropic.messages.create({
     model:     "claude-haiku-4-5",
-    max_tokens: 600,
+    max_tokens: 1200,
     system:    SYSTEM_PROMPT,
     messages: [{ role: "user", content: userPrompt }],
   });
@@ -261,19 +281,27 @@ async function extractBio(
       yearsInBusiness: unknown;
       serviceAreas:    unknown;
       specialties:     unknown;
-      awards:          unknown;
+      press:           unknown;
+      awards:          unknown; /* legacy — older outputs still use this key */
       teamSize:        unknown;
       style:           unknown;
     }>;
     const description = typeof parsed.description === "string" ? parsed.description.trim() : "";
     if (!description) return null; /* Without a description there's nothing useful to persist. */
+    /* Accept either `press` (new schema) or `awards` (legacy fallback)
+     * so a Claude output that drifts back to the old key still parses. */
+    const pressSource = Array.isArray(parsed.press)
+      ? parsed.press
+      : Array.isArray(parsed.awards)
+        ? parsed.awards
+        : [];
     return {
       description,
       ownerName:       typeof parsed.ownerName === "string" && parsed.ownerName.trim() ? parsed.ownerName.trim() : null,
       yearsInBusiness: typeof parsed.yearsInBusiness === "number" && Number.isFinite(parsed.yearsInBusiness) ? parsed.yearsInBusiness : null,
       serviceAreas:    Array.isArray(parsed.serviceAreas) ? parsed.serviceAreas.filter((s): s is string => typeof s === "string" && s.trim().length > 0) : [],
       specialties:     Array.isArray(parsed.specialties) ? parsed.specialties.filter((s): s is string => typeof s === "string" && s.trim().length > 0) : [],
-      awards:          Array.isArray(parsed.awards)      ? parsed.awards.filter((s): s is string => typeof s === "string" && s.trim().length > 0) : [],
+      press:           pressSource.filter((s): s is string => typeof s === "string" && s.trim().length > 0),
       teamSize:        typeof parsed.teamSize === "number" && Number.isFinite(parsed.teamSize) ? parsed.teamSize : null,
       style:           typeof parsed.style === "string" && parsed.style.trim() ? parsed.style.trim() : null,
     };

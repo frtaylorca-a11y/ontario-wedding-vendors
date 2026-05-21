@@ -228,6 +228,9 @@ export async function listVendors(
 
   const conditions = [
     or(eq(vendors.googleClosed, "no"), sql`${vendors.googleClosed} is null`)!,
+    /* Public listings exclude hidden rows. is_hidden defaults to
+     * false; explicitly checking !=true to handle nulls as visible. */
+    or(eq(vendors.isHidden, false), sql`${vendors.isHidden} is null`)!,
   ];
   if (params.region) conditions.push(eq(vendors.region, params.region));
   if (params.city) conditions.push(ilike(vendors.city, `%${params.city}%`));
@@ -347,6 +350,7 @@ export async function getSimilarVendors(opts: {
     eq(vendors.category, opts.category),
     ne(vendors.id, opts.excludeId),
     or(eq(vendors.googleClosed, "no"), sql`${vendors.googleClosed} is null`)!,
+    or(eq(vendors.isHidden, false), sql`${vendors.isHidden} is null`)!,
   ];
   if (opts.region) conditions.push(eq(vendors.region, opts.region));
 
@@ -433,11 +437,16 @@ export async function getVendorsBySlugs(slugs: string[]): Promise<Vendor[]> {
   const rows = await db
     .select()
     .from(vendors)
-    .where(sql`${vendors.slug} = ANY(${slugs})`);
+    .where(
+      and(
+        sql`${vendors.slug} = ANY(${slugs})`,
+        or(eq(vendors.isHidden, false), sql`${vendors.isHidden} is null`)!,
+      ),
+    );
   return rows;
 }
 
-/** Aggregate vendor count per category (excludes Google-closed listings). */
+/** Aggregate vendor count per category (excludes Google-closed + hidden listings). */
 export async function getVendorCountsByCategory(): Promise<Record<string, number>> {
   const rows = await db
     .select({
@@ -445,7 +454,12 @@ export async function getVendorCountsByCategory(): Promise<Record<string, number
       count: sql<number>`count(*)::int`,
     })
     .from(vendors)
-    .where(or(eq(vendors.googleClosed, "no"), sql`${vendors.googleClosed} is null`)!)
+    .where(
+      and(
+        or(eq(vendors.googleClosed, "no"), sql`${vendors.googleClosed} is null`)!,
+        or(eq(vendors.isHidden, false), sql`${vendors.isHidden} is null`)!,
+      ),
+    )
     .groupBy(vendors.category);
 
   const out: Record<string, number> = {};
@@ -453,8 +467,20 @@ export async function getVendorCountsByCategory(): Promise<Record<string, number
   return out;
 }
 
+/** Vendor detail lookup. Returns null when hidden — public callers
+ * should 404 in that case. Admin tools wanting to access hidden rows
+ * should query the DB directly rather than going through this helper. */
 export async function getVendorBySlug(slug: string): Promise<Vendor | null> {
-  const [row] = await db.select().from(vendors).where(eq(vendors.slug, slug)).limit(1);
+  const [row] = await db
+    .select()
+    .from(vendors)
+    .where(
+      and(
+        eq(vendors.slug, slug),
+        or(eq(vendors.isHidden, false), sql`${vendors.isHidden} is null`)!,
+      ),
+    )
+    .limit(1);
   return row ?? null;
 }
 
@@ -467,6 +493,7 @@ export async function getNearbyVendors(opts: {
   const limit = Math.min(Math.max(opts.limit ?? 8, 1), 50);
   const conditions = [
     or(eq(vendors.googleClosed, "no"), sql`${vendors.googleClosed} is null`)!,
+    or(eq(vendors.isHidden, false), sql`${vendors.isHidden} is null`)!,
   ];
   if (opts.region) conditions.push(eq(vendors.region, opts.region));
   if (opts.categories && opts.categories.length > 0) {
@@ -492,9 +519,10 @@ export async function getAllVenueSlugs(): Promise<{ slug: string; updatedAt: Dat
     .orderBy(asc(venues.slug));
 }
 
-/* For sitemap generation — every open vendor with a category gets its
- * own /vendors/[category]/[slug] page, so each one is a unique URL
- * worth surfacing to search engines. Skips google_closed='yes'. */
+/* For sitemap generation — every open, non-hidden vendor with a
+ * category gets its own /vendors/[category]/[slug] page, so each
+ * one is a unique URL worth surfacing to search engines. Skips
+ * google_closed='yes' and is_hidden=true rows. */
 export async function getAllVendorSlugs(): Promise<
   { slug: string; category: string; updatedAt: Date | null }[]
 > {
@@ -505,6 +533,11 @@ export async function getAllVendorSlugs(): Promise<
       updatedAt: vendors.updatedAt,
     })
     .from(vendors)
-    .where(or(eq(vendors.googleClosed, "no"), sql`${vendors.googleClosed} is null`)!)
+    .where(
+      and(
+        or(eq(vendors.googleClosed, "no"), sql`${vendors.googleClosed} is null`)!,
+        or(eq(vendors.isHidden, false), sql`${vendors.isHidden} is null`)!,
+      ),
+    )
     .orderBy(asc(vendors.slug));
 }

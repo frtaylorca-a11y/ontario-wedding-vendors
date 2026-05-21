@@ -419,9 +419,20 @@ async function processVendor(
       };
     }
 
+    /* On a confirmed match we also clear the visibility gates so the
+     * row re-enters public listings. hidden_reason is set back to
+     * null — the row could still be hidden in the future for a
+     * different reason (duplicate, low_quality), so we don't leave
+     * the old "no_website" label dangling. */
     await db
       .update(vendors)
-      .set({ website: verdict.url, updatedAt: new Date() })
+      .set({
+        website:            verdict.url,
+        isHidden:           false,
+        hiddenReason:       null,
+        needsWebsiteSearch: false,
+        updatedAt:          new Date(),
+      })
       .where(eq(vendors.id, v.id));
 
     return {

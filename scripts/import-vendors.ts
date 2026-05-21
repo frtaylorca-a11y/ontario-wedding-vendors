@@ -199,6 +199,13 @@ function toRow(raw: ScrapedVendor): NewVendor | null {
         ? "yes"
         : "no";
 
+  /* Hide imports that lack a website on file from public listings and
+   * flag them for the find-vendor-websites.ts AI search pass. Once
+   * that script finds + validates a URL it un-hides the row in the
+   * same write. */
+  const website = cleanString(raw.website);
+  const hasNoWebsite = !website;
+
   return {
     placeId:               raw.place_id,
     slug,
@@ -209,12 +216,15 @@ function toRow(raw: ScrapedVendor): NewVendor | null {
     province:              raw.province ?? "ON",
     region:                normalizeRegion(cleanString(raw.region), cleanString(raw.city)),
     phone:                 cleanString(raw.phone),
-    website:               cleanString(raw.website),
+    website,
     email:                 cleanString(raw.email),
     instagramHandle:       cleanString(raw.instagram_handle),
     googleRating:          raw.google_rating != null ? String(raw.google_rating) : null,
     reviewCount:           raw.review_count ?? null,
     googleClosed,
+    isHidden:              hasNoWebsite,
+    hiddenReason:          hasNoWebsite ? "no_website" : null,
+    needsWebsiteSearch:    hasNoWebsite,
     priceTier:             cleanString(raw.price_tier),
     priceFrom:             raw.price_from ?? null,
     priceTo:               raw.price_to ?? null,

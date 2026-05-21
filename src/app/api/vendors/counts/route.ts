@@ -16,6 +16,9 @@ export async function GET(request: Request) {
 
   const conditions = [
     or(eq(vendors.googleClosed, "no"), sql`${vendors.googleClosed} is null`)!,
+    /* Public-facing count — exclude hidden rows. Matches the filter
+     * applied by listVendors() so the count and the listing agree. */
+    or(eq(vendors.isHidden, false), sql`${vendors.isHidden} is null`)!,
   ];
   if (region && region !== "other") {
     conditions.push(eq(vendors.region, region));
