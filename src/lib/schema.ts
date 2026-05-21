@@ -217,6 +217,13 @@ export const vendors = pgTable(
      * first fetched. */
     additionalPhotos:    jsonb("additional_photos"),
 
+    /* Pre-computed multi-factor ranking score driving every public
+     * vendor sort. Higher = better. Recomputed by
+     * scripts/recompute-vendor-rankings.ts and by the import +
+     * bio-enrichment paths whenever a vendor row changes. See
+     * DISPLAY_RANK_SCORE_SQL in src/lib/queries.ts for the formula. */
+    displayRankScore:    integer("display_rank_score"),
+
     source: varchar("source", { length: 100 }),
     /* Wedding-readiness signal for vendors discovered through referrals + reviews */
     vendorReadinessScore: integer("vendor_readiness_score"),

@@ -354,6 +354,14 @@ async function processVendor(
         updatedAt:        new Date(),
       })
       .where(eq(vendors.id, vendor.id));
+
+    /* Bump the composite ranking immediately — the new description,
+     * specialties, service-areas, and bio-recency all feed into
+     * display_rank_score. Per-row recompute keeps the cost local
+     * (one row, single UPDATE) instead of triggering a full-table
+     * pass after every vendor. */
+    const { recomputeVendorDisplayRankScore } = await import("../src/lib/queries");
+    await recomputeVendorDisplayRankScore(vendor.id);
   }
 
   return { kind: "enriched" };

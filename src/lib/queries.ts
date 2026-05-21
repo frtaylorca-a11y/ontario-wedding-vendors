@@ -1,8 +1,77 @@
 import { cache } from "react";
-import { and, asc, desc, eq, getTableColumns, gte, ilike, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, gte, ilike, isNotNull, ne, or, sql } from "drizzle-orm";
 import { db } from "./db";
 import { venues, vendors, vendorRelationships } from "./schema";
 import type { Venue, Vendor } from "./schema";
+
+/* ─── Vendor ranking formula ─────────────────────────────────────────
+ * Composite score that drives every public vendor sort. The number
+ * is a sum across four buckets:
+ *   - tier boost: paid listings always above free (pinned: 1000,
+ *     featured: 500, else 0)
+ *   - Google quality: rating tiers + review-count tiers (max 35)
+ *   - profile completeness: website + non-generic description +
+ *     hero photo + phone + specialties + service-areas (max 40)
+ *   - recency: small bump for recently bio-enriched rows (max 5)
+ * Stored as vendors.display_rank_score by the import/enrichment paths
+ * so the ORDER BY is a plain column read, not a per-query computation. */
+export const DISPLAY_RANK_SCORE_SQL = sql<number>`(
+  CASE
+    WHEN ${vendors.isPinned} = true   THEN 1000
+    WHEN ${vendors.isFeatured} = true THEN 500
+    ELSE 0
+  END
+  + CASE
+      WHEN ${vendors.googleRating} >= 4.8 THEN 20
+      WHEN ${vendors.googleRating} >= 4.5 THEN 12
+      WHEN ${vendors.googleRating} >= 4.0 THEN 6
+      ELSE 0
+    END
+  + CASE
+      WHEN ${vendors.reviewCount} >= 100 THEN 15
+      WHEN ${vendors.reviewCount} >= 50  THEN 10
+      WHEN ${vendors.reviewCount} >= 20  THEN 6
+      WHEN ${vendors.reviewCount} >= 10  THEN 3
+      ELSE 0
+    END
+  + CASE WHEN ${vendors.website} IS NOT NULL AND ${vendors.website} <> '' THEN 10 ELSE 0 END
+  + CASE
+      WHEN ${vendors.description} IS NOT NULL
+        AND ${vendors.description} <> ''
+        AND ${vendors.description} NOT LIKE '%highly-rated%'
+        AND ${vendors.description} NOT LIKE '%wedding-ready%'
+      THEN 8 ELSE 0
+    END
+  + CASE WHEN ${vendors.heroImage}      IS NOT NULL THEN 8 ELSE 0 END
+  + CASE WHEN ${vendors.phone}          IS NOT NULL AND ${vendors.phone} <> '' THEN 5 ELSE 0 END
+  + CASE WHEN ${vendors.specialties}    IS NOT NULL THEN 5 ELSE 0 END
+  + CASE WHEN ${vendors.serviceAreas}   IS NOT NULL THEN 4 ELSE 0 END
+  + CASE WHEN ${vendors.bioEnrichedAt}  > NOW() - INTERVAL '30 days' THEN 5 ELSE 0 END
+)`;
+
+/* Recompute display_rank_score for every vendor row in one shot.
+ * Safe to run multiple times; the result is idempotent for a given
+ * snapshot of the data. Returns the number of rows updated. */
+export async function recomputeAllDisplayRankScores(): Promise<number> {
+  const res = await db
+    .update(vendors)
+    .set({
+      displayRankScore: DISPLAY_RANK_SCORE_SQL,
+      updatedAt:        new Date(),
+    })
+    .where(isNotNull(vendors.id))
+    .returning({ id: vendors.id });
+  return res.length;
+}
+
+/* Recompute the score for a single vendor row. Called by the import
+ * + bio-enrichment paths after they mutate the row's other columns. */
+export async function recomputeVendorDisplayRankScore(vendorId: number): Promise<void> {
+  await db
+    .update(vendors)
+    .set({ displayRankScore: DISPLAY_RANK_SCORE_SQL })
+    .where(eq(vendors.id, vendorId));
+}
 
 /**
  * Site-wide live counts for trust bars, meta descriptions, and copy.
@@ -297,12 +366,19 @@ export async function listVendors(
         )`
       : sql<boolean>`false`;
 
+  /* New ranking order — composite display_rank_score (computed by
+   * the import + enrichment paths) carries the heavy weight. Legacy
+   * vendor_readiness_score remains as a tiebreaker so vendors with
+   * the same display score but a fuller historical profile still
+   * sort up. The category/region pinnedMatch boost still runs FIRST
+   * — that's the "Recommended Partner" surface and intentionally
+   * outranks the algorithmic score. */
   const orderBy: ReturnType<typeof desc>[] = [
     desc(pinnedMatch),
-    desc(vendors.featured),
     desc(vendors.isPicBooth),
   ];
   if (hasProximity && distanceSql) orderBy.push(asc(distanceSql));
+  orderBy.push(desc(vendors.displayRankScore));
   orderBy.push(desc(vendors.vendorReadinessScore));
   orderBy.push(desc(vendors.googleRating));
   orderBy.push(desc(vendors.reviewCount));
@@ -359,6 +435,7 @@ export async function getSimilarVendors(opts: {
     .from(vendors)
     .where(and(...conditions))
     .orderBy(
+      desc(vendors.displayRankScore),
       desc(vendors.vendorReadinessScore),
       desc(vendors.googleRating),
       desc(vendors.reviewCount),
@@ -506,6 +583,7 @@ export async function getNearbyVendors(opts: {
     .orderBy(
       desc(vendors.isPicBooth),
       desc(vendors.featured),
+      desc(vendors.displayRankScore),
       desc(vendors.googleRating),
     )
     .limit(limit);

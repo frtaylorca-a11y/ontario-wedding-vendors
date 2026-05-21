@@ -453,6 +453,14 @@ async function main() {
   console.log(`  Skipped (unknown cat):  ${total.skippedUnknownCategory}`);
   console.log(`  Skipped (Pic Booth dup):${total.skippedPicBoothDup}`);
   console.log(`  Errors:   ${total.errors}`);
+
+  /* Refresh the composite display ranking after every import so the
+   * listing pages reflect the new data. One bulk UPDATE — cheaper
+   * than per-row recompute during the insert loop. */
+  console.log("\nRecomputing display_rank_score for all vendors…");
+  const { recomputeAllDisplayRankScores } = await import("../src/lib/queries");
+  const updated = await recomputeAllDisplayRankScores();
+  console.log(`  Updated ${updated.toLocaleString()} rows.`);
 }
 
 main().catch((err) => {
