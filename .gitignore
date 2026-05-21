@@ -48,6 +48,8 @@ vendor_search.py
 check*.py
 fix*.py
 *.py
+# Exception: the picbooth-yoast tool IS checked in (lives in this repo for convenience).
+!scripts/picbooth-yoast/*.py
 
 # dev server log
 dev.log
