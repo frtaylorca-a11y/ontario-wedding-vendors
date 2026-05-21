@@ -175,11 +175,12 @@ export function VendorCard({
           isPinned ? "border-rose hover:border-rose" : "border-border hover:border-[var(--cat-primary)]"
         }`}
       >
-        {/* Background photo */}
+        {/* Background photo — slow zoom on hover (700ms / scale 110%)
+         * tracks the parent `group` so the lift + zoom stay in sync. */}
         <img
           src={photoUrl}
           alt=""
-          className="absolute inset-0 h-full w-full object-cover"
+          className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-110"
           loading="lazy"
         />
         {/* Dark overlay — single solid black, no colour tint */}
@@ -308,10 +309,11 @@ export function VendorCard({
               )}
             </div>
             <span
-              className="relative z-[1] text-xs font-bold tracking-[0.04em] text-white"
+              className="relative z-[1] inline-flex items-center gap-1 text-xs font-bold tracking-[0.04em] text-white"
               style={{ textShadow: "0 1px 8px rgba(0,0,0,0.6)" }}
             >
-              View →
+              View
+              <ArrowRightIcon />
             </span>
           </div>
         </div>
@@ -416,10 +418,37 @@ export function VendorCard({
             <span className="text-xs text-text-muted">No reviews yet</span>
           )}
         </div>
-        <span className="relative z-[1] text-xs font-bold tracking-[0.04em] text-[var(--cat-primary)]">
-          View →
+        <span className="relative z-[1] inline-flex items-center gap-1 text-xs font-bold tracking-[0.04em] text-[var(--cat-primary)]">
+          View
+          <ArrowRightIcon />
         </span>
       </div>
     </article>
+  );
+}
+
+/* Inline ArrowRight icon — replaces the static "→" character in both
+ * VendorCard variants. Translates 4px right on the parent card's
+ * group-hover state, paired with the photo's group-hover scale to
+ * give the card a single coordinated "active" feel. Stroke style
+ * matches lucide-react so the icon reads consistent with the rest
+ * of the directory's iconography. */
+function ArrowRightIcon() {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      width="14"
+      height="14"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="transition-transform duration-300 ease-out group-hover:translate-x-1"
+    >
+      <path d="M5 12h14" />
+      <path d="m12 5 7 7-7 7" />
+    </svg>
   );
 }
