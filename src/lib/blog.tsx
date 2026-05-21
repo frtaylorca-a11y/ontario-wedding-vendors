@@ -722,6 +722,1231 @@ export const BLOG_POSTS: BlogPost[] = [
       </>
     ),
   },
+
+  /* ─── 9. Wedding videographer cost in Ontario ──────────────────── */
+  {
+    slug: "wedding-videographer-cost-ontario",
+    title: "How Much Does a Wedding Videographer Cost in Ontario? (2026 Guide)",
+    excerpt:
+      "Ontario wedding videography runs $1,500–$9,000 in 2026. Here's what each tier actually delivers — and the three add-ons that quietly double the bill.",
+    category: "Vendor pricing",
+    publishedAt: "2026-05-19",
+    readMinutes: 7,
+    heroImage: "/images/vendor-videographer.png",
+    metaDescription:
+      "Wedding videographer cost in Ontario (2026): real price ranges $1,500–$9,000, what each tier includes, cinematic vs documentary styles, and drone footage costs.",
+    body: (
+      <>
+        <p>
+          Wedding video sits in an awkward spot on the Ontario budget. Couples
+          who book it almost always say it was the most-rewatched investment of
+          the whole wedding; couples who skipped it tend to regret it within
+          eighteen months. The price range is wider than any other vendor
+          category — we see Ontario quotes anywhere from{" "}
+          <strong>$1,500 to $9,000</strong> for a full-day wedding film in 2026,
+          and the gap between the floor and the ceiling is real (not just
+          branding).
+        </p>
+
+        <h2>The four price tiers in Ontario</h2>
+        <p>
+          <strong>$1,500–$2,500 — Solo budget.</strong> One videographer, one
+          camera, ~6 hours of coverage, a 3–5 minute highlight reel delivered
+          4–8 weeks after the wedding. Often a side-hustle from a wedding
+          photographer who also shoots video. Fine for couples who want a
+          memento but aren&rsquo;t fussed about cinematic polish.
+        </p>
+        <p>
+          <strong>$2,500–$4,500 — Mid-market.</strong> The most common Ontario
+          booking. Two-person team, 8–10 hours of coverage, both a highlight
+          reel (4–8 minutes) and a longer feature film (15–30 minutes) of the
+          ceremony + speeches. Studios in this tier in the GTA include Vibrant
+          Wedding Films, Sevin Productions, and Frame Forty Films.
+        </p>
+        <p>
+          <strong>$4,500–$7,000 — Premium.</strong> Two operators plus a
+          dedicated drone pilot, gimbal-stabilised cinematography, full audio
+          rig (lavs on the officiant + groom, board feed from the DJ), and
+          sneak-peek edit delivered within 72 hours. You&rsquo;re paying for
+          colour-grading consistency, three-camera ceremony coverage, and a
+          producer who runs the day independently.
+        </p>
+        <p>
+          <strong>$7,000–$9,000+ — Luxury.</strong> Boutique studios with a
+          waitlist — Bird&rsquo;s Eye Cinema, Studio Sixty Photo + Film, and a
+          handful of Niagara wine-country specialists. Full-day to next-morning
+          coverage, custom music licensing, raw footage delivery, sometimes a
+          same-day edit shown at the reception.
+        </p>
+
+        <h2>Cinematic vs documentary — which style costs more?</h2>
+        <p>
+          Style isn&rsquo;t a price multiplier — it&rsquo;s a labour multiplier.
+          A <em>cinematic</em> edit means colour grading, music licensing, and
+          re-staged shots (the &ldquo;hands moment&rdquo;, the dress hanging in
+          the window). A <em>documentary</em> edit captures what actually
+          happened — speeches uncut, longer ceremony excerpts, less voiceover.
+          Cinematic typically lands $500–$1,500 above documentary at the same
+          studio because of the post-production hours, not because the gear is
+          different.
+        </p>
+
+        <h2>Drone footage — almost always worth it</h2>
+        <p>
+          Drone coverage runs <strong>$300–$700</strong> as an add-on. Worth
+          it for venues with a dramatic exterior — wineries, lakefront resorts,
+          historic estates — and skippable for downtown Toronto rooftops where
+          the city is the backdrop anyway. Note: Transport Canada requires the
+          operator hold a Basic or Advanced RPAS certificate; ask your
+          videographer to confirm theirs is current before booking.
+        </p>
+
+        <h2>The three add-ons that quietly double the bill</h2>
+        <p>
+          1. <strong>Raw footage delivery.</strong> Usually $500–$1,000 to
+          receive all the unedited clips on a hard drive. Most couples
+          don&rsquo;t need it — but if you ever want to re-edit in the future,
+          this is the only way to get the source files.
+        </p>
+        <p>
+          2. <strong>Extended coverage</strong> from morning prep through late
+          reception. Every additional hour after the contracted block is
+          $150–$300. Couples consistently underestimate how long they want the
+          team on site.
+        </p>
+        <p>
+          3. <strong>Second feature edit</strong> — a 30–60 minute
+          documentary-style cut of the full ceremony and speeches. Adds
+          $500–$1,200 and is the cut your parents will actually want.
+        </p>
+
+        <h2>When to book</h2>
+        <p>
+          Peak-season Ontario videographers (June, September, October Saturdays
+          in Niagara or the GTA) book 10–14 months ahead. Off-season Friday or
+          Sunday dates are routinely available 4–6 months out, sometimes with a
+          10–15% discount. Studios in the top tier ($7,000+) typically only
+          shoot 12–18 weddings per year and lock in their summer Saturdays
+          before the previous year is over — if your heart is set on a
+          specific name, reach out as soon as you have a date, even if you
+          haven&rsquo;t booked the venue yet.
+        </p>
+
+        <h2>What to ask in the consultation</h2>
+        <p>
+          Four questions surface most of the price + quality variation:
+        </p>
+        <ul>
+          <li>
+            <strong>How many weddings did you shoot last year, and how
+            many are you shooting this year?</strong> Active studios with
+            steady volume produce more consistent work than someone trying
+            to keep a side hustle alive between full-time jobs.
+          </li>
+          <li>
+            <strong>What does your music licensing look like?</strong> If
+            they&rsquo;re using uncleared tracks, your video can&rsquo;t go
+            on YouTube without a takedown. Reputable Ontario studios use
+            Musicbed, Soundstripe, or Artlist with a per-track sync license.
+          </li>
+          <li>
+            <strong>Who&rsquo;s the editor?</strong> Some studios shoot
+            in-house and outsource editing to Eastern Europe. The shot
+            list and the cut are different skills — find out who&rsquo;s
+            building the final piece.
+          </li>
+          <li>
+            <strong>What&rsquo;s your delivery timeline?</strong> Industry
+            standard is 8–12 weeks. Anything past 16 weeks should come with
+            a contractual penalty.
+          </li>
+        </ul>
+
+        <p>
+          Browse Ontario videographers by region, with portfolios, packages,
+          and Google review counts on the{" "}
+          <a href="/vendors/videographer">videographer directory</a>. Many
+          couples also pair their videographer with a photographer in advance —
+          see the{" "}
+          <a href="/blog/wedding-photographer-cost-ontario">photographer pricing guide</a>{" "}
+          for the companion breakdown.
+        </p>
+      </>
+    ),
+  },
+
+  /* ─── 10. Niagara-on-the-Lake winery weddings ──────────────────── */
+  {
+    slug: "niagara-on-the-lake-wineries-weddings",
+    title: "Getting Married at a Niagara-on-the-Lake Winery: The Complete Guide (2026)",
+    excerpt:
+      "Ravine, Two Sisters, Peller, Inniskillin — and the things every couple wishes someone had told them before booking a NOTL winery wedding.",
+    category: "Niagara guide",
+    publishedAt: "2026-05-18",
+    readMinutes: 9,
+    heroImage: "/images/venue-winery.png",
+    metaDescription:
+      "Niagara-on-the-Lake winery wedding guide (2026): Ravine, Two Sisters, Peller, Inniskillin — capacity, what's included, guest count limits, and real pricing.",
+    body: (
+      <>
+        <p>
+          Niagara-on-the-Lake is the most-searched wedding destination in
+          Ontario outside the GTA — and its wineries take more than half the
+          bookings. Within a 15-minute drive of the town centre there are
+          roughly thirty estate wineries running formal wedding programs, and
+          another dozen that host on a more ad-hoc basis. For a 2026 Saturday
+          in peak season (June–September), expect Niagara-on-the-Lake
+          (&ldquo;NOTL&rdquo;) wineries to quote{" "}
+          <strong>$15,000–$30,000+</strong> for venue + plated dinner for 100
+          guests, with the variation coming almost entirely from how many
+          inclusions the venue bundles into one rate.
+        </p>
+
+        <h2>The four most-booked NOTL wineries</h2>
+        <p>
+          <strong>Ravine Vineyard Estate Winery.</strong> Coopers&rsquo; Hall
+          (capacity 130 seated) plus the Lillian Boe Pavilion for outdoor
+          ceremonies. In-house catering through their farm-to-table restaurant
+          program. Full Saturday rental + plated dinner runs $18,000–$26,000
+          for a hundred guests. Strong choice for couples who want a single
+          venue to handle ceremony, cocktail hour, and reception with no
+          travel between.
+        </p>
+        <p>
+          <strong>Two Sisters Vineyards.</strong> Kitchen 76 hosts the dinner;
+          the Bordeaux-style estate provides the photography backdrop. Cap
+          around 140 indoor. Two Sisters is often the priciest of the
+          mainstream NOTL wineries — Saturdays in peak season clear $25,000 —
+          but the room itself is the most architecturally impressive of any
+          NOTL winery, with vaulted ceilings and floor-to-ceiling glass.
+        </p>
+        <p>
+          <strong>Peller Estates.</strong> The Riedel Room (180 seated) is one
+          of the largest winery wedding spaces in Niagara. Peller&rsquo;s 10
+          Below ice lounge is a unique cocktail-hour option in cooler months.
+          Pricing tracks Ravine — $18,000–$28,000 for a full Saturday with
+          plated dinner.
+        </p>
+        <p>
+          <strong>Inniskillin Wines.</strong> Smaller capacity (around 90),
+          which suits couples planning intimate weddings. The Founders&rsquo;
+          Hall has the most rustic feel of the major NOTL wineries — exposed
+          beams, smaller scale, and a quieter setting along the Niagara
+          Parkway. Lower entry pricing than the others ($14,000–$20,000),
+          partly because of the smaller guest count.
+        </p>
+
+        <h2>The next tier worth touring</h2>
+        <p>
+          If the big four are booked out (and they often are 12+ months ahead
+          for Saturdays), look at Konzelmann Estate Winery, Trius Winery,
+          Jackson-Triggs Estate, Stratus Vineyards, and The Old Stone Inn.
+          Konzelmann is the only major lakefront winery in the region.
+          Jackson-Triggs has a covered outdoor amphitheatre that fits 200+
+          guests and runs a less formal wedding program (couples bring their
+          own caterer, with Jackson-Triggs handling wine + ceremony space).
+        </p>
+
+        <h2>What&rsquo;s typically included</h2>
+        <p>
+          Most NOTL wineries include the ceremony space, reception hall,
+          plated dinner, wine service throughout the meal, table setup and
+          linens, a dedicated wedding coordinator, and parking. Bar packages
+          beyond wine are usually <em>additional</em> and run $40–$70 per
+          person for full open bar. Some wineries restrict the bar to their
+          own labels plus a limited beer + spirits list, which is worth
+          confirming in writing — it affects what your guests can order.
+        </p>
+
+        <h2>Guest count limits — the unwritten rule</h2>
+        <p>
+          Indoor capacity caps at most NOTL wineries are 130–180. The
+          published capacity is for a seated dinner with a dance floor;
+          ceremony-only seating runs higher. If your guest list is creeping
+          past 150, ask early about whether the venue requires an outdoor
+          tented expansion (an extra $4,000–$8,000 for tent + flooring + heat
+          in shoulder months).
+        </p>
+
+        <h2>Seasonal considerations</h2>
+        <p>
+          Peak NOTL wedding season is mid-May through mid-October. The
+          vineyard itself is photogenic from late May (bud break) through
+          early October (harvest). Late-October weddings risk vineyard
+          dormancy by the wedding date but can capture stunning autumn
+          colour. Winter weddings (December–March) are run by a smaller
+          subset of NOTL wineries with full heating; the rates drop sharply
+          (often 30–40% off peak), which couples on a tight budget
+          consistently overlook.
+        </p>
+
+        <h2>Before you sign</h2>
+        <p>
+          Read the corkage and outside-vendor policy. Many wineries restrict
+          which photographers, DJs, and florists can work on-site (preferred
+          vendor lists). If you&rsquo;ve already booked a vendor outside that
+          list, get an exception in writing before paying the deposit. Also
+          confirm the rain plan — most NOTL wineries have an indoor ceremony
+          backup but the move from outdoor to indoor needs to be triggered by
+          a specific time (typically 2 hours before ceremony start), and that
+          call is the venue coordinator&rsquo;s to make, not yours.
+        </p>
+
+        <h2>Getting guests to NOTL</h2>
+        <p>
+          Niagara-on-the-Lake is 90 minutes from downtown Toronto on a clear
+          Saturday afternoon, two-plus hours in summer traffic. Most couples
+          either book a hotel block in NOTL itself (Pillar &amp; Post,
+          Prince of Wales, Queen&rsquo;s Landing — all walkable to the town
+          centre) or run a coach shuttle from a hotel block in Niagara Falls
+          for the evening. Either way, build the transportation into the
+          budget early — guests trying to drive home from a winery after the
+          reception is the most common day-of issue NOTL couples run into.
+        </p>
+
+        <p>
+          Browse every wedding-ready NOTL winery with capacity, rating, and
+          coordinator info on the{" "}
+          <a href="/cities/niagara-on-the-lake">Niagara-on-the-Lake venues page</a>{" "}
+          or filter the full provincial directory to{" "}
+          <a href="/venues?type=winery">winery venues across Ontario</a>. For
+          broader region context including pricing benchmarks, see the{" "}
+          <a href="/regions/niagara">Niagara region guide</a>.
+        </p>
+      </>
+    ),
+  },
+
+  /* ─── 11. Muskoka cottage country wedding venues ───────────────── */
+  {
+    slug: "muskoka-cottage-wedding-venues",
+    title: "Best Muskoka Cottage Country Wedding Venues (2026)",
+    excerpt:
+      "Lakeside ceremonies, on-water portraits, weekend takeovers — here are the Muskoka resorts and lakefront venues couples are booking for 2026.",
+    category: "Muskoka guide",
+    publishedAt: "2026-05-17",
+    readMinutes: 8,
+    heroImage: "/images/region-muskoka.png",
+    metaDescription:
+      "Best Muskoka wedding venues 2026: Windermere House, Sherwood Inn, Living Water Resort, Bigwin Island, Touchstone — capacity, pricing, and guest travel notes.",
+    body: (
+      <>
+        <p>
+          Muskoka is Ontario&rsquo;s cottage country — three hours north of
+          Toronto, anchored by the towns of Bracebridge, Gravenhurst, Port
+          Carling, and Huntsville, and ringed by lakes that turn cinematic in
+          the last hour of summer light. Wedding bookings here cluster in a
+          tight 16-week window from late June to mid-October. Inside that
+          window, the historic lake resorts are the most-booked venues in the
+          region.
+        </p>
+
+        <h2>The five most-booked Muskoka venues</h2>
+        <p>
+          <strong>Windermere House.</strong> A four-storey Victorian
+          lakeside hotel on Lake Rosseau, in operation as a resort since
+          1864. The grand wraparound veranda is the venue&rsquo;s signature
+          photo location. Capacity runs to about 200 for tented receptions on
+          the lawn; the indoor ballroom seats 130. Saturday Muskoka rates land
+          at <strong>$25,000–$45,000</strong> for venue + plated dinner for
+          120 guests in peak season — partly because the resort books most
+          weddings as full weekend takeovers, including Friday welcome dinner
+          and Sunday brunch.
+        </p>
+        <p>
+          <strong>Sherwood Inn.</strong> On Lake Joseph, smaller and more
+          intimate than Windermere. Cap around 130 indoor. Strong choice for
+          couples who want a country-inn feel without the scale of the bigger
+          resorts. Pricing typically $18,000–$30,000 for a full weekend.
+        </p>
+        <p>
+          <strong>Living Water Resort &amp; Spa.</strong> Collingwood-adjacent
+          (technically Georgian Bay, not the Muskoka lakes — but couples
+          shopping &ldquo;Muskoka&rdquo; often consider it). Newer build,
+          modern aesthetic, and a marina view. Best for couples who want
+          cottage country light without the long drive.
+        </p>
+        <p>
+          <strong>Bigwin Island Golf Club.</strong> Boat-access island
+          (private launch from Port Cunnington) on Lake of Bays. Capacity to
+          180 in the clubhouse. The ferry to the island is part of the
+          experience — but it also means guests need either a shuttle plan or
+          on-island accommodation, both of which add cost.
+        </p>
+        <p>
+          <strong>Touchstone on Lake Muskoka.</strong> Resort condos with a
+          dedicated event lawn and lakefront ceremony site. More flexible
+          on guest accommodation (suites + cottages on-site) than the
+          historic hotels, which is why couples with 80+ guests travelling in
+          tend to book here.
+        </p>
+
+        <h2>What to expect from a Muskoka wedding</h2>
+        <p>
+          Almost every Muskoka venue is run as a <em>weekend</em> event, not a
+          single day. Friday welcome dinner + Saturday ceremony and reception
+          + Sunday brunch is the default cadence, and the venue typically
+          requires you book some minimum number of room-nights at the resort
+          on Friday and Saturday. This is the single biggest cost difference
+          versus a GTA or Niagara wedding: you&rsquo;re effectively buying out
+          a small resort for 48 hours, and the room-night minimums can push
+          the all-in cost past $50,000 even for a 100-guest wedding.
+        </p>
+
+        <h2>Guest travel — the planning that decides everything</h2>
+        <p>
+          Most guests will drive 2.5–3.5 hours from the GTA. The further west
+          you go (Lake Joseph), the longer the drive and the harder the
+          last-leg roads in shoulder season. Build the guest list with this in
+          mind: anyone who doesn&rsquo;t want to drive will need a hotel
+          room. If your venue has fewer than 60 rooms on-site, secure a
+          hotel block in Bracebridge or Huntsville early — there are only a
+          handful of full-service hotels in the region, and they sell out
+          June–September.
+        </p>
+
+        <h2>Seasonal window</h2>
+        <p>
+          Muskoka weddings run late June (when the water finally warms) to
+          mid-October. The shoulder weeks (late September and early October)
+          deliver the best colour for photos but introduce real weather risk
+          — every wedding plan needs an indoor backup by mid-September. May
+          and early June weddings exist but are unusual; the resorts are
+          still in shoulder operation and the lake hasn&rsquo;t thawed enough
+          for the on-water photography that defines the region.
+        </p>
+
+        <h2>Cost reality check</h2>
+        <p>
+          Plan for <strong>$30,000–$70,000+</strong> all-in for a Muskoka
+          weekend wedding for 100 guests, with the spread driven mostly by
+          accommodation buyouts. The venue rental + dinner line is rarely the
+          biggest part of the bill.
+        </p>
+
+        <h2>Bringing vendors up from the city</h2>
+        <p>
+          Many Toronto-based photographers, videographers, florists, and DJs
+          will travel for a Muskoka wedding — but they almost always charge a
+          travel premium ($300–$800) plus require accommodation either at the
+          venue or in a nearby hotel. A handful of Muskoka-based vendors run
+          full books year-round (Karina Vega Photography, Holly McCaig, Aglow
+          Weddings); they&rsquo;ll quote lower than equivalent GTA studios but
+          they book out 10–14 months ahead. Most couples end up with a hybrid
+          team — local florist + DJ, GTA photographer + planner — which works
+          well as long as the lead vendor (usually the planner) coordinates
+          load-in and load-out timing.
+        </p>
+
+        <p>
+          See every Muskoka venue we track — capacity, rating, and
+          coordinator info — on the{" "}
+          <a href="/venues?region=muskoka">Muskoka venues page</a>, or browse
+          the broader{" "}
+          <a href="/regions/cottage-country">cottage country region guide</a>{" "}
+          for surrounding areas (Collingwood, Wasaga Beach, Orillia).
+        </p>
+      </>
+    ),
+  },
+
+  /* ─── 12. Outdoor wedding venues Ontario ───────────────────────── */
+  {
+    slug: "outdoor-wedding-venues-ontario",
+    title: "Best Outdoor Wedding Venues in Ontario (2026 Guide)",
+    excerpt:
+      "Conservation areas, farm properties, vineyards, golf clubs — where to host outside in Ontario, and the weather-contingency mistakes every couple wants to avoid.",
+    category: "Venue guide",
+    publishedAt: "2026-05-16",
+    readMinutes: 8,
+    heroImage: "/images/venue-outdoor.png",
+    metaDescription:
+      "Outdoor wedding venues in Ontario (2026): conservation areas, farms, wineries, golf clubs — what to expect, weather backup planning, and permits.",
+    body: (
+      <>
+        <p>
+          Ontario has a real outdoor wedding season — and it&rsquo;s short.
+          Mid-May to early October is the realistic window, and within that
+          window only late June through mid-September are reliably warm.
+          Couples planning an outdoor ceremony should treat the weather plan
+          as a load-bearing decision, not a footnote. With that said, the
+          venues that lean into the outdoor experience consistently produce
+          the most memorable weddings in the province.
+        </p>
+
+        <h2>Four categories worth considering</h2>
+        <p>
+          <strong>Conservation areas and provincial parks.</strong> The
+          Niagara Parks Commission rents the Floral Showhouse, Queen Victoria
+          Park, and Whirlpool Aero Car overlooks. Conservation Halton manages
+          Crawford Lake, Mount Nemo, and Kelso. These properties run
+          $1,500–$5,000 for ceremony permits — they&rsquo;re a venue
+          backdrop, not a full reception space, so you&rsquo;re also booking a
+          separate dinner location nearby.
+        </p>
+        <p>
+          <strong>Farm and barn properties.</strong> Cambium Farms (Caledon),
+          Earth to Table Farm (Flamborough/Hamilton), and Honsberger Estate
+          (Niagara) host full outdoor ceremonies on grass or under
+          tents, then move dinner into a heated barn or pavilion. The barn
+          gives you the weather backup baked into the property. See the{" "}
+          <a href="/venues?type=barn">barn venue directory</a> for the full
+          list across Ontario.
+        </p>
+        <p>
+          <strong>Wineries.</strong> Most Niagara wineries have a dedicated
+          outdoor ceremony space — vineyards make for cinematic photos, and
+          the indoor reception hall is your built-in Plan B if the weather
+          turns. See{" "}
+          <a href="/venues?type=winery">winery venues across Ontario</a>.
+        </p>
+        <p>
+          <strong>Golf clubs.</strong> Often underrated — manicured greens,
+          covered patios, reliable indoor dining rooms. Angus Glen
+          (Markham), Granite Golf (King City), Whistle Bear (Cambridge), and
+          Cherry Downs (Pickering) all run formal wedding programs. Golf
+          clubs are the closest thing to a turnkey outdoor venue in Ontario
+          — you get the lawn ceremony, the patio cocktail hour, and the
+          indoor ballroom in one property.
+        </p>
+
+        <h2>The weather contingency — non-negotiable</h2>
+        <p>
+          Every Ontario outdoor wedding needs a Plan B confirmed in writing
+          before the deposit is paid. Three patterns work:
+        </p>
+        <ol>
+          <li>
+            <strong>Tented backup.</strong> A 40-by-80 frame tent with
+            sidewalls fits 120 seated. Rental + setup runs $3,500–$6,000;
+            many venues require you book the tent at contract regardless of
+            forecast.
+          </li>
+          <li>
+            <strong>Indoor mirror space.</strong> The venue has an indoor
+            room sized for the full ceremony — confirm the room is yours
+            even if you don&rsquo;t use it. Some venues will only hold the
+            indoor space if you pay an additional &ldquo;weather hold&rdquo;
+            fee.
+          </li>
+          <li>
+            <strong>Hybrid pavilion.</strong> Open-sided structures with a
+            permanent roof — common at conservation areas and some farms.
+            Cheapest backup and often the prettiest, but you&rsquo;re still
+            exposed if it rains horizontally (which Ontario absolutely
+            does).
+          </li>
+        </ol>
+
+        <h2>Permit considerations</h2>
+        <p>
+          Public parks and conservation areas require a special-event
+          permit. Lead time is typically 60–90 days; some require liability
+          insurance ($2 million general liability is standard). If your
+          ceremony venue isn&rsquo;t a private property with a wedding
+          program, check the permit office before assuming a date is
+          bookable. Municipal parks in Toronto (Trinity Bellwoods, High Park
+          gazebo) book up 6+ months out.
+        </p>
+
+        <h2>Timing — golden hour matters</h2>
+        <p>
+          Sunset in Toronto is roughly 8:50 PM in late June and 6:50 PM in
+          mid-October. The hour before sunset is your best photography light
+          — plan ceremony start times so that you finish vows before that
+          window and can use golden hour for couple portraits. A 4:00 PM
+          ceremony in late June gives you a generous golden-hour pad; the
+          same ceremony in early October leaves the photographer racing the
+          sun.
+        </p>
+
+        <h2>Bug season — the warning nobody puts on a brochure</h2>
+        <p>
+          Late June and most of July are mosquito season near water in
+          Ontario, including Muskoka, conservation areas, and lakeside
+          wineries. Decent venues will deploy citronella + perimeter
+          treatment the day-of, but ask directly. An outdoor September
+          wedding has almost no bugs and the same daylight as a late-May
+          wedding — and is consistently the best-photographed month.
+        </p>
+
+        <h2>Tent rentals — what each size costs</h2>
+        <p>
+          If you&rsquo;re running an outdoor reception on private land or at
+          a venue without a built-in indoor backup, tent rentals are the
+          single biggest line beyond catering:
+        </p>
+        <ul>
+          <li><strong>20×40 frame tent</strong> (60 guests): $1,500–$2,500 plus delivery + setup.</li>
+          <li><strong>40×60 frame tent</strong> (120 guests): $3,000–$4,500.</li>
+          <li><strong>40×80 frame tent</strong> (160 guests): $4,500–$6,500.</li>
+          <li><strong>Sailcloth / pole tents</strong> (the photogenic ones): typically 30–50% more than equivalent frame tents.</li>
+        </ul>
+        <p>
+          Heat and sidewalls add roughly 25% to the rental in shoulder
+          season. Major Ontario rental operators (Chair-man Mills, Higgins
+          Event Rentals, Cherry Avenue Rentals) require a 30% deposit at
+          contract and a final headcount 14 days before the wedding.
+        </p>
+
+        <p>
+          Browse every outdoor-capable venue we track — wineries, farms,
+          conservation areas, golf clubs, estates — on the{" "}
+          <a href="/venues?type=outdoor">outdoor venues page</a>.
+        </p>
+      </>
+    ),
+  },
+
+  /* ─── 13. Wedding catering costs in Ontario ────────────────────── */
+  {
+    slug: "wedding-catering-cost-ontario",
+    title: "Wedding Catering Costs in Ontario: What to Budget (2026)",
+    excerpt:
+      "Catering is the biggest single line on most Ontario wedding budgets — here's a per-head breakdown, the four service styles, and the five fees couples forget to budget for.",
+    category: "Vendor pricing",
+    publishedAt: "2026-05-15",
+    readMinutes: 8,
+    heroImage: "/images/vendor-catering.png",
+    metaDescription:
+      "Wedding catering costs in Ontario (2026): per-person $85–$250, plated vs buffet vs stations, bar costs, vendor meals, gratuity and HST explained.",
+    body: (
+      <>
+        <p>
+          For most Ontario weddings, catering is the largest single line on
+          the budget — usually 35–45% of the total. The per-person rate is
+          the figure couples anchor on, but the real number that matters is
+          what shows up on the final invoice after gratuity, HST, bar, and
+          vendor meals. Once you add it all up, an Ontario plated dinner that
+          quoted at $115 per person typically lands closer to <strong>$155
+          per person all-in</strong>. Plan for that gap from the start and
+          the surprises stop being surprises.
+        </p>
+
+        <h2>The three Ontario per-person tiers</h2>
+        <p>
+          <strong>$85–$125 — Budget.</strong> External caterers booked for a
+          dry hall or barn rental, family-style or buffet service, one
+          protein + one vegetarian option, simple appetizer rotation,
+          coffee/tea + dessert service included. Examples: Daniel et Daniel
+          mid-tier menus, Chef &amp; Co., 10tation Event Catering value
+          menus.
+        </p>
+        <p>
+          <strong>$125–$175 — Mid-market.</strong> The default for most
+          Ontario weddings. Plated dinner with three protein choices,
+          stationed cocktail-hour appetizers, late-night station (poutine,
+          slider bar, taco station), wedding-cake cutting and service. In
+          this tier in the GTA: Eatertainment, McEwan Group, Encore Catering;
+          in Niagara: Niagara&rsquo;s Finest Catering, The Wine Country
+          Catering Co.
+        </p>
+        <p>
+          <strong>$175–$250+ — Premium.</strong> Five-course tasting-menu
+          weddings or fully bespoke menus. Specialty proteins (lamb, duck,
+          beef tenderloin), composed plates, mid-service intermezzi, the
+          works. At this tier you&rsquo;re typically working with a
+          restaurant-group caterer (Oliver &amp; Bonacini, Eatertainment
+          premium, Daniel et Daniel signature) or an in-house team at a
+          luxury hotel ballroom.
+        </p>
+
+        <h2>Service styles — what each one actually costs</h2>
+        <p>
+          <strong>Plated dinner.</strong> The default. Most expensive on a
+          per-head basis (more service staff, more cooking precision), but
+          most predictable — exactly what each guest ordered shows up at the
+          right table.
+        </p>
+        <p>
+          <strong>Family-style.</strong> Large platters dropped on each
+          table. Typically $5–$15 per person cheaper than plated. Reads
+          generous; works best for guest counts under 120 because of table
+          logistics.
+        </p>
+        <p>
+          <strong>Buffet.</strong> Cheapest per-person ($10–$20 below plated)
+          but requires more food volume — overall savings are typically less
+          than the per-head number suggests. Works for less formal weddings.
+        </p>
+        <p>
+          <strong>Food stations.</strong> Often <em>more</em> expensive than
+          plated because each station needs its own chef and equipment.
+          Couples pick this for the experience, not the savings.
+        </p>
+
+        <h2>Bar costs</h2>
+        <p>
+          Three structures common in Ontario:
+        </p>
+        <ul>
+          <li>
+            <strong>Beer + wine only:</strong> $25–$40 per person for a 5–6
+            hour reception.
+          </li>
+          <li>
+            <strong>Standard open bar</strong> (beer, wine, well spirits):
+            $40–$60 per person.
+          </li>
+          <li>
+            <strong>Premium open bar</strong> (call brands + signature
+            cocktails): $55–$80 per person.
+          </li>
+        </ul>
+        <p>
+          Many barn and dry-hall venues let you bring in your own alcohol via
+          a Special Occasion Permit through AGCO ($35 application fee);
+          you&rsquo;ll still need a licensed bartender ($40–$60/hour) but the
+          bottle cost is yours to manage. Net savings on a 100-person wedding
+          typically run $1,500–$3,000.
+        </p>
+
+        <h2>The five fees couples forget</h2>
+        <ol>
+          <li>
+            <strong>Vendor meals.</strong> Photographer, videographer, DJ,
+            planner all need to eat. Caterers charge $30–$45 per vendor meal
+            — usually half-price of the guest meal. Budget for 4–6 vendor
+            meals.
+          </li>
+          <li>
+            <strong>Gratuity.</strong> 18–20% on the food + beverage subtotal
+            is standard in Ontario. Some caterers include it; most
+            don&rsquo;t. Always ask.
+          </li>
+          <li>
+            <strong>HST.</strong> 13% on top of food, beverage, and
+            sometimes service. On a $15,000 catering quote, that&rsquo;s
+            nearly $2,000.
+          </li>
+          <li>
+            <strong>Bartender + service staff fees.</strong> Often a separate
+            line — $400–$1,500 depending on team size and event length.
+          </li>
+          <li>
+            <strong>Cake cutting + dessert service.</strong> If your wedding
+            cake is from an outside baker, the caterer may charge $2–$5 per
+            person to plate and serve it.
+          </li>
+        </ol>
+
+        <h2>Tastings and menu development</h2>
+        <p>
+          Most Ontario caterers include one tasting for two people at no
+          additional cost once you&rsquo;ve paid the deposit. Additional
+          tastings run $75–$150 per person. Custom menu development (off
+          their standard list) may add a $200–$500 menu design fee — worth
+          confirming in writing if you&rsquo;re asking for anything unusual.
+        </p>
+
+        <h2>Dietary restrictions — the contractual fine print</h2>
+        <p>
+          Almost every Ontario caterer accommodates the four major
+          restrictions (vegetarian, gluten-free, dairy-free, nut-free) at no
+          additional cost — but they need to know the exact count 14–21
+          days before the wedding. Halal, kosher, and full-vegan menus are
+          handled on a case-by-case basis: vegan is usually a like-for-like
+          swap; halal and kosher may require an outside-sourced protein and
+          a separate $400–$1,000 sourcing fee. Always ask the caterer to
+          break out the &ldquo;regular meal&rdquo; price vs the &ldquo;special
+          dietary meal&rdquo; price in writing — some venues quietly bill
+          dietary swaps at 1.5× the standard rate.
+        </p>
+
+        <p>
+          Browse Ontario caterers by region, with pricing tiers, sample menus
+          and Google review counts on the{" "}
+          <a href="/vendors/catering">catering directory</a>. If your venue
+          requires you bring your own caterer, your{" "}
+          <a href="/vendors/wedding_planner">wedding planner</a> can usually
+          shortlist three vendors who&rsquo;ve worked at your specific venue
+          before — that experience is worth the half-day of coordination it
+          saves you.
+        </p>
+      </>
+    ),
+  },
+
+  /* ─── 14. Toronto + GTA wedding venues ─────────────────────────── */
+  {
+    slug: "toronto-wedding-venues",
+    title: "Best Wedding Venues in Toronto & the GTA (2026 Guide)",
+    excerpt:
+      "Distilleries, rooftops, hotel ballrooms, waterfront — every category of Toronto-area venue, with capacity, price ranges, and the parking notes nobody wants to talk about.",
+    category: "Toronto guide",
+    publishedAt: "2026-05-14",
+    readMinutes: 9,
+    heroImage: "/images/region-toronto.png",
+    metaDescription:
+      "Best Toronto and GTA wedding venues 2026: hotel ballrooms, distilleries, rooftops, waterfront, lofts — with price ranges, capacity, and parking notes.",
+    body: (
+      <>
+        <p>
+          Toronto and the broader GTA pull the highest wedding venue search
+          volume in Ontario by a wide margin — partly because the population
+          density supports it, partly because the venue diversity has no
+          equivalent elsewhere in the province. Couples are typically
+          choosing between five distinct &ldquo;flavours&rdquo; of GTA
+          venue, each with its own price band and logistical tradeoffs.
+        </p>
+
+        <h2>Hotel ballrooms — the turnkey choice</h2>
+        <p>
+          The Four Seasons (Yorkville), Shangri-La, The Ritz-Carlton, the
+          King Edward, the Fairmont Royal York, and One King West are the
+          most-booked downtown hotel ballrooms. Capacity ranges from 120
+          (Shangri-La&rsquo;s Lounge) to 800 (Royal York&rsquo;s Imperial
+          Room). Saturday Toronto rates run{" "}
+          <strong>$25,000–$60,000+</strong> for venue + plated dinner for
+          120 guests — partly because the hotels include just about
+          everything (linens, dance floor, full event staff, room block at
+          the hotel for guests). Best fit for couples who want a single
+          coordinator handling every line item from ceremony space through
+          midnight tea service.
+        </p>
+
+        <h2>Distillery District — the most-booked Toronto neighbourhood</h2>
+        <p>
+          Archeo, Loft, The Fermenting Cellar, and Madison Manor all sit
+          within the Distillery District. The exposed-brick + cobblestone
+          aesthetic is genuinely Instagram-defining; the venues are run by
+          two operators (Archeo Catering / Fermenting Cellar Group) that
+          handle everything in-house. Pricing $18,000–$35,000 for 120-guest
+          weekends. Watch the alcohol licensing — outside-vendor restrictions
+          are tight.
+        </p>
+
+        <h2>Rooftops + skyline venues</h2>
+        <p>
+          Malaparte (TIFF Bell Lightbox), The Globe and Mail Centre,
+          Storys Building, and 99 Sudbury offer downtown skyline backdrops.
+          Capacities 120–250. Pricing $20,000–$45,000 for venue + plated
+          dinner. Most rooftop venues have a hard rain backup (the indoor
+          dining room shares the floor) but ceremony timing has to flex if
+          the forecast is bad — confirm what the venue will do at 1 PM the
+          day-of if it&rsquo;s raining at the booked ceremony time.
+        </p>
+
+        <h2>Waterfront — Lake Ontario as backdrop</h2>
+        <p>
+          Polson Pier, Royal Canadian Yacht Club, Harbour 60, The Boulevard
+          Club, and Palais Royale all front the lake. Polson Pier is the
+          highest-capacity (200+ tented) and most-flexible — couples
+          regularly book it for a full-buyout summer weekend. The Yacht
+          Club is members-only access, which becomes the gating factor.
+          Pricing $20,000–$50,000.
+        </p>
+
+        <h2>Industrial + loft — the design-forward category</h2>
+        <p>
+          Wallace Studios (Junction Triangle), Berkeley Church (Berkeley +
+          Queen), Storys Building (King + Bay), Liberty Grand (Exhibition
+          Place). These run dry-hall — you bring your own caterer, often
+          from a preferred-vendor list. Cheaper venue line ($6,000–$15,000)
+          but the catering line goes up because you&rsquo;re paying retail.
+          Total comes in at $25,000–$50,000 for the same 120 guests.
+        </p>
+
+        <h2>GTA suburbs — the value option</h2>
+        <p>
+          If downtown isn&rsquo;t critical to your guests, the GTA suburbs
+          host the largest wedding venues in the province. Liberty Grand
+          (Exhibition Place / Liberty Village), Casa Loma (Forest Hill), The
+          Manor by Peter and Pauls (Kettleby), Estates of Sunnybrook,
+          Paramount Eventspace (Vaughan) all carry 250+ capacity at GTA
+          prices that are 15–25% below equivalent downtown options. Worth
+          considering if half your guest list is driving in from outside
+          the core anyway.
+        </p>
+
+        <h2>The parking conversation nobody wants to have</h2>
+        <p>
+          Downtown Toronto venues almost never have free guest parking.
+          Three common patterns:
+        </p>
+        <ul>
+          <li>
+            Validate parking at the hotel underneath (Four Seasons, Royal
+            York) — usually $25–$45 per guest, often you can prepay a flat
+            rate.
+          </li>
+          <li>
+            Pay for a shuttle from a hotel block — $1,500–$3,000 for a
+            coach running on a 4-hour evening loop.
+          </li>
+          <li>
+            Tell guests in the invitation to take Uber/transit — works if
+            most of your guest list is downtown-based.
+          </li>
+        </ul>
+        <p>
+          Almost every parking complaint we see in venue reviews could have
+          been prevented by addressing this on the invitation.
+        </p>
+
+        <h2>Permits for outdoor downtown</h2>
+        <p>
+          City parks (Trinity Bellwoods gazebo, High Park, Toronto Music
+          Garden) require a Special Event Permit from Toronto Parks &amp;
+          Recreation. Apply 90+ days out; $150–$500 plus liability
+          insurance. Casa Loma terrace ceremonies don&rsquo;t need this — it
+          ships with the venue contract.
+        </p>
+
+        <h2>Booking timeline for GTA Saturdays</h2>
+        <p>
+          The most-booked downtown Toronto venues (Four Seasons, Casa Loma,
+          Liberty Grand, the Distillery District halls, Royal York Imperial
+          Room) take 14–18 months of lead time for peak-season Saturdays.
+          Distillery District weddings are especially competitive between
+          May and October because the four operators control limited
+          inventory across only a handful of buildings. If you&rsquo;re
+          flexible on day — Friday and Sunday rates at most downtown venues
+          run 15–30% below Saturday — you can land a venue 6–9 months out
+          even in peak season, and your guests will mostly thank you for
+          the chance to recover before Monday.
+        </p>
+
+        <p>
+          Browse every wedding-ready venue across the GTA — capacity,
+          coordinator, indoor/outdoor flags — on the{" "}
+          <a href="/venues?region=gta">GTA venues page</a>, or filter to{" "}
+          <a href="/cities/toronto">Toronto-only venues</a> if downtown is
+          where the wedding has to land.
+        </p>
+      </>
+    ),
+  },
+
+  /* ─── 15. Wedding limo + transportation cost in Ontario ────────── */
+  {
+    slug: "wedding-limo-cost-ontario",
+    title: "Wedding Limo & Transportation Costs in Ontario (2026)",
+    excerpt:
+      "Stretch limo, party bus, vintage Bentley, guest shuttle — Ontario wedding transportation costs from $600 to $3,000, and how to size the booking.",
+    category: "Vendor pricing",
+    publishedAt: "2026-05-13",
+    readMinutes: 6,
+    heroImage: "/images/vendor-limo.png",
+    metaDescription:
+      "Ontario wedding limo costs (2026): stretch limo $600–$1,500, party bus $1,500–$3,000, vintage cars $1,200–$3,000, guest shuttle pricing and how many hours to book.",
+    body: (
+      <>
+        <p>
+          About half of Ontario weddings book some form of dedicated
+          transportation; the other half rely on guests driving themselves
+          or taking Uber. Couples who skip it almost never regret it —
+          couples who book it almost always say the photos in the back of
+          the car ended up being some of their favourites. Here&rsquo;s
+          what the Ontario market actually charges in 2026, and how to size
+          the booking so you don&rsquo;t pay for hours you won&rsquo;t use.
+        </p>
+
+        <h2>What you&rsquo;re actually paying for</h2>
+        <p>
+          Almost every Ontario limo company charges a <em>minimum booking
+          window</em> — typically 4 or 5 hours — even if you only need 90
+          minutes of driving. The reason: their driver is committed for the
+          afternoon, so they have to charge for the day. Plan the booking
+          window around your usage timeline, not the actual minutes the
+          wheels are turning.
+        </p>
+
+        <h2>Vehicle options + price ranges</h2>
+        <p>
+          <strong>Stretch limousine (8–10 passengers).</strong> The classic
+          Lincoln stretch or Chrysler 300 stretch. Holds the wedding party
+          plus parents comfortably. Pricing: <strong>$600–$1,500</strong>{" "}
+          for a 4–5 hour booking. Most-booked option for couples who want
+          one vehicle for the bridal party.
+        </p>
+        <p>
+          <strong>Stretch SUV / Escalade limo (12–16 passengers).</strong>{" "}
+          Roomier, more presence in photos, higher floor (which matters in
+          a long dress). Pricing: <strong>$900–$2,000</strong> for the
+          same 4–5 hour window. Good fit if your wedding party is 8+.
+        </p>
+        <p>
+          <strong>Party bus (20–30 passengers).</strong> Onboard sound
+          system, sometimes a dance pole (Ontario teenagers in the
+          mid-2010s have a lot to answer for here), space to stand. Pricing:{" "}
+          <strong>$1,500–$3,000</strong> for a 5-hour minimum. Worth the
+          spend when you want the wedding party to ride together AND have
+          drinks legally during the trip.
+        </p>
+        <p>
+          <strong>Vintage and luxury cars.</strong> A 1930s Bentley, a 1960s
+          Rolls-Royce Silver Cloud, a Classic Mustang. Pricing:{" "}
+          <strong>$1,200–$3,000</strong>, often with a strict 3-hour
+          window (vintage car operators don&rsquo;t want their machines on
+          the road all day). Best as a ceremony-to-reception transfer plus
+          couple portraits — not for moving the whole party around.
+        </p>
+
+        <h2>Guest shuttles — the underrated booking</h2>
+        <p>
+          If your venue is in Niagara wine country, Muskoka, or a Toronto
+          area without easy parking, a guest shuttle is often the
+          difference between a smooth night and an Uber-availability
+          nightmare at 1:00 AM. Typical pricing for a 50-passenger coach:
+        </p>
+        <ul>
+          <li><strong>$1,200–$2,000</strong> for a 6-hour evening loop (pickup at hotel → venue → return at midnight + 1 AM).</li>
+          <li><strong>$2,500–$4,000</strong> for full-day coverage including ceremony arrival at a separate location.</li>
+        </ul>
+        <p>
+          Coach Canada, Pacific Western, and Stock Transportation all run
+          wedding shuttles across Ontario. Smaller transportation operators
+          will sub-contract — confirm the actual fleet operator before
+          paying the deposit.
+        </p>
+
+        <h2>How many hours to book</h2>
+        <p>
+          A typical wedding-day limo timeline:
+        </p>
+        <ol>
+          <li>30 min — pickup at the prep location (hotel or family home).</li>
+          <li>15–30 min — drive to ceremony venue.</li>
+          <li>30 min — buffer (photos with the car, last-minute timing).</li>
+          <li>45–90 min — between ceremony and reception, sometimes including a photo stop.</li>
+          <li>15–30 min — final transfer to reception.</li>
+        </ol>
+        <p>
+          Total: 2.5–4 hours of actual usage, which fits inside almost
+          every 4–5 hour minimum. If your ceremony and reception are at the
+          same venue you can often reduce this — but you still pay the
+          minimum.
+        </p>
+
+        <h2>What&rsquo;s usually included</h2>
+        <p>
+          Champagne or sparkling-water service in the limo, a &ldquo;just
+          married&rdquo; sign or floral decoration, a uniformed driver,
+          fuel, and standard insurance. <strong>Driver gratuity (15–20%
+          on the rental rate)</strong> is almost never included and is
+          expected on top — typically $80–$300. HST adds 13%.
+        </p>
+
+        <h2>When to book</h2>
+        <p>
+          Peak-season Saturdays (June through September, plus all of October
+          in Niagara) book 4–6 months ahead at the major Ontario operators.
+          Off-season Friday and Sunday weddings can typically book 2–3
+          months out, often with a 10–15% rate discount.
+        </p>
+
+        <h2>What to ask before paying the deposit</h2>
+        <p>
+          Five questions surface most of the issues couples report after the
+          wedding:
+        </p>
+        <ul>
+          <li>
+            <strong>Confirm the exact vehicle, not just the class.</strong>{" "}
+            &ldquo;Stretch limo&rdquo; isn&rsquo;t one car — a 2011 Lincoln
+            and a 2024 Cadillac Escalade are both technically stretch
+            limos. Ask for the model year in writing.
+          </li>
+          <li>
+            <strong>Backup vehicle policy.</strong> If your contracted
+            limo breaks down (it happens), what shows up instead? A
+            comparable vehicle? A van? Get the answer before deposit.
+          </li>
+          <li>
+            <strong>Driver dress code.</strong> Default at the Ontario
+            mid-tier operators is black suit + tie. Specify if you want
+            something different.
+          </li>
+          <li>
+            <strong>Overtime rate.</strong> If the day runs over, what
+            does each additional 30 minutes cost? Should be in the
+            contract, typically $75–$150 per half hour.
+          </li>
+          <li>
+            <strong>Cancellation + weather policy.</strong> Most operators
+            keep 50% of the rental rate on cancellations inside 30 days.
+          </li>
+        </ul>
+
+        <p>
+          Browse Ontario limo + transportation providers by region,
+          with fleet listings, pricing tiers, and Google review counts on
+          the <a href="/vendors/limo">limo directory</a>.
+        </p>
+      </>
+    ),
+  },
+
+  /* ─── 16. Barn wedding venues Ontario ──────────────────────────── */
+  {
+    slug: "barn-wedding-venues-ontario",
+    title: "Best Barn Wedding Venues in Ontario (2026 Guide)",
+    excerpt:
+      "Heated barns, restored timber, working farms — the Ontario barn venues couples are booking in 2026, what&rsquo;s typically included, and the decorating decisions that carry the room.",
+    category: "Venue guide",
+    publishedAt: "2026-05-12",
+    readMinutes: 8,
+    heroImage: "/images/venue-barn.png",
+    metaDescription:
+      "Best barn wedding venues in Ontario (2026): top properties, what to look for, seasonal considerations, what's typically included, and lighting decisions that matter.",
+    body: (
+      <>
+        <p>
+          Ontario does barn weddings well. The province has decades of
+          farming heritage, a mature restoration market that has converted
+          dozens of old timber barns into proper event spaces, and just
+          enough sprawl outside the GTA to give every couple a working
+          countryside option within 60 minutes of the city. Barn weddings
+          aren&rsquo;t the cheapest category — once you add catering and
+          rentals, total cost typically matches a winery wedding — but they
+          deliver an aesthetic that nothing else in the venue catalogue can
+          match.
+        </p>
+
+        <h2>Eight Ontario barn venues worth touring</h2>
+        <p>
+          <strong>Honsberger Estate (Jordan / Niagara).</strong> Restored
+          1840s barn, capacity 200. Outdoor ceremony in the vineyard,
+          reception inside the barn. The most polished barn venue in the
+          province; rates reflect it. Saturdays run $9,000–$14,000 for
+          venue rental alone.
+        </p>
+        <p>
+          <strong>Little Barn Co. Weddings (St. Catharines).</strong> Newer
+          purpose-built barn-style venue in West Niagara. Capacity 130 +
+          outdoor ceremony lawn. Around $6,000–$10,000 for venue rental.
+        </p>
+        <p>
+          <strong>The Estate at Hidden Valley (Beamsville).</strong>
+          Working orchard property with a renovated barn. Capacity 180.
+          Strong choice for couples who want the rural feel without the
+          city/winery price tag.
+        </p>
+        <p>
+          <strong>Earth To Table Farm (Flamborough / Hamilton).</strong>
+          Restored century barn surrounded by a working organic farm.
+          Capacity 150. The catering comes through Pearle Hospitality
+          (Spencer&rsquo;s, Anker, others), which is what you want when
+          the menu becomes the whole story.
+        </p>
+        <p>
+          <strong>Cambium Farms (Caledon).</strong> 100-acre farm
+          property an hour northwest of Toronto. The barn fits 200 indoor
+          + tented outdoor option. Couples regularly host the full
+          weekend on-site.
+        </p>
+        <p>
+          <strong>Strathmere (Ottawa area).</strong> Country inn with a
+          dedicated barn building. Eastern Ontario&rsquo;s most-booked
+          barn venue. Capacity 250.
+        </p>
+        <p>
+          <strong>Hessenland Country Inn (Goderich-area).</strong>
+          Lake-Huron-side barn property. Quieter market, lower
+          pricing, real lakefront ceremony backdrop.
+        </p>
+        <p>
+          <strong>South Pond Farms (Pontypool, near Peterborough).</strong>
+          Farmhouse + restored barn + cooking-school kitchen on a 100-acre
+          property. Capacity 180. Catering is done in-house; the on-site
+          team writes a custom seasonal menu around the kitchen garden.
+        </p>
+
+        <h2>What to look for in a barn venue</h2>
+        <p>
+          Five questions decide whether a barn is bookable or just
+          photogenic:
+        </p>
+        <ol>
+          <li>
+            <strong>Is it heated?</strong> Ontario shoulder season (April,
+            October, November) needs real heat, not space heaters. Couples
+            consistently misjudge how cold a barn gets at 9 PM in October.
+          </li>
+          <li>
+            <strong>Restroom count.</strong> A 150-guest wedding needs at
+            least 4 toilets in working order. Some older barns supplement
+            with luxury trailer washrooms ($1,500–$3,000 for the day).
+          </li>
+          <li>
+            <strong>Power capacity.</strong> Sound system + lighting +
+            catering equipment + warming ovens add up. Ask whether the
+            venue&rsquo;s electrical can handle a full reception load, or
+            whether you&rsquo;ll need a generator.
+          </li>
+          <li>
+            <strong>Catering kitchen access.</strong> A proper prep kitchen
+            is the difference between a hot meal and a lukewarm one. If
+            the venue is &ldquo;catering-prep-only&rdquo;, your caterer
+            will quote higher to compensate.
+          </li>
+          <li>
+            <strong>Parking + the last mile of road.</strong> Rural barn
+            properties often sit at the end of a gravel road. In rain or
+            October mud this turns into a guest-experience problem. Some
+            venues run a parking shuttle from a paved lot.
+          </li>
+        </ol>
+
+        <h2>Seasonal window</h2>
+        <p>
+          Unheated barns operate May through October. Heated barns
+          (Honsberger, Cambium, South Pond, Strathmere) extend into
+          November and re-open in March, sometimes year-round. Winter barn
+          weddings are dramatically cheaper (often 30–40% off peak) and
+          increasingly popular — the photos look incredible when there&rsquo;s
+          snow outside the windows.
+        </p>
+
+        <h2>What&rsquo;s typically included</h2>
+        <p>
+          Most Ontario barn venues include the space, basic farm tables and
+          benches, a ceremony area, and parking. Almost nothing else. You
+          typically bring: caterer, bar service, rentals (linens, chairs,
+          glassware), lighting design, sound system, and dance floor.
+          Budget an extra $4,000–$8,000 for rentals beyond what the venue
+          provides on a 100-guest barn wedding.
+        </p>
+
+        <h2>Decorating — lighting carries the room</h2>
+        <p>
+          Three lighting investments do more than any floral installation
+          in a barn:
+        </p>
+        <ul>
+          <li>
+            <strong>Bistro string lights overhead</strong> — $400–$1,200
+            depending on barn size, the single best-spent lighting dollar.
+          </li>
+          <li>
+            <strong>Uplighting along the walls</strong> — $20–$40 per
+            fixture; 15–25 fixtures for a typical barn. Sets the mood
+            once the sun drops.
+          </li>
+          <li>
+            <strong>A focal-point installation</strong> behind the head
+            table — fabric drape, dried botanical wall, or pampas grass
+            grouping. Adds $800–$2,500 and shows up in every wide shot.
+          </li>
+        </ul>
+
+        <p>
+          Browse Ontario barn venues by region — capacity, indoor/outdoor
+          flags, coordinator info — on the{" "}
+          <a href="/venues?type=barn">barn venues page</a>. Lighting
+          designers across the province are listed on the{" "}
+          <a href="/vendors/lighting_decor">lighting + decor directory</a>;
+          almost all of them work with barn venues regularly and bring
+          rigging hardware appropriate for timber-frame ceilings. For
+          broader regional context, see the{" "}
+          <a href="/blog/best-wedding-venues-niagara-2026">2026 Niagara
+          venue guide</a>, which includes the highest concentration of
+          barn options in the province.
+        </p>
+      </>
+    ),
+  },
 ];
 
 export function getBlogPost(slug: string): BlogPost | null {
