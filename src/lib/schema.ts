@@ -141,6 +141,17 @@ export const vendors = pgTable(
     website: varchar("website", { length: 500 }),
     email: varchar("email", { length: 255 }),
     instagramHandle: varchar("instagram_handle", { length: 100 }),
+    /* Additional social/review-platform URLs sourced by the
+     * web_search enrichment pass (enrich-vendor-websearch.ts). */
+    yelpUrl:         varchar("yelp_url",      { length: 500 }),
+    pinterestUrl:    varchar("pinterest_url", { length: 500 }),
+    /* How vendors.description was sourced — drives the future UI
+     * "verified by" pill + helps the next enrichment pass decide
+     * whether to overwrite. Values: 'scraped' (from vendor website),
+     * 'web_search' (Claude + web_search on no-website rows),
+     * 'generated' (synthesized from name+city+category — last
+     * resort), or null for hand-curated. */
+    bioSource:       varchar("bio_source",    { length: 50 }),
 
     googleRating: numeric("google_rating", { precision: 3, scale: 1 }),
     reviewCount: integer("review_count"),
