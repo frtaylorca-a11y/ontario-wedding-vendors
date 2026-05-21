@@ -11,9 +11,12 @@ import { VENDOR_CATEGORIES, type VendorCategory } from "@/types";
 import { VendorCard } from "@/components/ui/VendorCard";
 import { PicBoothSitePartnerCard } from "@/components/ui/PicBoothSitePartnerCard";
 import { VendorFilterSidebar } from "@/components/vendors/VendorFilterSidebar";
-import { BreadcrumbSchema, ItemListSchema } from "@/components/seo/SchemaInjector";
+import { BreadcrumbSchema, ItemListSchema, FaqSchema } from "@/components/seo/SchemaInjector";
 import { Pagination } from "@/components/venues/Pagination";
 import { categoryColourVars, getCategoryColour } from "@/lib/vendor-colours";
+import { FaqAccordion } from "@/components/ui/FaqAccordion";
+import { CATEGORY_FAQS } from "@/lib/category-faqs";
+import { buildCategoryIntro, lastUpdatedLabel } from "@/lib/category-intros";
 import type { CSSProperties } from "react";
 
 /** Per-category hero photograph rendered behind the listing page's title band. */
@@ -188,6 +191,18 @@ export default async function VendorCategoryPage({
     itemListEntries.push({ name: v.name, url: `/vendors/${rawSlug}/${v.slug}` });
   });
 
+  /* Intro paragraph + FAQs are shown only on page 1 — paginated
+   * pages should stay lean and the FAQ JSON-LD must not appear
+   * on more than one URL per Google's spec. */
+  const isFirstPage      = page === 1 && !region && !priceTier && !venueSlug;
+  const categoryFaqs     = CATEGORY_FAQS[categorySlug] ?? [];
+  const introParagraph   = buildCategoryIntro({
+    category:    categorySlug,
+    count:       displayTotal,
+    pluralLabel: label.plural,
+  });
+  const updatedStamp     = lastUpdatedLabel();
+
   return (
     <>
       <BreadcrumbSchema items={breadcrumbItems} />
@@ -195,6 +210,11 @@ export default async function VendorCategoryPage({
         name={`Wedding ${label.plural.toLowerCase()} in Ontario`}
         items={itemListEntries}
       />
+      {isFirstPage && categoryFaqs.length > 0 && (
+        <FaqSchema
+          items={categoryFaqs.map((f) => ({ question: f.question, answer: f.answer }))}
+        />
+      )}
 
       <main
         style={categoryColourVars(categorySlug) as CSSProperties}
@@ -381,7 +401,19 @@ export default async function VendorCategoryPage({
                     </>
                   )}
                 </p>
+                {isFirstPage && (
+                  <p className="text-xs text-text-muted">{updatedStamp}</p>
+                )}
               </div>
+
+              {/* Editorial intro — first page only, before the grid */}
+              {isFirstPage && (
+                <div className="mb-8 rounded-card border border-border-light bg-white/60 p-5 lg:p-6">
+                  <p className="max-w-[720px] text-[15px] leading-relaxed text-text-mid">
+                    {introParagraph}
+                  </p>
+                </div>
+              )}
 
               {/* Site Partner pinned card — page 1, photo_booth only */}
               {showSitePartner && page === 1 && (
@@ -419,6 +451,17 @@ export default async function VendorCategoryPage({
                 basePath={`/vendors/${rawSlug}`}
                 ariaLabel="Vendor pagination"
               />
+
+              {/* FAQs — first page only, below the listing grid */}
+              {isFirstPage && categoryFaqs.length > 0 && (
+                <div className="mt-12">
+                  <FaqAccordion
+                    items={categoryFaqs}
+                    heading={`Frequently asked questions about wedding ${label.plural.toLowerCase()} in Ontario`}
+                    subheading="Real Ontario pricing, lead times, and what to look for when booking."
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>

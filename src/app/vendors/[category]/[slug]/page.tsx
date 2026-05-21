@@ -18,12 +18,13 @@ import {
   type GoogleVendorPhoto,
 } from "@/lib/google-reviews";
 import InteractiveBentoGallery from "@/components/ui/interactive-bento-gallery";
+import { FaqAccordion, type FaqItem } from "@/components/ui/FaqAccordion";
 import { ItemListSchema } from "@/components/seo/SchemaInjector";
 import { VENDOR_CATEGORIES, type VendorCategory } from "@/types";
 import { GoogleReviews } from "@/components/ui/GoogleReviews";
 import { VendorCard } from "@/components/ui/VendorCard";
 import { VenueCard } from "@/components/ui/VenueCard";
-import { VendorSchema, BreadcrumbSchema } from "@/components/seo/SchemaInjector";
+import { VendorSchema, BreadcrumbSchema, FaqSchema } from "@/components/seo/SchemaInjector";
 import { TrackPageView } from "@/components/analytics/TrackPageView";
 import { formatRating, normalizeRegionDisplay } from "@/lib/utils";
 import type { Vendor } from "@/lib/schema";
@@ -222,6 +223,25 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ontarioweddingvendors.com";
 
+/* vendor.faqs is stored as jsonb (unknown). Coerce defensively — drop
+ * any entry missing a question or answer string, and cap at 5 so a
+ * scraper bug can't blow up the page. The page expects the shape:
+ *   [{ question: string; answer: string; source?: string }] */
+function parseVendorFaqs(raw: unknown): FaqItem[] {
+  if (!Array.isArray(raw)) return [];
+  const out: FaqItem[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const q = (item as { question?: unknown }).question;
+    const a = (item as { answer?:   unknown }).answer;
+    if (typeof q !== "string" || typeof a !== "string") continue;
+    if (q.trim().length === 0 || a.trim().length === 0)  continue;
+    out.push({ question: q.trim(), answer: a.trim() });
+    if (out.length >= 5) break;
+  }
+  return out;
+}
+
 export default async function VendorPage({ params }: { params: Params }) {
   const { category: rawCategory, slug } = await params;
   const requestedCategory = normalizeCategorySlug(rawCategory);
@@ -329,6 +349,12 @@ export default async function VendorPage({ params }: { params: Params }) {
     { name: vendor.name, url: `/vendors/${rawCategory}/${vendor.slug}` },
   ];
 
+  /* Vendor-website FAQs scraped by enrich-vendor-bios.ts. The Part-2
+   * hybrid (3 from vendor + 2 OWV-generated) is deferred — for now we
+   * surface only what the vendor actually published themselves so the
+   * answers stay accurate to their offering. */
+  const vendorFaqs: FaqItem[] = parseVendorFaqs(vendor.faqs);
+
   return (
     <>
       <TrackPageView
@@ -338,6 +364,11 @@ export default async function VendorPage({ params }: { params: Params }) {
       />
       <VendorSchema vendor={vendor} imageUrl={heroImage} />
       <BreadcrumbSchema items={breadcrumbItems} />
+      {vendorFaqs.length > 0 && (
+        <FaqSchema
+          items={vendorFaqs.map((f) => ({ question: f.question, answer: f.answer }))}
+        />
+      )}
 
       <main className="bg-bg-warm">
         {/* Hero */}
@@ -710,6 +741,20 @@ export default async function VendorPage({ params }: { params: Params }) {
             </aside>
           </div>
         </div>
+
+        {/* Vendor FAQ — rendered when the vendor's own website had a
+         * FAQ page that we extracted via enrich-vendor-bios.ts. Site-
+         * scraped FAQs only for now; the hybrid OWV-generated ones
+         * land in Task D Part 2. */}
+        {vendorFaqs.length > 0 && (
+          <div className="mx-auto mt-12 max-w-[1180px] px-6">
+            <FaqAccordion
+              items={vendorFaqs}
+              heading="Frequently asked questions"
+              subheading={`Answers ${vendor.name} provides on their own website.`}
+            />
+          </div>
+        )}
 
         {/* Full-width "Ready to book…" CTA band — only renders when
          * there's at least one actionable destination. Buttons are

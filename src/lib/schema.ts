@@ -101,6 +101,11 @@ export const venues = pgTable(
      * the venue has 2+ photos available. */
     additionalPhotos:        jsonb("additional_photos"),
 
+    /* FAQs scraped from the venue's own website, same shape as
+     * vendors.faqs. Populated by a future venue-side bio-enrichment
+     * script; rendered by the Part-2 venue FAQ section. */
+    faqs:                    jsonb("faqs"),
+
     source: varchar("source", { length: 100 }),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
@@ -232,6 +237,14 @@ export const vendors = pgTable(
      * cache-vendor-reviews script. See IS_INDEXABLE_SQL in
      * src/lib/queries.ts for the OR formula. */
     isIndexable:         boolean("is_indexable").default(false),
+
+    /* FAQs extracted from the vendor's own website by
+     * scripts/enrich-vendor-bios.ts. Shape:
+     *   [{ question: string, answer: string, source: 'vendor_website' }]
+     * Caps at 5 entries — bio enrichment writes up to 5 if found.
+     * null = "never enriched"; [] = "enriched, none found". Read by
+     * the vendor detail page's FAQ section + FAQ JSON-LD emitter. */
+    faqs:                jsonb("faqs"),
 
     source: varchar("source", { length: 100 }),
     /* Wedding-readiness signal for vendors discovered through referrals + reviews */

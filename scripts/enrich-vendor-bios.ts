@@ -184,15 +184,19 @@ function stripToText(html: string): string {
 }
 
 async function pickBestVariant(website: string): Promise<string> {
-  /* Fetch homepage + /about + /about-us in parallel. Combine the
-   * homepage with the about page (whichever variant is longest) so
-   * Claude sees both surfaces — the homepage carries the hero
-   * proposition, the about page carries the personal story. Cap
-   * the joined text at MAX_CHARS_FOR_CLAUDE. */
-  const home   = buildVariantUrl(website, "");
-  const aboutA = buildVariantUrl(website, "about");
-  const aboutB = buildVariantUrl(website, "about-us");
-  const urls = [home, aboutA, aboutB].filter((u): u is string => u != null);
+  /* Fetch homepage + about page + FAQ page in parallel. Combine all
+   * three into a single corpus so Claude sees:
+   *   - homepage voice + service proposition
+   *   - about-page personal story (longest of /about /about-us)
+   *   - FAQ content (longest of /faq /faqs /frequently-asked-questions)
+   * Cap the joined text at MAX_CHARS_FOR_CLAUDE. */
+  const home    = buildVariantUrl(website, "");
+  const aboutA  = buildVariantUrl(website, "about");
+  const aboutB  = buildVariantUrl(website, "about-us");
+  const faqA    = buildVariantUrl(website, "faq");
+  const faqB    = buildVariantUrl(website, "faqs");
+  const faqC    = buildVariantUrl(website, "frequently-asked-questions");
+  const urls = [home, aboutA, aboutB, faqA, faqB, faqC].filter((u): u is string => u != null);
 
   const variants = await Promise.all(
     urls.map(async (u) => {
@@ -206,19 +210,27 @@ async function pickBestVariant(website: string): Promise<string> {
   const aboutText = [aboutA, aboutB]
     .map((u) => (u ? variants.find((v) => v.url === u)?.text ?? "" : ""))
     .sort((a, b) => b.length - a.length)[0] ?? "";
+  const faqText   = [faqA, faqB, faqC]
+    .map((u) => (u ? variants.find((v) => v.url === u)?.text ?? "" : ""))
+    .sort((a, b) => b.length - a.length)[0] ?? "";
 
-  /* When both are available, stitch them together with a clear
-   * marker so Claude can distinguish home-page voice from
-   * about-page personal copy. When only one is available, use that
-   * alone. */
-  const combined = homeText && aboutText
-    ? `${homeText}\n\n--- /about ---\n\n${aboutText}`
-    : homeText || aboutText;
-
-  return combined.slice(0, MAX_CHARS_FOR_CLAUDE);
+  /* Stitch with section markers so Claude can keep voice/story/FAQ
+   * distinct when extracting fields. Missing sections just drop out
+   * of the corpus — no empty placeholders. */
+  const parts = [
+    homeText,
+    aboutText ? `--- /about ---\n\n${aboutText}` : "",
+    faqText   ? `--- /faq ---\n\n${faqText}`     : "",
+  ].filter((p) => p.length > 0);
+  return parts.join("\n\n").slice(0, MAX_CHARS_FOR_CLAUDE);
 }
 
 /* ─── Claude ───────────────────────────────────────────────────────── */
+
+type ExtractedFaq = {
+  question: string;
+  answer:   string;
+};
 
 type ExtractedBio = {
   description:     string;
@@ -229,6 +241,7 @@ type ExtractedBio = {
   press:           string[];
   teamSize:        number | null;
   style:           string | null;
+  faqs:            ExtractedFaq[];
 };
 
 const SYSTEM_PROMPT =
@@ -254,8 +267,12 @@ async function extractBio(
     `  "specialties":    ["<style / niche / approach the vendor uses to describe themselves — e.g. 'candid documentary', 'South Asian weddings', 'editorial', 'fine art'>"],\n` +
     `  "press":          ["<publications or shows that have featured them — 'Wedding Bells', 'Today's Bride', 'CTV', etc. Only include if explicitly mentioned. NOT for awards — see note below.>"],\n` +
     `  "teamSize":       <integer or null — only if explicitly stated>,\n` +
-    `  "style":          "<their described shooting / working style if stated, else null>"\n` +
+    `  "style":          "<their described shooting / working style if stated, else null>",\n` +
+    `  "faqs":           [\n` +
+    `    {"question": "<exact question text from the site, 5-15 words>", "answer": "<answer text, 1-3 sentences, in their own words>"}\n` +
+    `  ]\n` +
     `}\n\n` +
+    `For "faqs" — only extract questions actually present on the site (look for explicit FAQ sections, "Frequently asked questions", or Q&A blocks). Up to 5 entries. If there are no real FAQs on the site, return an empty array []. Do NOT invent FAQs. Each answer should preserve the vendor's own voice — keep the original phrasing where possible, just clean up obvious whitespace.\n\n` +
     `Note: previously this field was called 'awards' — many vendors are featured in press but very few list real industry awards. Press features count; vague self-claimed 'best of' ribbons do not.\n\n` +
     `Reply with ONLY the JSON object — no preamble, no code fence.`;
 
@@ -285,6 +302,7 @@ async function extractBio(
       awards:          unknown; /* legacy — older outputs still use this key */
       teamSize:        unknown;
       style:           unknown;
+      faqs:            unknown;
     }>;
     const description = typeof parsed.description === "string" ? parsed.description.trim() : "";
     if (!description) return null; /* Without a description there's nothing useful to persist. */
@@ -295,6 +313,23 @@ async function extractBio(
       : Array.isArray(parsed.awards)
         ? parsed.awards
         : [];
+    /* Coerce faqs — accept only objects with non-empty question +
+     * answer. Cap at 5 to avoid pathological pages where Claude
+     * over-extracts from a long FAQ section. */
+    const faqs: ExtractedFaq[] = Array.isArray(parsed.faqs)
+      ? (parsed.faqs as unknown[])
+          .map((entry): ExtractedFaq | null => {
+            if (!entry || typeof entry !== "object") return null;
+            const r = entry as Record<string, unknown>;
+            const question = typeof r.question === "string" ? r.question.trim() : "";
+            const answer   = typeof r.answer   === "string" ? r.answer.trim()   : "";
+            if (!question || !answer) return null;
+            return { question, answer };
+          })
+          .filter((f): f is ExtractedFaq => f != null)
+          .slice(0, 5)
+      : [];
+
     return {
       description,
       ownerName:       typeof parsed.ownerName === "string" && parsed.ownerName.trim() ? parsed.ownerName.trim() : null,
@@ -304,6 +339,7 @@ async function extractBio(
       press:           pressSource.filter((s): s is string => typeof s === "string" && s.trim().length > 0),
       teamSize:        typeof parsed.teamSize === "number" && Number.isFinite(parsed.teamSize) ? parsed.teamSize : null,
       style:           typeof parsed.style === "string" && parsed.style.trim() ? parsed.style.trim() : null,
+      faqs,
     };
   } catch {
     return null;
@@ -342,6 +378,14 @@ async function processVendor(
   if (!bio) return { kind: "no-extract" };
 
   if (!dryRun) {
+    /* Tag each FAQ with source='vendor_website' so the Part-2 hybrid
+     * UI on the vendor detail page can tell them apart from
+     * OWV-generated category FAQs. */
+    const taggedFaqs = bio.faqs.map((f) => ({
+      question: f.question,
+      answer:   f.answer,
+      source:   "vendor_website" as const,
+    }));
     await db
       .update(vendors)
       .set({
@@ -350,6 +394,7 @@ async function processVendor(
         yearsInBusiness:  bio.yearsInBusiness,
         specialties:      bio.specialties.length > 0 ? bio.specialties : null,
         serviceAreas:     bio.serviceAreas.length > 0 ? bio.serviceAreas : null,
+        faqs:             taggedFaqs.length > 0 ? taggedFaqs : [],
         bioEnrichedAt:    new Date(),
         updatedAt:        new Date(),
       })
