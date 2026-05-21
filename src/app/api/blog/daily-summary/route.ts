@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { desc, gte, count, eq, and } from "drizzle-orm";
+import { desc, gte, count, eq, and, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { blogPosts, blogScoutLog } from "@/lib/schema";
+import { blogPosts, blogScoutLog, contentDistributionLog } from "@/lib/schema";
+import { renderDailySummaryHtml, sendBrevoEmail } from "@/lib/blog-agent/email";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -16,12 +17,9 @@ function isAuthorized(req: Request): boolean {
   return (cron && provided === cron.trim()) || (admin && provided === admin.trim()) || false;
 }
 
-/**
- * 5pm-ET daily summary email. Compiles the day's published posts
- * + scout queue stats and sends via Brevo. Email integration is
- * in Commit 3 — for now this endpoint computes the report and
- * returns it as JSON so the cron is wired end-to-end.
- */
+const REPORT_RECIPIENT =
+  process.env.BLOG_REPORT_RECIPIENT ?? "hello@ontarioweddingvendors.com";
+
 export async function GET(request: Request) {
   if (!isAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -32,10 +30,11 @@ export async function GET(request: Request) {
 
   const publishedToday = await db
     .select({
-      id:        blogPosts.id,
-      slug:      blogPosts.slug,
-      title:     blogPosts.title,
-      wordCount: blogPosts.wordCount,
+      id:           blogPosts.id,
+      slug:         blogPosts.slug,
+      title:        blogPosts.title,
+      wordCount:    blogPosts.wordCount,
+      heroImageUrl: blogPosts.heroImageUrl,
     })
     .from(blogPosts)
     .where(and(eq(blogPosts.isPublished, true), gte(blogPosts.publishedAt, startOfDay)))
@@ -51,17 +50,54 @@ export async function GET(request: Request) {
     .from(blogPosts)
     .where(eq(blogPosts.isPublished, true));
 
+  /* Distribution stats — what platforms did today's posts hit? */
+  const todayPostIds = publishedToday.map((p) => p.id);
+  let platformsPublished: string[] = [];
+  if (todayPostIds.length > 0) {
+    const rows = await db
+      .select({ platform: contentDistributionLog.platform })
+      .from(contentDistributionLog)
+      .where(
+        and(
+          eq(contentDistributionLog.status, "published"),
+          sql`${contentDistributionLog.blogPostId} = ANY(${todayPostIds})`,
+        ),
+      );
+    platformsPublished = Array.from(new Set(rows.map((r) => r.platform)));
+  }
+
+  const imagesGenerated = publishedToday.filter((p) => !!p.heroImageUrl).length;
+  /* Internal-link count comes from the agent's persisted internal_links jsonb. */
+  const internalLinksAdded = 0;  /* TODO: query when blog_posts.internal_links populated */
+
   const summary = {
     date:                 startOfDay.toISOString().slice(0, 10),
-    publishedToday,
+    publishedToday:       publishedToday.map(({ slug, title, wordCount }) => ({ slug, title, wordCount })),
     publishedTodayCount:  publishedToday.length,
     scoutUnusedCount:     Number(scoutUnused),
     totalPublishedPosts:  Number(totalPosts),
-    /* Filled in by Commit 3 when GBP / Meta / Pinterest publishing lands. */
-    platformsPublishedTo: [],
-    imagesGenerated:      0,
-    estimatedCostUsd:     0,
+    platformsPublished,
+    imagesGenerated,
+    estimatedCostUsd:     +(imagesGenerated * 0.04).toFixed(2),
   };
 
-  return NextResponse.json({ ok: true, summary });
+  /* Render + send the email when Brevo creds are present. */
+  const rendered = renderDailySummaryHtml({
+    date:                 summary.date,
+    publishedToday:       summary.publishedToday,
+    scoutUnusedCount:     summary.scoutUnusedCount,
+    totalPublishedPosts:  summary.totalPublishedPosts,
+    imagesGenerated:      summary.imagesGenerated,
+    platformsPublished:   summary.platformsPublished,
+    internalLinksAdded,
+  });
+
+  const sendResult = await sendBrevoEmail({
+    to:          [{ email: REPORT_RECIPIENT }],
+    subject:     rendered.subject,
+    htmlContent: rendered.html,
+    textContent: rendered.text,
+  });
+
+  return NextResponse.json({ ok: true, summary, email: sendResult });
 }

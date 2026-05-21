@@ -9,7 +9,7 @@
  */
 import { and, desc, eq, gte, count, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { blogPosts, blogAgentSettings } from "@/lib/schema";
+import { blogPosts, blogAgentSettings, contentDistributionLog } from "@/lib/schema";
 import { BLOG_POSTS } from "@/lib/blog";
 import {
   runScout,
@@ -19,6 +19,14 @@ import {
 } from "@/lib/blog-agent/scout";
 import { generateBlogPost, type BlogGenerateInput } from "@/lib/blog-generate";
 import { generateAndUploadHeroImage } from "@/lib/blog-agent/hero-image";
+import { adaptForPlatforms } from "@/lib/blog-agent/adapter";
+import {
+  publishToGbp,
+  publishToInstagram,
+  publishToFacebook,
+  publishToPinterest,
+  type PublishResult,
+} from "@/lib/blog-agent/publishers";
 
 const ONTARIO_REGION_RE  = /\b(niagara|toronto|gta|hamilton|burlington|oakville|muskoka)\b/i;
 const COST_RE     = /\b(cost|price|pricing|budget|how much)\b/i;
@@ -253,6 +261,8 @@ export type DailyAgentResult = {
     reason?:    string;
     exifStatus?: string;
   };
+  /* Distribution-pipeline outcomes — one entry per platform attempt. */
+  distribution?: PublishResult[];
 };
 
 export async function runDailyAgent(run: "morning" | "afternoon" | "evening"): Promise<DailyAgentResult> {
@@ -377,6 +387,27 @@ export async function runDailyAgent(run: "morning" | "afternoon" | "evening"): P
         heroResult = { status: "failed", reason };
       }
 
+      /* Distribution — only attempt when the post is actually being
+       * published. Drafts (autoPublish=false) skip the social rollout. */
+      let distribution: PublishResult[] | undefined;
+      if (willPublish) {
+        try {
+          distribution = await distributeToPlatforms({
+            postId:       row.id,
+            slug:         draft.slug,
+            title:        draft.title,
+            excerpt,
+            contentBody:  draft.content,
+            category:     input.category ?? null,
+            region:       input.targetRegion,
+            heroImageUrl: heroResult?.url ?? null,
+          });
+        } catch (err) {
+          console.warn(`[daily-agent] distribution failed for ${draft.slug}:`,
+            err instanceof Error ? err.message : err);
+        }
+      }
+
       return {
         ok:            true,
         topic:         item.title,
@@ -386,6 +417,7 @@ export async function runDailyAgent(run: "morning" | "afternoon" | "evening"): P
         autoPublished: willPublish,
         scoutLogged:   candidates.length,
         heroImage:     heroResult,
+        distribution,
       };
     } catch (err) {
       lastError = err instanceof Error ? err.message : String(err);
@@ -427,4 +459,78 @@ function buildExcerpt(markdown: string): string {
   if (!first) return markdown.slice(0, 240);
   const words = first.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").split(/\s+/);
   return words.slice(0, 50).join(" ") + (words.length > 50 ? "…" : "");
+}
+
+/* ─── Distribution orchestrator ─────────────────────────────────── */
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ontarioweddingvendors.com";
+
+async function distributeToPlatforms(opts: {
+  postId:       number;
+  slug:         string;
+  title:        string;
+  excerpt:      string;
+  contentBody:  string;
+  category:     string | null;
+  region:       string | null;
+  heroImageUrl: string | null;
+}): Promise<PublishResult[]> {
+  const postUrl = `${SITE_URL}/blog/${opts.slug}`;
+
+  /* 1. Adapt — single Claude call produces all platform shapes. */
+  const adapted = await adaptForPlatforms({
+    title:       opts.title,
+    excerpt:     opts.excerpt,
+    contentBody: opts.contentBody,
+    postUrl,
+    category:    opts.category,
+    region:      opts.region,
+  });
+
+  /* 2. Publish in parallel. Each publisher self-handles missing
+   *    credentials with a 'skipped' result — never throws. */
+  const fail = (platform: string, err: unknown): PublishResult => ({
+    platform,
+    status: "failed",
+    reason: err instanceof Error ? err.message : String(err),
+  });
+
+  const results: PublishResult[] = await Promise.all([
+    publishToGbp({
+      postUrl,
+      adapted,
+      heroImageUrl: opts.heroImageUrl,
+    }).catch((err) => fail("gbp", err)),
+    publishToInstagram({
+      caption:      adapted.instagram.caption,
+      hashtags:     adapted.instagram.hashtags,
+      heroImageUrl: opts.heroImageUrl,
+    }).catch((err) => fail("instagram", err)),
+    publishToFacebook({
+      text:         adapted.facebook.text,
+      postUrl,
+      heroImageUrl: opts.heroImageUrl,
+    }).catch((err) => fail("facebook", err)),
+    publishToPinterest({
+      title:        adapted.pinterest.title,
+      description:  adapted.pinterest.description,
+      board:        adapted.pinterest.board,
+      postUrl,
+      heroImageUrl: opts.heroImageUrl,
+    }).catch((err) => fail("pinterest", err)),
+  ]);
+
+  /* 3. Persist content_distribution_log rows for every attempt. */
+  await db.insert(contentDistributionLog).values(
+    results.map((r) => ({
+      blogPostId:     opts.postId,
+      platform:       r.platform,
+      platformPostId: r.platformPostId ?? null,
+      publishedAt:    r.status === "published" ? new Date() : null,
+      status:         r.status,
+      errorMessage:   r.reason ?? null,
+    })),
+  );
+
+  return results;
 }
