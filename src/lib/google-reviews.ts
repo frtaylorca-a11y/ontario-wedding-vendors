@@ -5,26 +5,32 @@ export type GoogleVendorPhoto = {
 };
 
 /**
- * Server-side helper: load cached additional Google Places photos for
- * the InteractiveBentoGallery, populating the cache on cold render.
+ * Server-side helper: load gallery photos for InteractiveBentoGallery.
  *
- * If `additionalPhotos` is already an array on the row, return it
- * verbatim (no Google call). Otherwise hit Places Details, build the
- * URLs, persist them to the row's `additional_photos` jsonb column,
- * and return. Errors are swallowed so the page never breaks — the
- * gallery just won't render.
+ * Resolution order (May 2026 — replaces the previous Google-only path):
+ *   1. Cached `additional_photos` jsonb on the row → use verbatim.
+ *   2. Scrape vendor.website for gallery images → upload to R2 →
+ *      persist + return. (See src/lib/scrape-website-photos.ts.)
+ *   3. Google Places Photos as last-resort fallback — only when
+ *      scraping returns < 2 images AND a placeId is set.
  *
- * Both vendors and venues share this helper — pass the table import
- * from "@/lib/schema". The row must have at minimum {id, placeId,
- * additionalPhotos}; only those fields are read.
+ * Why we changed it: per-page Google Places calls were $0.017 each
+ * and the photos weren't always great. Vendor websites usually have
+ * higher-quality, curated gallery images for free.
  *
- * The Google fetch is intentionally async-blocking on the page
- * server-render. After the first visit, the cached column is used.
+ * The vendor row needs name + slug + website passed in along with the
+ * id + placeId + additionalPhotos that were there before — the caller
+ * site (the vendor + venue detail pages) was updated to thread these.
  */
+import { scrapeWebsitePhotos, buildR2Config } from "./scrape-website-photos";
+
 type AdditionalPhotosRow = {
   id:                number;
   placeId:           string | null;
   additionalPhotos:  unknown;
+  name?:             string;
+  slug?:             string;
+  website?:          string | null;
 };
 
 export async function loadCachedAdditionalPhotos(
@@ -32,7 +38,7 @@ export async function loadCachedAdditionalPhotos(
   persist: (id: number, photos: GoogleVendorPhoto[]) => Promise<void>,
   count = 6,
 ): Promise<GoogleVendorPhoto[]> {
-  /* Already cached — return verbatim. */
+  /* 1 — already cached. */
   if (Array.isArray(row.additionalPhotos)) {
     return (row.additionalPhotos as unknown[])
       .filter((p): p is GoogleVendorPhoto => {
@@ -43,12 +49,41 @@ export async function loadCachedAdditionalPhotos(
       .slice(0, count);
   }
 
+  /* 2 — website scrape. Requires name + slug + website to be passed
+   * by the caller. If any is missing we treat scraping as unavailable
+   * and skip straight to the Google fallback. */
+  const r2 = buildR2Config();
+  if (row.name && row.slug && row.website && r2) {
+    try {
+      const scrape = await scrapeWebsitePhotos({
+        website:    row.website,
+        vendorName: row.name,
+        vendorSlug: row.slug,
+        r2,
+        count,
+      });
+      if (scrape.photos.length >= 2) {
+        try { await persist(row.id, scrape.photos); }
+        catch (err) {
+          console.error("[load-additional-photos] persist (scraped) failed for id",
+            row.id, err);
+        }
+        return scrape.photos;
+      }
+      /* Less than 2 → fall through to Google. */
+    } catch (err) {
+      console.warn("[load-additional-photos] website scrape failed for id",
+        row.id, err instanceof Error ? err.message : err);
+    }
+  }
+
+  /* 3 — last-resort Google Places. Same behaviour as before. */
   const fresh = await getGoogleVendorPhotos(row.placeId, count);
   if (fresh.length > 0) {
-    try {
-      await persist(row.id, fresh);
-    } catch (err) {
-      console.error("[load-additional-photos] persist failed for id", row.id, err);
+    try { await persist(row.id, fresh); }
+    catch (err) {
+      console.error("[load-additional-photos] persist (google) failed for id",
+        row.id, err);
     }
   }
   return fresh;

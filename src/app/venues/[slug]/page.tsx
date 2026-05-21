@@ -147,6 +147,9 @@ export default async function VenuePage({ params }: { params: Params }) {
         id:               venue.id,
         placeId:          venue.placeId,
         additionalPhotos: venue.additionalPhotos,
+        name:             venue.name,
+        slug:             venue.slug,
+        website:          venue.website,
       },
       async (id, photos) => {
         await db

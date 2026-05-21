@@ -286,6 +286,9 @@ export default async function VendorPage({ params }: { params: Params }) {
         id:               vendor.id,
         placeId:          vendor.placeId,
         additionalPhotos: vendor.additionalPhotos,
+        name:             vendor.name,
+        slug:             vendor.slug,
+        website:          vendor.website,
       },
       async (id, photos) => {
         await db
