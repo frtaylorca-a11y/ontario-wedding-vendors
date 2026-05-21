@@ -631,6 +631,119 @@ export const blogDrafts = pgTable(
 export type BlogDraft = typeof blogDrafts.$inferSelect;
 export type NewBlogDraft = typeof blogDrafts.$inferInsert;
 
+/* ─── Blog agent tables ─────────────────────────────────────────── */
+
+/* Published blog posts. The TSX-defined posts in src/lib/blog.tsx
+ * stay where they are — DB-first lookup in /blog/[slug] falls back
+ * to BLOG_POSTS so existing URLs never break. */
+export const blogPosts = pgTable(
+  "blog_posts",
+  {
+    id:                     serial("id").primaryKey(),
+    slug:                   varchar("slug", { length: 255 }).notNull().unique(),
+    title:                  varchar("title", { length: 255 }).notNull(),
+    content:                text("content").notNull(),       /* markdown body */
+    metaDescription:        text("meta_description"),
+    excerpt:                text("excerpt"),
+    category:               varchar("category", { length: 100 }),
+    tags:                   jsonb("tags"),                    /* string[] */
+    publishedAt:            timestamp("published_at"),
+    wordCount:              integer("word_count"),
+    sourceTopic:            text("source_topic"),
+    sourceDirectory:        varchar("source_directory", { length: 120 }),
+    internalLinks:          jsonb("internal_links"),          /* [{text,url,kind}] */
+    isPublished:            boolean("is_published").default(false),
+    isAiGenerated:          boolean("is_ai_generated").default(true),
+    heroImageUrl:           varchar("hero_image_url", { length: 500 }),
+    heroImageAlt:           varchar("hero_image_alt", { length: 200 }),
+    heroImagePrompt:        text("hero_image_prompt"),
+    heroImageGeneratedAt:   timestamp("hero_image_generated_at"),
+    createdAt:              timestamp("created_at").defaultNow(),
+    updatedAt:              timestamp("updated_at").defaultNow(),
+  },
+  (t) => ({
+    publishedIdx: index("blog_posts_published_idx").on(t.isPublished, t.publishedAt),
+    slugIdx:      index("blog_posts_slug_idx").on(t.slug),
+  }),
+);
+
+/* Topics discovered by the daily scout — one row per (source, title)
+ * combo, even if rejected. Lets us track dedupe + audit what got picked. */
+export const blogScoutLog = pgTable(
+  "blog_scout_log",
+  {
+    id:            serial("id").primaryKey(),
+    title:         text("title").notNull(),
+    sourceName:    varchar("source_name", { length: 120 }).notNull(),
+    sourceUrl:     varchar("source_url", { length: 600 }),
+    discoveredAt:  timestamp("discovered_at").defaultNow(),
+    score:         integer("score").default(0),
+    used:          boolean("used").default(false),
+    usedAt:        timestamp("used_at"),
+    ourPostSlug:   varchar("our_post_slug", { length: 255 }),
+  },
+  (t) => ({
+    discoveredIdx: index("blog_scout_log_discovered_idx").on(t.discoveredAt),
+    usedIdx:       index("blog_scout_log_used_idx").on(t.used, t.score),
+  }),
+);
+
+/* Singleton settings — id=1 row holds the live config. */
+export const blogAgentSettings = pgTable("blog_agent_settings", {
+  id:                serial("id").primaryKey(),
+  autoPublish:       boolean("auto_publish").default(false),
+  dailyRunEnabled:   boolean("daily_run_enabled").default(true),
+  minWordCount:      integer("min_word_count").default(700),
+  maxWordCount:      integer("max_word_count").default(900),
+  targetRegions:     jsonb("target_regions"),  /* string[] */
+  updatedAt:         timestamp("updated_at").defaultNow(),
+});
+
+/* Cross-platform distribution telemetry — GBP, Instagram, Facebook,
+ * Pinterest. status: queued | published | skipped | failed. */
+export const contentDistributionLog = pgTable(
+  "content_distribution_log",
+  {
+    id:               serial("id").primaryKey(),
+    blogPostId:       integer("blog_post_id"),
+    platform:         varchar("platform", { length: 40 }).notNull(),
+    platformPostId:   varchar("platform_post_id", { length: 255 }),
+    publishedAt:      timestamp("published_at"),
+    status:           varchar("status", { length: 20 }).notNull(),
+    engagementData:   jsonb("engagement_data"),
+    errorMessage:     text("error_message"),
+    createdAt:        timestamp("created_at").defaultNow(),
+  },
+  (t) => ({
+    postIdx:     index("content_distribution_post_idx").on(t.blogPostId, t.platform),
+    statusIdx:   index("content_distribution_status_idx").on(t.status, t.createdAt),
+  }),
+);
+
+/* Newsletter subscribers (weekly digest). */
+export const newsletterSubscribers = pgTable(
+  "newsletter_subscribers",
+  {
+    id:                  serial("id").primaryKey(),
+    email:               varchar("email", { length: 255 }).notNull().unique(),
+    name:                varchar("name", { length: 120 }),
+    region:              varchar("region", { length: 80 }),
+    subscribedAt:        timestamp("subscribed_at").defaultNow(),
+    unsubscribeToken:    varchar("unsubscribe_token", { length: 64 }).notNull(),
+    isActive:            boolean("is_active").default(true),
+  },
+  (t) => ({
+    activeIdx: index("newsletter_active_idx").on(t.isActive, t.subscribedAt),
+  }),
+);
+
+export type BlogPost = typeof blogPosts.$inferSelect;
+export type NewBlogPost = typeof blogPosts.$inferInsert;
+export type BlogScoutLog = typeof blogScoutLog.$inferSelect;
+export type BlogAgentSettings = typeof blogAgentSettings.$inferSelect;
+export type ContentDistributionLog = typeof contentDistributionLog.$inferSelect;
+export type NewsletterSubscriber = typeof newsletterSubscribers.$inferSelect;
+
 export type Venue = typeof venues.$inferSelect;
 export type NewVenue = typeof venues.$inferInsert;
 export type Vendor = typeof vendors.$inferSelect;

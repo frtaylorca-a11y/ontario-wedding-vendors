@@ -1,0 +1,21 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/blog/daily-agent?run=morning",
+      "schedule": "0 11 * * *"
+    },
+    {
+      "path": "/api/blog/daily-agent?run=afternoon",
+      "schedule": "0 20 * * *"
+    },
+    {
+      "path": "/api/blog/daily-summary",
+      "schedule": "0 22 * * *"
+    },
+    {
+      "path": "/api/blog/weekly-digest",
+      "schedule": "0 14 * * 0"
+    }
+  ]
+}

@@ -3,19 +3,34 @@ import Image from "next/image";
 import type { Route } from "next";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { BLOG_POSTS, getBlogPost } from "@/lib/blog";
+import { BLOG_POSTS, getBlogPost, type BlogPost } from "@/lib/blog";
 import { BreadcrumbSchema } from "@/components/seo/SchemaInjector";
 import { RelatedPosts } from "@/components/blog/RelatedPosts";
+import { getDbBlogPost, listDbBlogSlugs } from "@/lib/blog-agent/db-posts";
 
 type Params = Promise<{ slug: string }>;
 
+/* Don't pre-render DB posts at build time — they're created at
+ * runtime by the daily agent. Static posts stay pre-rendered. */
+export const dynamicParams = true;
+
 export async function generateStaticParams() {
-  return BLOG_POSTS.map((p) => ({ slug: p.slug }));
+  const staticSlugs = BLOG_POSTS.map((p) => p.slug);
+  let dbSlugs: string[] = [];
+  try { dbSlugs = await listDbBlogSlugs(); } catch { /* DB optional at build */ }
+  const all = new Set<string>([...staticSlugs, ...dbSlugs]);
+  return Array.from(all).map((slug) => ({ slug }));
+}
+
+async function resolvePost(slug: string): Promise<BlogPost | null> {
+  const staticPost = getBlogPost(slug);
+  if (staticPost) return staticPost;
+  try { return await getDbBlogPost(slug); } catch { return null; }
 }
 
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { slug } = await params;
-  const post = getBlogPost(slug);
+  const post = await resolvePost(slug);
   if (!post) return { title: "Post not found" };
   return {
     title: `${post.title} | Ontario Wedding Vendors`,
@@ -43,7 +58,7 @@ function formatDate(iso: string): string {
 
 export default async function BlogPostPage({ params }: { params: Params }) {
   const { slug } = await params;
-  const post = getBlogPost(slug);
+  const post = await resolvePost(slug);
   if (!post) notFound();
 
   const articleSchema = {

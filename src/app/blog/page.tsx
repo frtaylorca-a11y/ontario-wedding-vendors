@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata, Route } from "next";
 import { listBlogPosts } from "@/lib/blog";
+import { listDbBlogPosts } from "@/lib/blog-agent/db-posts";
 import { BreadcrumbSchema } from "@/components/seo/SchemaInjector";
 import { BlogIndexClient } from "@/components/blog/BlogIndexClient";
 
@@ -11,8 +12,21 @@ export const metadata: Metadata = {
   alternates: { canonical: "/blog" },
 };
 
-export default function BlogIndexPage() {
-  const posts = listBlogPosts();
+/* DB rows can change between deploys (the agent writes nightly), so
+ * we render this dynamically. The static posts are still bundled in
+ * the JS — no extra fetch cost. */
+export const dynamic = "force-dynamic";
+
+export default async function BlogIndexPage() {
+  const staticPosts = listBlogPosts();
+  let dbPosts: typeof staticPosts = [];
+  try { dbPosts = await listDbBlogPosts(); } catch { /* DB optional */ }
+  /* Dedupe by slug — static wins, so an agent-generated post with
+   * the same slug as a TSX one stays hidden until the TSX is removed. */
+  const seen = new Set<string>();
+  const posts = [...staticPosts, ...dbPosts]
+    .filter((p) => (seen.has(p.slug) ? false : (seen.add(p.slug), true)))
+    .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
 
   return (
     <>
