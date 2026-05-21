@@ -57,9 +57,22 @@
  * Flags:
  *   --limit N            Process at most N candidates.
  *   --dry-run            Run the full pipeline but never write to DB.
- *   --min-confidence X   Accept matches at or above X. Default 'high'.
- *                        Set to 'medium' to widen yield at the cost of
- *                        more false positives. Never accepts 'low'.
+ *   --confidence X       Accept matches at or above X. Default 'high'.
+ *   --min-confidence X   (alias for --confidence)
+ *
+ * Confidence behaviour:
+ *   high (default) — only commit when Claude's web_search returns HIGH
+ *                    confidence + the page passes name/city + relevance
+ *                    checks.
+ *   medium         — also commit MEDIUM-confidence matches IF the page
+ *                    passes one of three independent corroborating
+ *                    checks (phone last-7-digit match, verbatim
+ *                    business name in body, or domain root contains
+ *                    a name slug). Coming-soon placeholder pages are
+ *                    rejected outright. This catches legitimate vendors
+ *                    with simple websites that lack wedding-specific
+ *                    signals.
+ *   low            — never accepted.
  */
 import "dotenv/config";
 import { and, eq, isNull, isNotNull, or } from "drizzle-orm";
@@ -101,16 +114,16 @@ function parseArgs(): Args {
         console.error("--limit requires a positive integer"); process.exit(1);
       }
       limit = n;
-    } else if (a === "--min-confidence") {
+    } else if (a === "--min-confidence" || a === "--confidence") {
       const v = args[++i];
       if (v !== "high" && v !== "medium") {
-        console.error("--min-confidence must be 'high' or 'medium'"); process.exit(1);
+        console.error(`${a} must be 'high' or 'medium'`); process.exit(1);
       }
       minConfidence = v;
-    } else if (a.startsWith("--min-confidence=")) {
-      const v = a.slice("--min-confidence=".length);
+    } else if (a.startsWith("--min-confidence=") || a.startsWith("--confidence=")) {
+      const v = a.split("=", 2)[1];
       if (v !== "high" && v !== "medium") {
-        console.error("--min-confidence must be 'high' or 'medium'"); process.exit(1);
+        console.error(`${a.split("=")[0]} must be 'high' or 'medium'`); process.exit(1);
       }
       minConfidence = v;
     } else {
@@ -142,6 +155,7 @@ type Candidate = {
   category: string;
   city:     string | null;
   region:   string | null;
+  phone:    string | null;
 };
 
 async function loadCandidates(limit: number | null): Promise<Candidate[]> {
@@ -153,6 +167,7 @@ async function loadCandidates(limit: number | null): Promise<Candidate[]> {
       category: vendors.category,
       city:     vendors.city,
       region:   vendors.region,
+      phone:    vendors.phone,
     })
     .from(vendors)
     .where(
@@ -286,7 +301,23 @@ const SOCIAL_HOSTS = new Set([
   "youtube.com",   "www.youtube.com",
 ]);
 
-async function fetchTitleAndMeta(url: string): Promise<string> {
+/* Returns:
+ *   meta — lowercase concatenation of <title> + og:title + og:description
+ *          + meta description. Same string the original validator used.
+ *   body — first 6000 chars of plain visible text from the page body.
+ *          Used by the medium-confidence verifier (phone + verbatim
+ *          name + coming-soon detection). Empty string when fetch fails.
+ *   bodyLowercase — body but lowercased for case-insensitive matching.
+ *
+ * One HTTP fetch produces both — keeps the round-trip count flat. */
+type FetchedPage = {
+  meta:          string;
+  body:          string;
+  bodyLowercase: string;
+};
+
+async function fetchTitleAndMeta(url: string): Promise<FetchedPage> {
+  const empty: FetchedPage = { meta: "", body: "", bodyLowercase: "" };
   try {
     const ctrl  = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
@@ -296,24 +327,42 @@ async function fetchTitleAndMeta(url: string): Promise<string> {
         redirect: "follow",
         headers:  { "user-agent": "OntarioWeddingVendors-Bot/1.0 (+website-discovery)" },
       });
-      if (!res.ok) return "";
+      if (!res.ok) return empty;
       const text = await res.text();
       const head = text.slice(0, 16_384); /* first 16KB is enough for <head> */
       const titleMatch   = head.match(/<title[^>]*>([^<]+)<\/title>/i);
       const ogTitleMatch = head.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i);
       const ogDescMatch  = head.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i);
       const descMatch    = head.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i);
-      return [
+      const meta = [
         titleMatch?.[1] ?? "",
         ogTitleMatch?.[1] ?? "",
         ogDescMatch?.[1] ?? "",
         descMatch?.[1] ?? "",
       ].join(" \n ").toLowerCase();
+
+      /* Plain text body — strip script/style, then tags, then collapse
+       * whitespace. Cap at 6000 chars: enough for phone + about copy
+       * + footer (where most vendor contact info lives) without
+       * loading entire blog rolls into memory. */
+      const body = text
+        .replace(/<script[\s\S]*?<\/script>/gi, " ")
+        .replace(/<style[\s\S]*?<\/style>/gi,   " ")
+        .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/&nbsp;/gi, " ")
+        .replace(/&amp;/gi, "&")
+        .replace(/&[a-z]+;/gi, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 6_000);
+
+      return { meta, body, bodyLowercase: body.toLowerCase() };
     } finally {
       clearTimeout(timer);
     }
   } catch {
-    return "";
+    return empty;
   }
 }
 
@@ -336,9 +385,9 @@ function meaningfulNameTokens(name: string): string[] {
 }
 
 type ValidationResult =
-  | { kind: "ok"; matched: string; pageText: string }
+  | { kind: "ok";          matched: string; pageText: string; bodyText: string; bodyLowercase: string }
   | { kind: "social-only" }
-  | { kind: "no-match"; pageText: string }
+  | { kind: "no-match";    pageText: string }
   | { kind: "fetch-failed" };
 
 async function validateMatch(url: string, vendor: Candidate): Promise<ValidationResult> {
@@ -346,24 +395,27 @@ async function validateMatch(url: string, vendor: Candidate): Promise<Validation
   try { host = new URL(url).hostname.toLowerCase(); } catch { return { kind: "fetch-failed" }; }
   if (SOCIAL_HOSTS.has(host)) return { kind: "social-only" };
 
-  const pageText = await fetchTitleAndMeta(url);
-  if (!pageText) return { kind: "fetch-failed" };
+  const fetched = await fetchTitleAndMeta(url);
+  if (!fetched.meta && !fetched.body) return { kind: "fetch-failed" };
 
-  /* Match if (a) any meaningful word from the vendor name appears,
-   * OR (b) the vendor's city appears. The OR is intentional: a
-   * studio named "Qiu Photography" might list "Toronto" rather than
-   * a full company name in their og:title; conversely a famous
-   * photographer might omit the city. Either signal is enough. */
+  /* Token / city match runs against the meta string (title + og + meta
+   * description) — same scope as the original validator. The body
+   * text is carried through for the medium-confidence verifier. */
+  const haystack = fetched.meta + " " + fetched.bodyLowercase;
   const tokens = meaningfulNameTokens(vendor.name);
   for (const t of tokens) {
-    if (pageText.includes(t)) return { kind: "ok", matched: `name:${t}`, pageText };
+    if (haystack.includes(t)) {
+      return { kind: "ok", matched: `name:${t}`, pageText: fetched.meta, bodyText: fetched.body, bodyLowercase: fetched.bodyLowercase };
+    }
   }
   if (vendor.city) {
     const city = vendor.city.toLowerCase();
-    if (pageText.includes(city)) return { kind: "ok", matched: `city:${vendor.city}`, pageText };
+    if (haystack.includes(city)) {
+      return { kind: "ok", matched: `city:${vendor.city}`, pageText: fetched.meta, bodyText: fetched.body, bodyLowercase: fetched.bodyLowercase };
+    }
   }
 
-  return { kind: "no-match", pageText: pageText.slice(0, 120) };
+  return { kind: "no-match", pageText: fetched.meta.slice(0, 120) };
 }
 
 /* ─── Confidence ordering ─────────────────────────────────────────── */
@@ -371,6 +423,129 @@ async function validateMatch(url: string, vendor: Candidate): Promise<Validation
 function meetsThreshold(c: Confidence, min: "high" | "medium"): boolean {
   if (min === "high")   return c === "high";
   return c === "high" || c === "medium";
+}
+
+/* ─── Medium-confidence verification ─────────────────────────────── */
+
+/* When --confidence medium accepts medium-conf matches from Claude, we
+ * still don't want to commit a website without independent corroborating
+ * proof. The medium-conf verifier requires ONE of three concrete
+ * signals before persisting:
+ *
+ *   1. Phone last-7-digit match — the vendor's stored phone (or a
+ *      meaningful subsequence of it) appears in the page body.
+ *   2. Verbatim business name appears in the body (not just a token —
+ *      the full name without the stop-word reduction).
+ *   3. Domain root contains a meaningful slug from the business name.
+ *
+ * Plus a guard: if the page looks like a "coming soon" or "under
+ * construction" placeholder, we refuse regardless. */
+
+const COMING_SOON_PATTERNS = [
+  /\bcoming\s+soon\b/i,
+  /\bunder\s+construction\b/i,
+  /\bsite\s+(is\s+)?coming\b/i,
+  /\blaunching\s+soon\b/i,
+  /\bbe\s+back\s+soon\b/i,
+  /\bwebsite\s+(is\s+)?(currently\s+)?down\b/i,
+  /\bpage\s+not\s+found\b/i,    /* generic 404 caught by 200-OK soft fail */
+  /\bstay\s+tuned\b/i,
+];
+
+export function isComingSoonPage(bodyText: string): boolean {
+  /* If the page is suspiciously thin, AND contains any placeholder
+   * phrase, treat it as coming-soon. We require the thinness gate
+   * because legitimate vendors do say "coming soon" in event copy. */
+  const len = bodyText.trim().length;
+  if (len > 0 && len < 600) {
+    for (const re of COMING_SOON_PATTERNS) {
+      if (re.test(bodyText)) return true;
+    }
+  }
+  /* Even on long pages, if a placeholder phrase appears in the first
+   * 200 chars, that's a strong placeholder signal. */
+  const opening = bodyText.slice(0, 200);
+  for (const re of COMING_SOON_PATTERNS) {
+    if (re.test(opening)) return true;
+  }
+  return false;
+}
+
+/* Compare last-7-digit subsequences of the vendor phone against
+ * the body text. We use 7 digits because Canadian numbers vary in
+ * formatting (905.555.1234 vs (905) 555-1234 vs 9055551234) and the
+ * subscriber number (last 7) is the most stable component. */
+function phoneAppearsInBody(vendorPhone: string | null, bodyText: string): boolean {
+  if (!vendorPhone) return false;
+  const digits = vendorPhone.replace(/\D/g, "");
+  if (digits.length < 7) return false;
+  const last7 = digits.slice(-7);
+
+  /* Strip all non-digit chars from the body once, then substring match.
+   * That handles every formatting variant in one comparison. */
+  const bodyDigits = bodyText.replace(/\D/g, "");
+  return bodyDigits.includes(last7);
+}
+
+/* Domain-contains-slug check: pull a 3+ char meaningful token from the
+ * business name and check whether the URL's hostname contains it. */
+function domainContainsNameSlug(name: string, url: string): string | null {
+  let host: string;
+  try { host = new URL(url).hostname.toLowerCase().replace(/^www\./, ""); }
+  catch { return null; }
+  /* Strip the TLD so "qiu.ca" matches "qiu" cleanly. */
+  const root = host.replace(/\.[a-z]{2,3}(?:\.[a-z]{2})?$/, "");
+  const tokens = meaningfulNameTokens(name);
+  for (const t of tokens) {
+    if (t.length >= 4 && root.includes(t)) return t;
+    /* Allow 3-char tokens only if the entire root is also 3-4 chars
+     * (e.g. "qiu.ca" → root "qiu" matches token "qiu"). */
+    if (t.length === 3 && root.length <= 4 && root.includes(t)) return t;
+  }
+  return null;
+}
+
+/* Verbatim-name check: normalize both sides (lowercase, collapse
+ * whitespace, drop the few obvious noise tokens) and substring search. */
+function verbatimNameInBody(name: string, bodyLowercase: string): boolean {
+  /* Skip the smallest noise so "Qiu Photography Inc." normalizes
+   * to "qiu photography" and still matches "qiu photography studio". */
+  const normalized = name
+    .toLowerCase()
+    .replace(/\b(inc\.?|ltd\.?|llc|co\.?|corp\.?)\b/gi, " ")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (normalized.length < 5) return false;
+  return bodyLowercase.includes(normalized);
+}
+
+type MediumVerification =
+  | { kind: "verified";    reason: string }
+  | { kind: "coming-soon" }
+  | { kind: "no-signal" };
+
+function verifyMediumMatch(
+  vendor: Candidate,
+  url:    string,
+  v:      ValidationResult & { kind: "ok" },
+): MediumVerification {
+  /* Hard reject: coming-soon / placeholder pages. */
+  if (isComingSoonPage(v.bodyText)) return { kind: "coming-soon" };
+
+  /* Then the three corroborating signals — first one that passes wins.
+   * Order is the cheapest signal first. */
+  if (phoneAppearsInBody(vendor.phone, v.bodyText)) {
+    return { kind: "verified", reason: "phone-match" };
+  }
+  if (verbatimNameInBody(vendor.name, v.bodyLowercase)) {
+    return { kind: "verified", reason: "verbatim-name" };
+  }
+  const domainToken = domainContainsNameSlug(vendor.name, url);
+  if (domainToken) {
+    return { kind: "verified", reason: `domain-slug:${domainToken}` };
+  }
+  return { kind: "no-signal" };
 }
 
 /* ─── Main loop ───────────────────────────────────────────────────── */
@@ -384,6 +559,8 @@ type Outcome =
   | { kind: "fetch-failed";    url: string }
   | { kind: "category-mismatch-hidden";  url: string; actualCategory: string | null; reason: string }
   | { kind: "category-mismatch-flagged"; url: string; actualCategory: string | null; reason: string }
+  | { kind: "medium-no-signal"; url: string }
+  | { kind: "coming-soon";      url: string }
   | { kind: "no-result";       reason: string }
   | { kind: "error";           reason: string };
 
@@ -412,15 +589,32 @@ async function processVendor(
     if (validation.kind === "fetch-failed") return { kind: "fetch-failed",      url: verdict.url };
     if (validation.kind === "no-match")     return { kind: "validation-failed", url: verdict.url, preview: validation.pageText };
 
+    /* Medium-confidence verification gate. When Claude returned MEDIUM
+     * confidence AND we're accepting medium matches (args.minConfidence
+     * === 'medium'), require independent corroborating proof before
+     * committing — phone match OR verbatim name OR domain has slug.
+     * Also reject coming-soon placeholder pages. Cheap pre-relevance
+     * check — avoids the $0.0002 classifier call on rows we'd reject. */
+    if (verdict.confidence === "medium" && args.minConfidence === "medium") {
+      const med = verifyMediumMatch(v, verdict.url, validation);
+      if (med.kind === "coming-soon") {
+        return { kind: "coming-soon", url: verdict.url };
+      }
+      if (med.kind === "no-signal") {
+        return { kind: "medium-no-signal", url: verdict.url };
+      }
+      /* med.kind === "verified" — log the corroborating signal so the
+       * audit trail shows WHY this medium-conf match was accepted. */
+      console.log(`    medium-conf verified via ${med.reason}`);
+    }
+
     /* Category relevance check — name/city matched, but does the page
-     * actually describe a business in this category? Pass the same
-     * pageText (title + og + meta description, ~200-600 chars) the
-     * validator just used. classifyCategoryRelevance gates on a 40-char
-     * minimum, so very thin pages return low-confidence relevant. */
+     * actually describe a business in this category? Pass the body
+     * text (richer signal than just meta) when available. */
     const verdictRelevance = await classifyCategoryRelevance({
       vendorName:     v.name,
       category:       v.category,
-      websiteContent: validation.pageText,
+      websiteContent: validation.bodyText || validation.pageText,
     });
     const action = actionForVerdict(verdictRelevance);
 
@@ -530,6 +724,8 @@ async function main() {
   let errored          = 0;
   let mismatchHidden   = 0;
   let mismatchFlagged  = 0;
+  let mediumNoSignal   = 0;
+  let comingSoon       = 0;
   const issues: Array<{ slug: string; outcome: string }> = [];
 
   for (let i = 0; i < candidates.length; i++) {
@@ -573,6 +769,14 @@ async function main() {
         committed++;  /* still committed the website; counts as a save */
         console.log(`  ✓ ${v.slug} → ${r.url} · FLAGGED for review (${r.actualCategory ?? "?"})`);
         break;
+      case "medium-no-signal":
+        mediumNoSignal++;
+        issues.push({ slug: v.slug, outcome: `MED-NO-SIGNAL: ${r.url}` });
+        break;
+      case "coming-soon":
+        comingSoon++;
+        issues.push({ slug: v.slug, outcome: `COMING-SOON: ${r.url}` });
+        break;
       case "no-result":
         noResult++;
         break;
@@ -605,6 +809,8 @@ async function main() {
   console.log(`Fetch failed:               ${fetchFailed}`);
   console.log(`Category mismatch (hide):   ${mismatchHidden}`);
   console.log(`Category mismatch (flag):   ${mismatchFlagged}`);
+  console.log(`Medium-conf no signal:      ${mediumNoSignal}`);
+  console.log(`Coming-soon page:           ${comingSoon}`);
   console.log(`No result:                  ${noResult}`);
   console.log(`Errored:                    ${errored}`);
   console.log(`Actual cost:                ~$${(candidates.length * COST_PER_VENDOR_USD).toFixed(2)}`);
