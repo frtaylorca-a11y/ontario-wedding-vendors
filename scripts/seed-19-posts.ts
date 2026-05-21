@@ -32,7 +32,12 @@ type SeedPost = {
   targetKeyword:  string;
   targetRegion:   BlogGenerateInput["targetRegion"];
   category:       BlogGenerateInput["category"];
+  /* Primary competitor URL — generator tries this first. */
   competitorUrl:  string;
+  /* Ordered fallbacks — used in order if the primary 403s/fails.
+   * When everything fails the generator switches to a "no competitor"
+   * prompt that builds from topic + pricing + DB data alone. */
+  competitorFallbacks?: string[];
   /* Length class — drives targetWordCount. */
   length:         "standard" | "pillar";
 };
@@ -47,72 +52,121 @@ const POSTS: SeedPost[] = [
     targetKeyword: "how to choose wedding photographer Ontario",
     targetRegion: "all", category: "photographer", length: "standard",
     competitorUrl: "https://www.theknot.com/content/how-to-choose-wedding-photographer",
+    competitorFallbacks: [
+      "https://www.zola.com/expert-advice/how-to-find-the-right-wedding-photographer",
+      "https://www.weddingwire.com/wedding-ideas/wedding-photographer-questions",
+      "https://www.brides.com/story/how-to-pick-a-wedding-photographer",
+    ],
   },
   {
     n: 2,  topic: "How to Choose a Wedding Videographer in Ontario",
     targetKeyword: "how to choose wedding videographer Ontario",
     targetRegion: "all", category: "videographer", length: "standard",
     competitorUrl: "https://www.theknot.com/content/how-to-choose-a-wedding-videographer",
+    competitorFallbacks: [
+      "https://www.zola.com/expert-advice/how-to-choose-wedding-videographer",
+      "https://www.weddingwire.com/wedding-ideas/how-to-choose-wedding-videographer",
+    ],
   },
   {
     n: 3,  topic: "How to Choose a Wedding DJ in Ontario",
     targetKeyword: "how to choose wedding DJ Ontario",
     targetRegion: "all", category: "dj", length: "standard",
     competitorUrl: "https://www.theknot.com/content/how-to-find-a-wedding-dj",
+    competitorFallbacks: [
+      "https://www.zola.com/expert-advice/how-to-find-a-wedding-dj",
+      "https://www.weddingwire.com/wedding-ideas/how-to-hire-a-wedding-dj",
+    ],
   },
   {
     n: 4,  topic: "How to Choose a Wedding Florist in Ontario",
     targetKeyword: "how to choose wedding florist Ontario",
     targetRegion: "all", category: "florist", length: "standard",
     competitorUrl: "https://www.theknot.com/content/how-to-pick-wedding-florist",
+    competitorFallbacks: [
+      "https://www.zola.com/expert-advice/how-to-find-the-right-wedding-florist",
+      "https://www.weddingwire.com/wedding-ideas/wedding-florist-questions",
+    ],
   },
   {
     n: 5,  topic: "How to Choose a Wedding Caterer in Ontario",
     targetKeyword: "how to choose wedding caterer Ontario",
     targetRegion: "all", category: "catering", length: "standard",
     competitorUrl: "https://www.theknot.com/content/how-to-choose-a-wedding-caterer",
+    competitorFallbacks: [
+      "https://www.zola.com/expert-advice/how-to-choose-wedding-caterer",
+      "https://www.weddingwire.com/wedding-ideas/wedding-catering-questions",
+    ],
   },
   {
     n: 6,  topic: "How to Choose a Wedding Officiant in Ontario",
     targetKeyword: "how to choose wedding officiant Ontario",
     targetRegion: "all", category: "officiant", length: "standard",
     competitorUrl: "https://www.theknot.com/content/how-to-choose-an-officiant",
+    competitorFallbacks: [
+      "https://www.zola.com/expert-advice/wedding-officiant",
+      "https://www.weddingwire.com/wedding-ideas/wedding-officiant",
+    ],
   },
   {
     n: 7,  topic: "How to Choose Wedding Hair and Makeup in Ontario",
     targetKeyword: "how to choose wedding hair makeup Ontario",
     targetRegion: "all", category: "hair_makeup", length: "standard",
     competitorUrl: "https://www.theknot.com/content/how-to-choose-a-wedding-makeup-artist",
+    competitorFallbacks: [
+      "https://www.zola.com/expert-advice/bridal-hair-and-makeup",
+      "https://www.weddingwire.com/wedding-ideas/wedding-hair-and-makeup",
+    ],
   },
   {
     n: 8,  topic: "Do You Need a Wedding Planner in Ontario?",
     targetKeyword: "wedding planner Ontario worth it",
     targetRegion: "all", category: "wedding_planner", length: "standard",
     competitorUrl: "https://www.theknot.com/content/do-i-need-a-wedding-planner",
+    competitorFallbacks: [
+      "https://www.zola.com/expert-advice/do-you-need-a-wedding-planner",
+      "https://www.weddingwire.com/wedding-ideas/do-i-need-a-wedding-planner",
+    ],
   },
   {
     n: 9,  topic: "How to Choose Your Wedding Cake in Ontario",
     targetKeyword: "how to choose wedding cake Ontario",
     targetRegion: "all", category: "cake", length: "standard",
     competitorUrl: "https://www.theknot.com/content/wedding-cake-101",
+    competitorFallbacks: [
+      "https://www.zola.com/expert-advice/how-to-choose-a-wedding-cake",
+      "https://www.weddingwire.com/wedding-ideas/wedding-cake-101",
+    ],
   },
   {
     n: 10, topic: "How to Choose Wedding Transportation in Ontario",
     targetKeyword: "wedding limo transportation Ontario",
     targetRegion: "all", category: "limo", length: "standard",
     competitorUrl: "https://www.theknot.com/content/how-to-pick-wedding-transportation",
+    competitorFallbacks: [
+      "https://www.zola.com/expert-advice/wedding-transportation",
+      "https://www.weddingwire.com/wedding-ideas/wedding-transportation-options",
+    ],
   },
   {
     n: 11, topic: "How to Choose a Wedding Photo Booth in Ontario",
     targetKeyword: "how to choose wedding photo booth Ontario",
     targetRegion: "all", category: "photo_booth", length: "standard",
     competitorUrl: "https://www.theknot.com/content/wedding-photo-booth-tips",
+    competitorFallbacks: [
+      "https://www.zola.com/expert-advice/wedding-photo-booth",
+      "https://www.weddingwire.com/wedding-ideas/wedding-photo-booth",
+    ],
   },
   {
     n: 12, topic: "Wedding Lighting and Decor in Ontario: A Guide",
     targetKeyword: "wedding lighting decor Ontario",
     targetRegion: "all", category: "lighting_decor", length: "standard",
     competitorUrl: "https://www.theknot.com/content/wedding-lighting-ideas",
+    competitorFallbacks: [
+      "https://www.zola.com/expert-advice/wedding-lighting-ideas",
+      "https://www.weddingwire.com/wedding-ideas/wedding-lighting",
+    ],
   },
 
   /* ─── 7 cost posts (1,500-2,000 words) ─────────────────────────── */
@@ -121,42 +175,70 @@ const POSTS: SeedPost[] = [
     targetKeyword: "wedding officiant cost Ontario",
     targetRegion: "all", category: "officiant", length: "standard",
     competitorUrl: "https://www.theknot.com/content/officiant-cost",
+    competitorFallbacks: [
+      "https://www.zola.com/expert-advice/how-much-does-a-wedding-officiant-cost",
+      "https://www.weddingwire.com/wedding-ideas/officiant-cost",
+    ],
   },
   {
     n: 14, topic: "Wedding Hair and Makeup Costs in Ontario (2026)",
     targetKeyword: "wedding hair makeup cost Ontario",
     targetRegion: "all", category: "hair_makeup", length: "standard",
     competitorUrl: "https://www.theknot.com/content/average-bridal-makeup-cost",
+    competitorFallbacks: [
+      "https://www.zola.com/expert-advice/bridal-hair-and-makeup-cost",
+      "https://www.weddingwire.com/wedding-ideas/wedding-hair-and-makeup-cost",
+    ],
   },
   {
     n: 15, topic: "How Much Does a Wedding Planner Cost in Ontario?",
     targetKeyword: "wedding planner cost Ontario",
     targetRegion: "all", category: "wedding_planner", length: "standard",
     competitorUrl: "https://www.theknot.com/content/wedding-planner-cost",
+    competitorFallbacks: [
+      "https://www.zola.com/expert-advice/how-much-does-a-wedding-planner-cost",
+      "https://www.weddingwire.com/wedding-ideas/wedding-planner-cost",
+    ],
   },
   {
     n: 16, topic: "Wedding Cake Costs in Ontario: What Couples Pay",
     targetKeyword: "wedding cake cost Ontario",
     targetRegion: "all", category: "cake", length: "standard",
     competitorUrl: "https://www.theknot.com/content/average-wedding-cake-cost",
+    competitorFallbacks: [
+      "https://www.zola.com/expert-advice/wedding-cake-cost",
+      "https://www.weddingwire.com/wedding-ideas/average-wedding-cake-cost",
+    ],
   },
   {
     n: 17, topic: "Wedding Photo Booth Rental Cost in Ontario (2026)",
     targetKeyword: "wedding photo booth cost Ontario",
     targetRegion: "all", category: "photo_booth", length: "standard",
     competitorUrl: "https://www.theknot.com/content/wedding-photo-booth-cost",
+    competitorFallbacks: [
+      "https://www.zola.com/expert-advice/photo-booth-rental-cost",
+      "https://www.weddingwire.com/wedding-ideas/wedding-photo-booth-cost",
+    ],
   },
   {
     n: 18, topic: "Wedding Lighting and Decor Costs in Ontario",
     targetKeyword: "wedding lighting decor cost Ontario",
     targetRegion: "all", category: "lighting_decor", length: "standard",
     competitorUrl: "https://www.theknot.com/content/wedding-lighting-cost",
+    competitorFallbacks: [
+      "https://www.zola.com/expert-advice/wedding-lighting-cost",
+      "https://www.weddingwire.com/wedding-ideas/wedding-lighting-cost",
+    ],
   },
   {
     n: 19, topic: "How Much Does a Wedding Venue Cost in Ontario?",
     targetKeyword: "wedding venue cost Ontario",
     targetRegion: "all", category: "venue", length: "pillar",
     competitorUrl: "https://www.theknot.com/content/wedding-venue-cost",
+    competitorFallbacks: [
+      "https://www.zola.com/expert-advice/wedding-venue-cost",
+      "https://www.weddingwire.com/wedding-ideas/average-wedding-venue-cost",
+    ],
   },
 ];
 
@@ -264,13 +346,14 @@ async function main() {
     }
 
     const input: BlogGenerateInput = {
-      topic:             post.topic,
-      competitorUrl:     post.competitorUrl,
-      targetKeyword:     post.targetKeyword,
-      targetRegion:      post.targetRegion,
-      category:          post.category,
-      internalLinkCount: 2,
-      targetWordCount:   WORD_COUNT_BY_CLASS[post.length],
+      topic:                  post.topic,
+      competitorUrl:          post.competitorUrl,
+      competitorUrlFallbacks: post.competitorFallbacks,
+      targetKeyword:          post.targetKeyword,
+      targetRegion:           post.targetRegion,
+      category:               post.category,
+      internalLinkCount:      2,
+      targetWordCount:        WORD_COUNT_BY_CLASS[post.length],
     };
 
     console.log(`  [${post.n}/19] generating: ${post.topic}`);

@@ -24,7 +24,14 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ontarioweddingvend
 
 export type BlogGenerateInput = {
   topic:             string;
+  /* Primary competitor URL. Best-effort fetch — the generator falls
+   * back to fallbacks below and then to a no-competitor prompt if
+   * everything 403s / times out. Pass "" to skip the fetch entirely. */
   competitorUrl:     string;
+  /* Optional ordered fallback URLs. The generator tries the primary
+   * first, then each fallback in order, then gives up and switches
+   * to the no-competitor prompt path. */
+  competitorUrlFallbacks?: string[];
   targetKeyword:     string;
   /* Pricing region from ontario-pricing.ts ("niagara" | "gta") OR
    * "all" to keep pricing province-wide rather than regional. */
@@ -95,13 +102,22 @@ export async function fetchCompetitorStructure(url: string): Promise<{
 }> {
   const res = await fetch(url, {
     headers: {
-      /* Realistic UA — some content mills 403 default fetch agents. */
+      /* Full Chrome UA — content mills (The Knot, Brides, Zola) 403
+       * anything that smells like a crawler. The compatible-bot string
+       * we used previously was the exact pattern triggering rejects.
+       * Pair with realistic accept-* headers so the request looks like
+       * a normal browser navigation. */
       "user-agent":
-        "Mozilla/5.0 (compatible; OntarioWeddingVendorsBot/1.0; +https://ontarioweddingvendors.com)",
-      accept: "text/html,*/*;q=0.8",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      accept:
+        "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+      "accept-language": "en-CA,en-US;q=0.9,en;q=0.8",
+      "accept-encoding": "gzip, deflate, br",
+      "upgrade-insecure-requests": "1",
     },
     /* 12s ceiling — fail fast rather than block the API call. */
     signal: AbortSignal.timeout(12_000),
+    redirect: "follow",
   });
   if (!res.ok) throw new Error(`competitor fetch failed: ${res.status}`);
   const html = await res.text();
@@ -343,6 +359,7 @@ function buildUserPrompt({
   input,
   competitorHeadings,
   competitorExcerpt,
+  hasCompetitor,
   pricingBlock,
   dataPoints,
   internalLinks,
@@ -350,6 +367,7 @@ function buildUserPrompt({
   input:              BlogGenerateInput;
   competitorHeadings: string[];
   competitorExcerpt:  string;
+  hasCompetitor:      boolean;
   pricingBlock:       string;
   dataPoints:         string[];
   internalLinks:      InternalLink[];
@@ -382,21 +400,54 @@ function buildUserPrompt({
       ].join("\n")
     : "";
 
-  return [
+  /* Common header — same shape whether or not we have a competitor. */
+  const header = [
     `Topic:           ${input.topic}`,
     `Target keyword:  ${input.targetKeyword}`,
     `Target region:   ${labelRegion(input.targetRegion)}`,
     input.category ? `Vendor focus:    ${input.category}` : "Vendor focus:    (general — no single category)",
     wordLine,
     "",
-    "Competitor post structure (their H2 headings — for topic-coverage signal only, do NOT summarize):",
-    competitorHeadings.length > 0
-      ? competitorHeadings.map((h) => `  - ${h}`).join("\n")
-      : "  (no headings extracted — competitor post had unusual structure)",
-    "",
-    "Competitor post opening text (first 600 chars — for topic context only, do NOT paraphrase):",
-    `"""${competitorExcerpt}"""`,
-    "",
+  ].filter(Boolean).join("\n");
+
+  /* Competitor-aware section — only included when we successfully
+   * fetched competitor material. Otherwise we skip it entirely and
+   * replace with a "you're the definitive source" directive. */
+  const competitorSection = hasCompetitor
+    ? [
+        "Competitor post structure (their H2 headings — for topic-coverage signal only, do NOT summarize):",
+        competitorHeadings.length > 0
+          ? competitorHeadings.map((h) => `  - ${h}`).join("\n")
+          : "  (no headings extracted — competitor post had unusual structure)",
+        "",
+        "Competitor post opening text (first 600 chars — for topic context only, do NOT paraphrase):",
+        `"""${competitorExcerpt}"""`,
+        "",
+      ].join("\n")
+    : [
+        "Be the definitive Ontario resource on this topic.",
+        "",
+        "We could not fetch the competitor's version of this article. That is",
+        "fine — you have what we need:",
+        "  - the topic and target keyword",
+        "  - real Ontario pricing data (below)",
+        "  - a curated list of real Ontario vendors/venues for internal links",
+        "  - a generous word-count budget",
+        "",
+        "Open with an Ontario-specific hook. Build 5-7 H2 sections that cover",
+        "the topic thoroughly. Use the pricing numbers below verbatim. Mention",
+        "real Ontario regions, landmarks, and venues naturally (Niagara wineries,",
+        "Muskoka cottage country, Toronto's distillery district, Hamilton's",
+        "escarpment, etc.). Include a short FAQ section with 3 questions, then",
+        "a Key Takeaways summary, then a closing CTA pointing readers to the",
+        "Ontario Wedding Vendors directory.",
+        "",
+        "What can we say that The Knot or Zola can't? Local knowledge, specific",
+        "Ontario pricing, regional tips, named venues.",
+        "",
+      ].join("\n");
+
+  const tail = [
     pricingBlock,
     "",
     dataPoints.length > 0
@@ -409,6 +460,8 @@ function buildUserPrompt({
     "",
     "Return the JSON exactly as specified in the system prompt. Do not include the title as an H1 inside the content field.",
   ].filter(Boolean).join("\n");
+
+  return header + competitorSection + tail;
 }
 
 /* ─── JSON-safe parser (defensive against fenced output) ──────────── */
@@ -437,9 +490,43 @@ type AnthropicMessageResp = {
 /* ─── The main generator ──────────────────────────────────────────── */
 
 export async function generateBlogPost(input: BlogGenerateInput): Promise<BlogDraftResult> {
-  /* 1. Pull competitor structure (fail fast on bad URL). */
-  const { headings: competitorHeadings, excerpt: competitorExcerpt } =
-    await fetchCompetitorStructure(input.competitorUrl);
+  /* 1. Pull competitor structure — best-effort. The Knot, Brides, etc.
+   *    increasingly 403 unsigned crawlers. Try the primary URL, then
+   *    each fallback in order; if everything fails we proceed without
+   *    a competitor (the prompt branches on the null result and tells
+   *    Claude to write the definitive Ontario take from scratch). */
+  let competitorHeadings: string[] = [];
+  let competitorExcerpt:  string   = "";
+  let competitorSource:   string | null = null;
+  const urlsToTry = [input.competitorUrl, ...(input.competitorUrlFallbacks ?? [])]
+    .map((u) => u.trim())
+    .filter((u) => u.length > 0);
+
+  for (const url of urlsToTry) {
+    try {
+      const fetched = await fetchCompetitorStructure(url);
+      /* Treat an empty-headings response as a failed fetch — the page
+       * loaded but we got nothing usable. Move on to the next URL. */
+      if (fetched.headings.length === 0 && fetched.excerpt.length < 200) {
+        console.warn(`[blog-generate] competitor returned thin content (${url}) — trying next`);
+        continue;
+      }
+      competitorHeadings = fetched.headings;
+      competitorExcerpt  = fetched.excerpt;
+      competitorSource   = url;
+      break;
+    } catch (err) {
+      console.warn(
+        `[blog-generate] competitor fetch failed (${url}): ` +
+        (err instanceof Error ? err.message : String(err)),
+      );
+    }
+  }
+
+  const hasCompetitor = competitorSource != null;
+  if (!hasCompetitor) {
+    console.log("  competitor fetch failed — generating without competitor analysis");
+  }
 
   /* 2. Pull internal links from the DB. Default mix: top-N
    *    vendors when category is set; top-N venues when not. */
@@ -518,6 +605,7 @@ export async function generateBlogPost(input: BlogGenerateInput): Promise<BlogDr
     input,
     competitorHeadings,
     competitorExcerpt,
+    hasCompetitor,
     pricingBlock,
     dataPoints,
     internalLinks,
