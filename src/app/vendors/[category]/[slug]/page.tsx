@@ -757,6 +757,36 @@ export default async function VendorPage({ params }: { params: Params }) {
                       }
                     />
                   )}
+                  {vendor.yelpUrl && (
+                    <DetailRow
+                      label="Yelp"
+                      value={
+                        <a
+                          href={vendor.yelpUrl}
+                          target="_blank"
+                          rel="noopener nofollow"
+                          className="text-rose hover:underline"
+                        >
+                          Read Yelp reviews →
+                        </a>
+                      }
+                    />
+                  )}
+                  {vendor.pinterestUrl && (
+                    <DetailRow
+                      label="Pinterest"
+                      value={
+                        <a
+                          href={vendor.pinterestUrl}
+                          target="_blank"
+                          rel="noopener nofollow"
+                          className="text-rose hover:underline"
+                        >
+                          View portfolio →
+                        </a>
+                      }
+                    />
+                  )}
                 </dl>
               </div>
 
