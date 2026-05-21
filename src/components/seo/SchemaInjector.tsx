@@ -140,6 +140,26 @@ export function VendorSchema({
     };
   }
 
+  /* areaServed — prefer the enriched serviceAreas jsonb when present,
+   * otherwise fall back to the vendor's city + region. Each item is a
+   * Place node so search engines can resolve it as a real location
+   * rather than free text. */
+  const serviceAreas: string[] = Array.isArray(vendor.serviceAreas)
+    ? (vendor.serviceAreas as unknown[]).filter(
+        (s): s is string => typeof s === "string" && s.trim().length > 0,
+      )
+    : [];
+  const areaServedNames =
+    serviceAreas.length > 0
+      ? serviceAreas
+      : [vendor.city, vendor.region].filter((s): s is string => !!s && s.length > 0);
+  if (areaServedNames.length > 0) {
+    node.areaServed = areaServedNames.map((name) => ({
+      "@type": "Place",
+      name,
+    }));
+  }
+
   const payload = { "@context": "https://schema.org", "@graph": [node] };
   return (
     <script

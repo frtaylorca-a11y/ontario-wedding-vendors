@@ -10,6 +10,7 @@ import {
   getVendorBySlug,
   getSimilarVendors,
   getVenuesRecommendingVendor,
+  listVendors,
 } from "@/lib/queries";
 import {
   getGoogleReviews,
@@ -17,6 +18,7 @@ import {
   type GoogleVendorPhoto,
 } from "@/lib/google-reviews";
 import InteractiveBentoGallery from "@/components/ui/interactive-bento-gallery";
+import { ItemListSchema } from "@/components/seo/SchemaInjector";
 import { VENDOR_CATEGORIES, type VendorCategory } from "@/types";
 import { GoogleReviews } from "@/components/ui/GoogleReviews";
 import { VendorCard } from "@/components/ui/VendorCard";
@@ -24,6 +26,7 @@ import { VenueCard } from "@/components/ui/VenueCard";
 import { VendorSchema, BreadcrumbSchema } from "@/components/seo/SchemaInjector";
 import { TrackPageView } from "@/components/analytics/TrackPageView";
 import { formatRating, normalizeRegionDisplay } from "@/lib/utils";
+import type { Vendor } from "@/lib/schema";
 
 type Params = Promise<{ category: string; slug: string }>;
 
@@ -90,8 +93,100 @@ function normalizeIgHandle(raw: string): string {
   return raw.trim().replace(/^@+/, "");
 }
 
+/* ─── City landing pages ────────────────────────────────────────────
+ * /vendors/[category]/[slug] dispatches to a city listing when the
+ * slug matches one of these 19 SEO-target cities. Vendors are
+ * extremely unlikely to share a slug with one of these single-word
+ * city names (vendor slugs are typically business names + city
+ * combined, e.g. "lauren-garbutt-photography-hamilton"), but the
+ * city branch runs FIRST so any collision lands on the city page.
+ *
+ * Region mapping mirrors src/lib/regions.ts so listVendors() can
+ * filter by region — but we ALSO filter by exact city match below,
+ * since two different cities can share a region.
+ */
+const SEO_CITIES: Record<string, { label: string; region: string }> = {
+  hamilton:                { label: "Hamilton",              region: "golden-horseshoe"      },
+  burlington:              { label: "Burlington",            region: "golden-horseshoe"      },
+  "niagara-falls":         { label: "Niagara Falls",         region: "niagara"               },
+  "st-catharines":         { label: "St. Catharines",        region: "niagara"               },
+  "niagara-on-the-lake":   { label: "Niagara-on-the-Lake",   region: "niagara"               },
+  toronto:                 { label: "Toronto",               region: "gta"                   },
+  mississauga:             { label: "Mississauga",           region: "gta"                   },
+  oakville:                { label: "Oakville",              region: "golden-horseshoe"      },
+  markham:                 { label: "Markham",               region: "gta"                   },
+  vaughan:                 { label: "Vaughan",               region: "gta"                   },
+  brampton:                { label: "Brampton",              region: "gta"                   },
+  kitchener:               { label: "Kitchener",             region: "waterloo-region"       },
+  waterloo:                { label: "Waterloo",              region: "waterloo-region"       },
+  guelph:                  { label: "Guelph",                region: "waterloo-region"       },
+  kingston:                { label: "Kingston",              region: "eastern"               },
+  ottawa:                  { label: "Ottawa",                region: "eastern"               },
+  huntsville:              { label: "Huntsville",            region: "cottage-country"       },
+  bracebridge:             { label: "Bracebridge",           region: "cottage-country"       },
+  picton:                  { label: "Picton",                region: "prince-edward-county"  },
+};
+const CITY_SLUGS = new Set(Object.keys(SEO_CITIES));
+function isCitySlug(s: string): boolean {
+  return CITY_SLUGS.has(s);
+}
+
+/* Trim a description to ~150 chars at a word boundary so the meta
+ * description doesn't slice a word in half. Falls back to a templated
+ * sentence when no description exists. */
+function buildMetaDescription(
+  vendor: Pick<Vendor, "name" | "description" | "city" | "region">,
+  categoryLabel: string,
+): string {
+  if (vendor.description && vendor.description.trim().length > 0) {
+    const raw = vendor.description.trim().replace(/\s+/g, " ");
+    if (raw.length <= 150) return raw;
+    const sliceEnd = raw.lastIndexOf(" ", 150);
+    const cut = sliceEnd > 100 ? sliceEnd : 150;
+    return raw.slice(0, cut).replace(/[.,;:—-]+$/, "") + "…";
+  }
+  const city = vendor.city ?? normalizeRegionDisplay(vendor.region);
+  return (
+    `${vendor.name} is a ${city} ${categoryLabel.toLowerCase()} serving ` +
+    `${city} and surrounding Ontario communities. View portfolio, ratings, and request a quote.`
+  );
+}
+
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
-  const { slug } = await params;
+  const { category: rawCategory, slug } = await params;
+  const requestedCategory = normalizeCategorySlug(rawCategory);
+
+  /* City branch — runs BEFORE the vendor lookup so a SEO-target city
+   * slug never accidentally resolves to a vendor with the same name. */
+  if (isCitySlug(slug)) {
+    if (!isValidCategory(requestedCategory)) return { title: "Page not found" };
+    const cityMeta = SEO_CITIES[slug];
+    const label    = CATEGORY_PLURAL[requestedCategory];
+    const { total } = await listVendors({
+      category: requestedCategory,
+      city:     cityMeta.label,
+      limit:    1,
+    });
+    const cityTitle =
+      `Wedding ${label} in ${cityMeta.label}, Ontario — ` +
+      `${total.toLocaleString()} Verified ${label}`;
+    const cityDesc =
+      `Find the best wedding ${label.toLowerCase()} in ${cityMeta.label}, Ontario. ` +
+      `Browse ${total.toLocaleString()} verified ${label.toLowerCase()} with real reviews and direct quote requests.`;
+    return {
+      title:       cityTitle,
+      description: cityDesc.slice(0, 160),
+      alternates:  { canonical: `/vendors/${rawCategory}/${slug}` },
+      openGraph: {
+        title:       cityTitle,
+        description: cityDesc.slice(0, 160),
+        type:        "website",
+        url:         `${SITE_URL}/vendors/${rawCategory}/${slug}`,
+      },
+    };
+  }
+
+  /* Vendor branch — original behaviour. */
   const vendor = await getVendorBySlug(slug);
   if (!vendor) return { title: "Vendor not found" };
 
@@ -99,21 +194,35 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const isValid = isValidCategory(category);
   const label = isValid ? CATEGORY_LABEL[category] : "Wedding Vendor";
   const city = vendor.city ?? regionLabel(vendor.region);
-  const title = `${vendor.name} | Wedding ${label} in ${city}, Ontario`;
-  const desc = vendor.description?.slice(0, 160)
-    ?? `${vendor.name} — wedding ${label.toLowerCase()} serving ${city}, Ontario. Reviews, packages, contact details.`;
+  /* Title format per the SEO brief — vendor name + categoryLabel +
+   * city + Ontario + site name. ~70-80 chars typical. */
+  const title = `${vendor.name} — Wedding ${label} in ${city}, Ontario`;
+  const desc  = buildMetaDescription(vendor, `Wedding ${label}`);
 
   return {
     title,
     description: desc,
     alternates: { canonical: `/vendors/${category.replace(/_/g, "-")}/${vendor.slug}` },
-    openGraph: { title, description: desc, type: "website" },
+    openGraph: {
+      title,
+      description: desc,
+      type: "website",
+      url: `${SITE_URL}/vendors/${category.replace(/_/g, "-")}/${vendor.slug}`,
+    },
   };
 }
+
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://ontarioweddingvendors.com";
 
 export default async function VendorPage({ params }: { params: Params }) {
   const { category: rawCategory, slug } = await params;
   const requestedCategory = normalizeCategorySlug(rawCategory);
+
+  /* City landing page branch — runs before the vendor lookup. */
+  if (isCitySlug(slug)) {
+    if (!isValidCategory(requestedCategory)) notFound();
+    return <CityLandingPage rawCategory={rawCategory} citySlug={slug} />;
+  }
 
   const vendor = await getVendorBySlug(slug);
   if (!vendor) notFound();
@@ -168,12 +277,16 @@ export default async function VendorPage({ params }: { params: Params }) {
     "md:col-span-1 md:row-span-2",
     "md:col-span-1 md:row-span-2",
   ] as const;
+  /* Gallery alt text per the SEO brief — vendor name + category +
+   * portfolio + city + Ontario + (photo N). The InteractiveBentoGallery
+   * uses item.title as the <img alt> via its MediaItem component, so
+   * we set title to the full SEO string per item. */
   const bentoMediaItems = (galleryPhotos as GoogleVendorPhoto[])
     .slice(0, 6)
     .map((p, i) => ({
       id:    i + 1,
       type:  "image",
-      title: vendor.name,
+      title: `${vendor.name} — Wedding ${label} portfolio, ${vendor.city ?? regionLabel(vendor.region) ?? "Ontario"} Ontario (photo ${i + 1})`,
       desc:  [vendor.city, vendor.category.replace(/_/g, " ")].filter(Boolean).join(" · "),
       url:   p.url,
       span:  BENTO_SPANS[i] ?? BENTO_SPANS[BENTO_SPANS.length - 1],
@@ -192,11 +305,20 @@ export default async function VendorPage({ params }: { params: Params }) {
   const priceLabel = vendor.priceTier ? (PRICE_TIER_LABEL[vendor.priceTier] ?? vendor.priceTier) : null;
   const igHandle = vendor.instagramHandle ? normalizeIgHandle(vendor.instagramHandle) : null;
 
+  /* Breadcrumb now carries a city item between the category and the
+   * vendor name when a city is on file. Routes through the city
+   * landing page at /vendors/[category]/[city-slug]. */
+  const citySlugForBreadcrumb = vendor.city
+    ? vendor.city.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")
+    : null;
   const breadcrumbItems = [
-    { name: "Home",        url: "/" },
-    { name: "Vendors",     url: "/vendors" },
-    { name: plural,        url: `/vendors/${rawCategory}` },
-    { name: vendor.name,   url: `/vendors/${rawCategory}/${vendor.slug}` },
+    { name: "Home",     url: "/" },
+    { name: "Vendors",  url: "/vendors" },
+    { name: plural,     url: `/vendors/${rawCategory}` },
+    ...(vendor.city && citySlugForBreadcrumb
+      ? [{ name: vendor.city, url: `/vendors/${rawCategory}/${citySlugForBreadcrumb}` }]
+      : []),
+    { name: vendor.name, url: `/vendors/${rawCategory}/${vendor.slug}` },
   ];
 
   return (
@@ -214,7 +336,7 @@ export default async function VendorPage({ params }: { params: Params }) {
         <section className="relative h-[360px] overflow-hidden md:h-[440px]">
           <Image
             src={heroImage}
-            alt={`${vendor.name} — wedding ${label.toLowerCase()} in ${vendor.city ?? "Ontario"}`}
+            alt={`${vendor.name} — Wedding ${label} in ${vendor.city ?? regionLabel(vendor.region) ?? "Ontario"} Ontario`}
             fill
             priority
             sizes="100vw"
@@ -265,6 +387,21 @@ export default async function VendorPage({ params }: { params: Params }) {
             >
               {vendor.name}
             </h1>
+            {/* H2 below the H1 — keyword-tight subheading that pairs
+             * the category and city. Renders only when a city is on
+             * file (otherwise the H1 → category-region eyebrow combo
+             * carries the SEO signal). */}
+            {vendor.city && (
+              <h2
+                className="mt-2 font-display text-lg font-medium md:text-2xl"
+                style={{
+                  color: "rgba(255,255,255,0.95)",
+                  textShadow: "0 1px 8px rgba(0,0,0,0.7)",
+                }}
+              >
+                Wedding {label} in {vendor.city}, Ontario
+              </h2>
+            )}
           </div>
         </section>
 
@@ -624,5 +761,146 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
       </dt>
       <dd className="mt-1 text-charcoal">{value}</dd>
     </div>
+  );
+}
+
+/* ─── City landing page ────────────────────────────────────────────
+ * Rendered when /vendors/[category]/[slug] is a known SEO-target
+ * city. Lists vendors in that city's region, sorted by the standard
+ * listVendors ranking. ItemList JSON-LD on output so Google can
+ * pull a sitelink-style listing into the SERP. Content layer (intro
+ * paragraph, FAQ) lands in a separate commit — page is functional +
+ * indexable without it. */
+async function CityLandingPage({
+  rawCategory,
+  citySlug,
+}: {
+  rawCategory: string;
+  citySlug:    string;
+}) {
+  const requestedCategory = normalizeCategorySlug(rawCategory);
+  if (!isValidCategory(requestedCategory)) notFound();
+  const cityMeta = SEO_CITIES[citySlug];
+  const label    = CATEGORY_LABEL[requestedCategory as VendorCategory];
+  const plural   = CATEGORY_PLURAL[requestedCategory as VendorCategory];
+  const heroImg  = CATEGORY_HERO_IMAGE[requestedCategory as VendorCategory];
+
+  /* Use the standard listVendors helper so the city page benefits
+   * from the same ranking + is_hidden filtering as the parent
+   * category page. Filter by city only — region is implied. Adding
+   * both filters caused empty pages when a row's region column
+   * didn't match the expected mapping (Hamilton vendors sometimes
+   * land in 'gta' rather than 'golden-horseshoe' depending on
+   * how they were tagged during import). */
+  const { vendors: cityVendors, total } = await listVendors({
+    category: requestedCategory,
+    city:     cityMeta.label,
+    limit:    24,
+  });
+
+  const breadcrumbItems = [
+    { name: "Home",          url: "/" },
+    { name: "Vendors",       url: "/vendors" },
+    { name: plural,          url: `/vendors/${rawCategory}` },
+    { name: cityMeta.label,  url: `/vendors/${rawCategory}/${citySlug}` },
+  ];
+
+  const itemListItems = cityVendors.map((v) => ({
+    name: v.name,
+    url:  `${SITE_URL}/vendors/${rawCategory}/${v.slug}`,
+  }));
+
+  return (
+    <>
+      <BreadcrumbSchema items={breadcrumbItems} />
+      <ItemListSchema
+        name={`Wedding ${plural} in ${cityMeta.label}, Ontario`}
+        items={itemListItems}
+      />
+
+      <main className="bg-bg-warm">
+        {/* Slim hero — keeps the page light since the vendor grid
+         * carries most of the page weight. */}
+        <section className="relative h-[260px] overflow-hidden md:h-[320px]">
+          <Image
+            src={heroImg}
+            alt={`Wedding ${label.toLowerCase()} in ${cityMeta.label}, Ontario`}
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover"
+            style={{ filter: "saturate(0.7)", zIndex: 0 }}
+          />
+          <div
+            aria-hidden
+            className="absolute inset-0"
+            style={{ background: "rgba(0,0,0,0.45)", zIndex: 1 }}
+          />
+          <div
+            className="relative mx-auto flex h-full max-w-[1180px] flex-col justify-end px-6 pb-10"
+            style={{ zIndex: 2 }}
+          >
+            <div
+              className="text-xs font-bold uppercase tracking-[0.14em]"
+              style={{
+                color:      "rgba(255,255,255,0.85)",
+                textShadow: "0 1px 8px rgba(0,0,0,0.6)",
+              }}
+            >
+              {cityMeta.label} · Ontario
+            </div>
+            <h1
+              className="mt-2 font-display text-4xl font-semibold leading-tight md:text-5xl"
+              style={{
+                color:      "#ffffff",
+                textShadow: "0 2px 20px rgba(0,0,0,0.9), 0 1px 3px rgba(0,0,0,1)",
+              }}
+            >
+              Wedding {plural} in {cityMeta.label}, Ontario
+            </h1>
+            <p
+              className="mt-2 text-sm md:text-base"
+              style={{
+                color:      "rgba(255,255,255,0.92)",
+                textShadow: "0 1px 8px rgba(0,0,0,0.6)",
+              }}
+            >
+              {total.toLocaleString()} verified {plural.toLowerCase()}
+            </p>
+          </div>
+        </section>
+
+        <div className="mx-auto max-w-[1180px] px-6 py-12 lg:py-16">
+          <Link
+            href={`/vendors/${rawCategory}` as Route}
+            className="mb-8 inline-flex items-center gap-1.5 text-sm font-medium text-rose transition-colors hover:text-rose-hover"
+          >
+            <span aria-hidden>←</span> All Ontario {plural.toLowerCase()}
+          </Link>
+
+          {cityVendors.length === 0 ? (
+            <div className="rounded-card border border-dashed border-border bg-white p-10 text-center text-text-muted">
+              <p>
+                No verified {plural.toLowerCase()} in {cityMeta.label} yet.
+              </p>
+              <Link
+                href={`/vendors/${rawCategory}` as Route}
+                className="mt-4 inline-flex rounded-pill bg-rose px-5 py-2 text-sm font-bold text-white"
+              >
+                Browse all Ontario {plural.toLowerCase()}
+              </Link>
+            </div>
+          ) : (
+            <ul className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {cityVendors.map((v) => (
+                <li key={v.id}>
+                  <VendorCard vendor={v} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </main>
+    </>
   );
 }

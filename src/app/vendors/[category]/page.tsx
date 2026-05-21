@@ -84,9 +84,14 @@ export async function generateMetadata({
   const raw = await searchParams;
   const page = Math.max(1, parseInt(first(raw.page) ?? "1", 10) || 1);
 
+  /* Title format per the SEO brief — year-tagged keyword phrase
+   * + count + brand suffix. Keep year tag rolling forward with
+   * the publish-date helpers; once we hit 2027 this becomes a
+   * dated string. */
   return {
-    title: `Wedding ${label.plural} in Ontario | Browse ${displayTotal.toLocaleString()} ${label.plural}`,
-    description: `${displayTotal.toLocaleString()} verified wedding ${label.plural.toLowerCase()} across Ontario. Filter by region and price. Compare reviews, packages, and availability.`,
+    /* Layout template appends " | Ontario Wedding Vendors" automatically. */
+    title: `Wedding ${label.plural} in Ontario (2026) — ${displayTotal.toLocaleString()} Verified ${label.plural}`,
+    description: `Browse ${displayTotal.toLocaleString()} verified wedding ${label.plural.toLowerCase()} across Ontario. Filter by region, price, and style. Request quotes directly from ${label.plural.toLowerCase()}.`,
     alternates: { canonical: `/vendors/${category}` },
     robots: page > 1 ? { index: false, follow: true } : undefined,
   };

@@ -102,8 +102,10 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   if (!venue) return { title: "Venue not found" };
 
   const city = venue.city ?? "Ontario";
-  const cityLabel = venue.city ? `${venue.city}, Ontario` : "Ontario";
-  const title = `${venue.name} Wedding Venue | ${cityLabel}`;
+  /* Title format per the SEO brief — match the vendor detail page
+   * shape so the directory reads as one set of pages. */
+  /* Layout template appends " | Ontario Wedding Vendors" automatically. */
+  const title = `${venue.name} — Wedding Venue in ${city}, Ontario`;
 
   /* SEO-tuned description: lead with name + city + value props, capped at ~160 chars */
   const reviewBit = venue.reviewCount && venue.googleRating
