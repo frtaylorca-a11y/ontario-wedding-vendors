@@ -97,11 +97,78 @@ export const BLOG_POSTS: BlogPost[] = [
           If you want a single coordinator handling food + room + ceremony
           space, lean winery or resort.
         </p>
+
+        <h2>What 100 guests actually costs in Niagara (2026)</h2>
         <p>
-          Browse the full list with capacity, rating, and Google review counts
-          on our <a href="/regions/niagara">Niagara venues page</a>, or filter
-          to Niagara-on-the-Lake specifically on{" "}
-          <a href="/cities/niagara-on-the-lake">our NOTL guide</a>.
+          The headline venue rate is rarely the bill that lands on your
+          credit card. Here&rsquo;s the realistic all-in (venue + plated
+          dinner + bar + gratuity + HST) for a 100-guest Saturday in peak
+          season across the three Niagara venue categories:
+        </p>
+        <ul>
+          <li>
+            <strong>Vineyard estate (NOTL):</strong> $32,000–$48,000.
+            Bundled catering, in-house wines, single coordinator.
+          </li>
+          <li>
+            <strong>Barn / rural venue (West Niagara):</strong>{" "}
+            $28,000–$42,000. Venue cheaper, but rentals + external
+            caterer + tent backup eat the savings.
+          </li>
+          <li>
+            <strong>Fallsview hotel:</strong> $30,000–$50,000. Premium
+            for the view; hotel block included.
+          </li>
+        </ul>
+        <p>
+          Couples consistently underestimate the rentals line at barn
+          venues (linens, glassware, chairs, dance floor, generator
+          access — $4,000–$8,000 for 100 guests) and overestimate the
+          savings of a dry-hall booking.
+        </p>
+
+        <h2>Booking timeline + deposits</h2>
+        <p>
+          Premier NOTL wineries (Ravine, Two Sisters, Peller) book{" "}
+          <strong>14–18 months ahead</strong> for peak-season Saturdays —
+          if you&rsquo;re booking for September 2027, the calls should
+          happen by April 2026. Most Niagara venues take a 25–30%
+          non-refundable deposit at contract, a second 25% at the 6-month
+          mark, and the balance two weeks before the wedding. The
+          contract is where the surprises happen — read the corkage
+          policy, vendor-restriction list, and ceremony rain-call
+          deadline before paying anything.
+        </p>
+
+        <h2>Seasonal pricing — where you actually save</h2>
+        <p>
+          Peak season is mid-June through mid-October Saturdays. Outside
+          that window the same venues drop pricing 25–40%. Friday weddings
+          in shoulder months (May, early June, late October) are the
+          single biggest value play in Niagara — same room, same staff,
+          15–25% lower per-guest rate, and your vendor team is more
+          available and often happier to work with you on extras.
+          January through March winter weddings drop another tier:
+          intimate ceremony in a heated barn or hotel ballroom, dramatic
+          photos with snow and frozen vineyards, and venue rates 35–50%
+          below the same room in July. The catch is photography light —
+          winter sunset is at 5 PM in Niagara, so the ceremony either
+          happens earlier than couples expect or finishes after dark. The small handful of Niagara
+          venues that run year-round (Pillar &amp; Post, Sheraton on the
+          Falls, Honsberger&rsquo;s heated barn) consistently book January
+          and February weddings six months out instead of eighteen.
+        </p>
+
+        <p>
+          Browse the full list with capacity, rating, and Google review
+          counts on our <a href="/regions/niagara">Niagara venues page</a>,
+          or filter to Niagara-on-the-Lake specifically on{" "}
+          <a href="/cities/niagara-on-the-lake">our NOTL guide</a>. For
+          the deeper dive on winery-specific options across NOTL, see the{" "}
+          <a href="/blog/niagara-on-the-lake-wineries-weddings">NOTL
+          winery wedding guide</a>, and{" "}
+          <a href="/venues?type=winery">all winery venues across Ontario</a>{" "}
+          for couples open to driving slightly further.
         </p>
       </>
     ),
@@ -178,9 +245,83 @@ export const BLOG_POSTS: BlogPost[] = [
           and add it post-wedding.
         </p>
 
+        <h2>What to ask before paying the deposit</h2>
+        <p>
+          Five questions surface most of the real differences between
+          quotes that look identical on paper:
+        </p>
+        <ol>
+          <li>
+            <strong>Who is actually shooting the wedding?</strong> Some
+            larger studios (Ikonica, AGI Studio in the GTA) operate as a
+            collective — the photographer in the portfolio may not be the
+            one assigned to your day. Get the name in writing.
+          </li>
+          <li>
+            <strong>What&rsquo;s the turnaround on photo delivery?</strong>{" "}
+            Industry standard in Ontario is 6–10 weeks for the full
+            gallery, with a sneak-peek set within 7 days. Anything past
+            14 weeks should come with a contract penalty.
+          </li>
+          <li>
+            <strong>How many weddings do you shoot in a season?</strong>{" "}
+            High-volume studios (30+ weddings/year) deliver consistent
+            quality but each wedding gets less attention; boutique
+            photographers (12–18 weddings/year) tend to produce more
+            personal galleries.
+          </li>
+          <li>
+            <strong>What&rsquo;s your bad-weather plan?</strong> Ontario
+            outdoor ceremonies get rained on regularly. Your photographer
+            needs a Plan B for couple portraits — a covered patio, indoor
+            window light, or a nearby gallery space.
+          </li>
+          <li>
+            <strong>Backup gear + insurance?</strong> Every professional
+            should have two camera bodies on hand and $2M liability
+            coverage. Most venues require proof of insurance at load-in.
+          </li>
+        </ol>
+
+        <h2>Engagement sessions + add-on shoots</h2>
+        <p>
+          Most mid-tier packages include a 60–90 minute engagement
+          session, but the deliverable counts vary widely — typically
+          25–60 edited images. Engagement sessions are also the easiest
+          time to test how the photographer directs you, which matters
+          more on the wedding day than any portfolio piece. If your
+          package doesn&rsquo;t include one, expect <strong>$400–$900</strong>{" "}
+          to add it. Rehearsal dinner coverage runs another $500–$1,200;
+          most couples decide it&rsquo;s the first cut when the budget
+          tightens.
+        </p>
+
+        <h2>When to book in Ontario</h2>
+        <p>
+          Peak-season photographers (June, September, October Saturdays
+          in Niagara or the GTA) book{" "}
+          <strong>12–18 months ahead</strong>. The top tier of Ontario
+          wedding photographers — Tara McMullen, Mango Studios, Daring
+          Wanderer, Carey Nash — typically close their Saturday bookings
+          12+ months out. If your dream photographer has a 6-month
+          availability gap on their calendar, you&rsquo;re looking at a
+          recent cancellation or an off-season date. Mid-tier photographers
+          are usually bookable 6–10 months out for summer Saturdays, and
+          you can find genuinely talented newer photographers (under
+          three seasons in business) at 3–5 months for any date — the
+          portfolios are smaller but the work is often more thoughtful
+          than the established names.
+        </p>
+
         <p>
           Browse photographers in your region with distance and reviews on{" "}
-          <a href="/vendors/photographer">our photographers directory</a>.
+          <a href="/vendors/photographer">the photographers directory</a>.
+          Many couples pair a photographer with a videographer at the same
+          studio for consistency — see the{" "}
+          <a href="/blog/wedding-videographer-cost-ontario">videographer
+          pricing guide</a> and{" "}
+          <a href="/vendors/videographer">videographer directory</a> for
+          the companion options.
         </p>
       </>
     ),
@@ -261,10 +402,68 @@ export const BLOG_POSTS: BlogPost[] = [
           <li>What&rsquo;s the latest acceptable end time? (Many NOTL venues stop music at 11pm)</li>
         </ol>
 
+        <h2>Boutique alternatives — 60-guest weddings</h2>
+        <p>
+          For weddings under 80 guests, NOTL has a tier most couples
+          never tour. The Drawing Room at Riverbend Inn, the private
+          dining room at Treadwell, and the carriage house at the
+          Olde Angel Inn all run small-wedding programs at{" "}
+          <strong>$8,000–$13,000</strong> all-in for 60 guests including
+          plated dinner. These are easier to book on short notice
+          (3–6 months out) and produce more intimate photography than
+          the larger estates. The trade-off is no on-site
+          accommodation block — guests stay across town and walk back to
+          their hotel. For couples considering an elopement-style NOTL
+          wedding (20–40 guests, ceremony plus a long dinner), Treadwell
+          and Backhouse both run private buyout dinners under $6,000
+          including a custom tasting menu — a fraction of the typical
+          NOTL wedding bill, with photography just as compelling. The
+          Niagara Parks Commission runs a small ceremony program at
+          Riverside Park ($450 permit, 90-minute window) that pairs
+          naturally with a restaurant dinner reception twenty minutes
+          away — a flexible alternative for couples who don&rsquo;t want
+          to commit to a single full-day venue.
+        </p>
+
+        <h2>Restaurant private-dining options</h2>
+        <p>
+          NOTL&rsquo;s restaurant scene (Treadwell, Tiara, Hob Nob, the
+          Stagecoach for breakfast brunches) handles weddings as private
+          buyouts. Restaurant weddings typically run 25–40% below the
+          equivalent winery wedding for the same guest count, with
+          chef-led tasting menus and zero room-flip logistics. Worth
+          considering for couples whose priority is the food, not the
+          backdrop. Sunday brunch buyouts after a Saturday ceremony are
+          increasingly popular — half the cost of the wedding-day dinner
+          and gives extended family one more meal together.
+        </p>
+
+        <h2>Booking window + deposits</h2>
+        <p>
+          NOTL wineries take a 25–30% non-refundable deposit at contract
+          and book peak-season Saturdays 14–18 months ahead. The wedding
+          coordinator at most NOTL venues runs 60–80 weddings a year,
+          so meeting them in person matters — your coordinator is your
+          single point of contact for vendor load-in, rain calls, and
+          timeline adjustments. The hotels (Pillar &amp; Post,
+          Queen&rsquo;s Landing) book closer to 18–24 months out because
+          they need to hold both the venue and the room block on the
+          same dates.
+        </p>
+
         <p>
           Browse the full Niagara-on-the-Lake list with capacity, rating,
           coordinator details on{" "}
           <a href="/cities/niagara-on-the-lake">our NOTL venues page</a>.
+          For the broader Niagara region — including barn venues and
+          Fallsview options — see the{" "}
+          <a href="/blog/best-wedding-venues-niagara-2026">2026 Niagara
+          guide</a>. Couples specifically focused on winery weddings
+          should also browse{" "}
+          <a href="/venues?type=winery">winery venues across Ontario</a>{" "}
+          and read the deeper{" "}
+          <a href="/blog/niagara-on-the-lake-wineries-weddings">NOTL
+          winery wedding guide</a>.
         </p>
       </>
     ),
@@ -360,12 +559,57 @@ export const BLOG_POSTS: BlogPost[] = [
           </li>
         </ol>
 
+        <h2>Distance from Toronto + guest travel</h2>
+        <p>
+          Niagara Falls is 90 minutes from downtown Toronto on a clear
+          afternoon, two-plus hours on a summer Saturday with QEW
+          traffic backed up at Burlington. Most couples either run a
+          coach shuttle for guests (Coach Canada quotes $1,800–$2,800
+          for a 50-passenger return trip including evening pickup) or
+          block hotel rooms at the wedding venue itself. The major
+          Fallsview hotels comp 1–2 rooms for the wedding party on most
+          full-evening packages — confirm in writing before paying the
+          deposit.
+        </p>
+
+        <h2>Best months for a Falls wedding</h2>
+        <p>
+          June through early October is peak — the Falls runs at full
+          flow, the gardens at Queen Victoria Park are in bloom, and
+          outdoor photos work without weather backup. December is the
+          surprising second peak: the Festival of Lights illuminates the
+          Falls and the Niagara Parkway from mid-November through early
+          February. Couples doing winter Fallsview weddings get a
+          dramatically different photo set than the summer crowd, often
+          at 25–35% lower venue rates. April and November are the
+          shoulder months to avoid — the Falls is at its highest volume
+          (snow melt + autumn rain) but the weather is unreliable for
+          outdoor photos.
+        </p>
+
+        <h2>Photography permits + logistics</h2>
+        <p>
+          The Niagara Parks Commission requires a commercial photography
+          permit ($150–$300) for any pro shoot inside the park system,
+          including Queen Victoria Park, the Floral Showhouse, Table
+          Rock, and Dufferin Islands. Your photographer should pull this
+          permit themselves; couples don&rsquo;t typically interact with
+          the application. Wedding-party photo stops typically take 60–90
+          minutes — build that into the timeline between ceremony and
+          reception. The Maid of the Mist (mid-May to October) and
+          Hornblower boats offer wedding-party photo cruises by special
+          arrangement; book through the boat operator directly, not
+          through your venue.
+        </p>
+
         <p>
           Browse the full Niagara Falls list, filtered to wedding-ready
           venues only, on{" "}
           <a href="/cities/niagara-falls">our Niagara Falls page</a>, or
           compare against quieter Niagara-on-the-Lake on{" "}
-          <a href="/cities/niagara-on-the-lake">the NOTL page</a>.
+          <a href="/cities/niagara-on-the-lake">the NOTL page</a>. For
+          the broader region overview see the{" "}
+          <a href="/regions/niagara">Niagara region guide</a>.
         </p>
       </>
     ),
@@ -449,10 +693,75 @@ export const BLOG_POSTS: BlogPost[] = [
           </li>
         </ul>
 
+        <h2>Booking window — earlier than anywhere else in Ontario</h2>
+        <p>
+          Muskoka books further ahead than any other Ontario region. The
+          big four resorts (Windermere House, Sherwood Inn, Deerhurst,
+          JW Marriott The Rosseau) typically close peak-season Saturdays{" "}
+          <strong>18–22 months ahead</strong>. If you&rsquo;re booking
+          July or August 2027, the calls should happen by April 2026 at
+          the latest. The wedding-coordinator team at each resort runs
+          tours through fall + winter for the following two summers
+          simultaneously, and Saturdays in mid-July through mid-August
+          are gone first.
+        </p>
+
+        <h2>The accommodation puzzle</h2>
+        <p>
+          The single biggest Muskoka planning decision is how guests
+          stay over. Three patterns work in the region:
+        </p>
+        <ol>
+          <li>
+            <strong>Full resort buyout.</strong> Block 40–80 rooms at
+            the venue itself for the wedding-party-plus-guests core.
+            Friday welcome dinner + Saturday wedding + Sunday brunch
+            included. Most expensive option — adds $15,000–$30,000 to
+            the all-in.
+          </li>
+          <li>
+            <strong>Venue + town hotel block.</strong> Wedding party at
+            the venue, broader guest list at hotels in Bracebridge,
+            Huntsville, or Port Carling. Shuttle bridges the gap.
+            Cheapest option — saves $8,000–$15,000 vs. full buyout.
+          </li>
+          <li>
+            <strong>Cottage rentals + Airbnb.</strong> Couples increasingly
+            book a dozen cottages for their wedding party and family for a
+            full week, with the wedding day in the middle. Works when
+            most of the guest list is local or already cottagers.
+          </li>
+        </ol>
+
+        <h2>Catering style at Muskoka resorts</h2>
+        <p>
+          The historic resorts run their own kitchens — Windermere, Sherwood
+          Inn, Deerhurst all serve plated dinners through their permanent
+          culinary teams. JW Marriott Rosseau partners with Pursuit
+          Hospitality for full event production. None of the major Muskoka
+          resorts allow outside caterers. If you&rsquo;ve already booked a
+          GTA catering team you love, Muskoka private estates are your only
+          option — see the dedicated{" "}
+          <a href="/blog/muskoka-cottage-wedding-venues">Muskoka cottage
+          wedding guide</a> for the private-rental options that let you
+          bring your own team. The resort catering teams cap menu
+          customisation at swapping protein options within the existing
+          template; couples wanting a fully bespoke menu (Asian, Italian
+          family-style, Indian wedding multi-course) either book a private
+          estate or look at the resort&rsquo;s second-tier wedding package
+          where the kitchen is more flexible on a smaller guest count.
+          The Friday welcome dinner is worth using strategically — most
+          resorts allow a more relaxed menu there (BBQ, food stations,
+          wood-fired pizza on the deck), giving the broader weekend a
+          different culinary arc than the formal Saturday plated dinner.
+        </p>
+
         <p>
           The full Muskoka list with capacity, lakefront frontage, and
           on-site accommodation is on{" "}
-          <a href="/regions/cottage-country">our Cottage Country page</a>.
+          <a href="/regions/cottage-country">our Cottage Country page</a>{" "}
+          or filter to{" "}
+          <a href="/venues?region=muskoka">Muskoka venues only</a>.
         </p>
       </>
     ),
@@ -539,10 +848,59 @@ export const BLOG_POSTS: BlogPost[] = [
           local, and locals are price-sensitive.
         </p>
 
+        <h2>Hotel block options</h2>
+        <p>
+          Hamilton and Burlington have a thinner downtown hotel scene than
+          Toronto, which catches couples off guard when guest lists run
+          50+ out-of-town attendees. The reliable blocks: Sheraton Hamilton
+          (downtown core, blocks of 30–50 rooms at $185–$245/night
+          contracted rate); Homewood Suites Burlington (suite-style for
+          family groups); Pearle Hotel &amp; Spa (Burlington waterfront,
+          higher-end). For escarpment-area venues, the Best Western Plus
+          Stoney Creek and the Holiday Inn Burlington-Hotel &amp;
+          Conference Centre handle most overflow. Book the block at
+          contract — most venues don&rsquo;t coordinate this for you, and
+          summer Saturdays sell out across the region.
+        </p>
+
+        <h2>Booking timeline + comparing estates</h2>
+        <p>
+          Pearle Hospitality venues (Ancaster Mill, Cambridge Mill,
+          Whistle Bear, Spencer&rsquo;s) close peak-season Saturdays{" "}
+          <strong>12–16 months ahead</strong>. Ancaster Mill is the most
+          competitive booking in the region — couples regularly tour, fall
+          in love, and discover their target year is already locked. If
+          Ancaster Mill is full, Cambridge Mill (sister property, similar
+          aesthetic, slightly cheaper) is the closest substitute, then
+          Liuna Station (downtown Hamilton beaux-arts train station,
+          200-guest capacity) for couples wanting a different but equally
+          dramatic backdrop. The Royal Botanical Gardens (Burlington) runs
+          a dedicated weddings program out of the RBG Centre with three
+          ceremony locations — a quieter option that books closer to
+          6–10 months out.
+        </p>
+
+        <h2>Catering quality — the underrated strength</h2>
+        <p>
+          The Pearle Hospitality kitchens (running Spencer&rsquo;s, Anker,
+          Cambridge Mill, Ancaster Mill, others) consistently produce the
+          best wedding plates in the Golden Horseshoe — chef-driven menus
+          with a heavier vegetable focus than the typical hotel ballroom
+          template. Liuna Station&rsquo;s in-house team handles 300+ guest
+          weddings and runs a more traditional banquet menu. For couples
+          choosing a venue largely on the food, see the broader{" "}
+          <a href="/blog/wedding-catering-cost-ontario">wedding catering
+          pricing guide</a> — Hamilton-Burlington venues are routinely
+          $15–$25 per guest below the equivalent Toronto plated dinner for
+          comparable quality.
+        </p>
+
         <p>
           Browse the full Hamilton-Burlington list with capacity, escarpment
           views, and conservation-area filters on{" "}
-          <a href="/regions/golden-horseshoe">our Golden Horseshoe page</a>.
+          <a href="/regions/golden-horseshoe">our Golden Horseshoe page</a>{" "}
+          or filter to{" "}
+          <a href="/venues?region=golden-horseshoe">Golden Horseshoe venues only</a>.
         </p>
       </>
     ),
@@ -627,9 +985,83 @@ export const BLOG_POSTS: BlogPost[] = [
           full disclosure.
         </p>
 
+        <h2>DJ vs MC — what you&rsquo;re actually hiring</h2>
+        <p>
+          Most Ontario couples assume their DJ also handles MC duties —
+          announcing the wedding party entrance, walking through cake
+          cutting, telling guests when speeches start. About 70% of the
+          DJs in our directory bundle MC at no extra cost, but a meaningful
+          minority either charge $300–$600 extra OR don&rsquo;t do it at
+          all. The dedicated wedding MCs (separate booking) run $400–$900;
+          they&rsquo;re worth it if your wedding has a complex run-of-show
+          (cultural ceremonies, multi-language announcements, family
+          tributes). Confirm in writing which one is included.
+        </p>
+
+        <h2>What to ask before paying the deposit</h2>
+        <p>
+          Six questions that surface most of the real quality variation:
+        </p>
+        <ol>
+          <li>
+            <strong>Will you be the DJ on the day, or someone else from
+            your team?</strong> Larger Ontario DJ companies (DJX, Hush
+            Hush Entertainment) operate as agencies; the DJ in the demo
+            video may not be yours. Get the specific name in writing.
+          </li>
+          <li>
+            <strong>Backup DJ + backup gear policy?</strong> If your DJ
+            gets sick, what happens? Any reputable agency has a backup
+            list. Solo operators should name a colleague.
+          </li>
+          <li>
+            <strong>Music consultation process?</strong> Industry standard
+            is one phone call + a shared playlist tool (Spotify or a
+            dedicated portal) where you build the do-play and do-not-play
+            lists 30 days before the wedding.
+          </li>
+          <li>
+            <strong>Lighting setup time?</strong> Uplighting and DJ
+            equipment need 90–120 minutes to load in. Some venues require
+            this to happen during ceremony, others require it earlier in
+            the day — coordinate with your venue contact.
+          </li>
+          <li>
+            <strong>Late-night extension policy?</strong> If the party
+            runs past the booked end-time, how is the overage billed?
+            Typical Ontario rate is $150–$250 per additional hour.
+          </li>
+          <li>
+            <strong>What does the dance-floor sound like at 11 PM?</strong>{" "}
+            Ask for a video clip of the last hour from a recent wedding —
+            it tells you whether the room actually filled, not just whether
+            the playlist was good.
+          </li>
+        </ol>
+
+        <h2>When to book in Ontario</h2>
+        <p>
+          Premium DJs (Toronto-based agencies, top-tier Niagara
+          specialists like FunkyTown Productions) close peak-season
+          Saturdays <strong>10–14 months ahead</strong>. The mid-market
+          books closer to 6–9 months out. Off-season Friday and Sunday
+          weddings can book at 3–4 months out, often with a 10–15% rate
+          discount and more attention from the operator. Booking
+          dramatically late — under 60 days from the wedding — usually
+          means working with someone newer to the wedding industry. That
+          can work for a low-key reception but isn&rsquo;t the place to
+          save money if your wedding has a complex run-of-show.
+        </p>
+
         <p>
           Browse DJs by region with reviews + price tiers on{" "}
-          <a href="/vendors/dj">the DJ directory</a>.
+          <a href="/vendors/dj">the DJ directory</a>. Many couples also
+          book a photo booth alongside the DJ — see{" "}
+          <a href="/vendors/photo-booth">the photo booth directory</a>{" "}
+          for the standalone options, and{" "}
+          <a href="/blog/wedding-limo-cost-ontario">wedding transportation
+          pricing</a> if you&rsquo;re also coordinating the move between
+          ceremony and reception.
         </p>
       </>
     ),
@@ -715,9 +1147,94 @@ export const BLOG_POSTS: BlogPost[] = [
           asking on the consultation.
         </p>
 
+        <h2>Seasonal availability — what blooms when in Ontario</h2>
+        <p>
+          The local-grown vs imported choice is partly a seasonal one.
+          Ontario&rsquo;s growing season runs roughly May through October,
+          and certain blooms are dramatically cheaper in specific months:
+        </p>
+        <ul>
+          <li>
+            <strong>Tulips</strong> — March through May (greenhouse) and
+            outdoor field in late April/early May.
+          </li>
+          <li>
+            <strong>Peonies</strong> — Niagara field peonies in late May
+            through mid-June. The cheapest bloom-to-presence ratio in
+            the Ontario calendar.
+          </li>
+          <li>
+            <strong>Ranunculus + anemones</strong> — May through July.
+          </li>
+          <li>
+            <strong>Garden roses</strong> — Niagara field-grown July
+            through September; imported the rest of the year (2–3× the
+            price).
+          </li>
+          <li>
+            <strong>Dahlias</strong> — August through early October —
+            peak Ontario availability and the bloom most florists push
+            for fall weddings.
+          </li>
+          <li>
+            <strong>Chrysanthemums + sunflowers</strong> — September
+            through November.
+          </li>
+        </ul>
+        <p>
+          Off-season (November through April) means imported via Miami or
+          Bogotá; expect a 30–50% premium and shorter vase life on the
+          arrival day. Couples set on peonies for a November wedding
+          should know they&rsquo;ll pay $14–$24 per stem versus $5–$8 in
+          June.
+        </p>
+
+        <h2>Top-of-mind Ontario florists by region</h2>
+        <p>
+          Niagara: Lakeshore Flower Studio, Lush Florals, and Sweet
+          Woodruff (Toronto-based but heavy in Niagara wedding work).
+          Toronto + GTA: Coriander Girl, Periwinkle Flowers, Forget Me
+          Not Flowers. Muskoka: Aglow Weddings and Designs by Decoflora
+          (Bracebridge). Each books peak-season Saturdays 8–14 months
+          out. The boutique florists (boutique = fewer than 30 weddings
+          a year) tend to be more flexible on personalised design but
+          take longer to quote.
+        </p>
+
+        <h2>When to book + payment structure</h2>
+        <p>
+          Most Ontario florists book Saturdays in peak season{" "}
+          <strong>8–12 months ahead</strong>. The premium tier
+          (Coriander Girl, Sweet Woodruff) closes 12+ months out.
+          Typical payment structure: 25% non-refundable deposit at
+          contract; 50% at the 90-day mark; balance two weeks before
+          the wedding. Final stem counts lock in 14 days before the
+          wedding — most florists will work with you on swaps within
+          the same colour family up to that point.
+        </p>
+
+        <h2>DIY vs full-service — what couples regret</h2>
+        <p>
+          The DIY florist temptation (especially via Costco bulk
+          orders or Toronto&rsquo;s wholesale flower district) saves
+          $1,500–$3,000 on a full-floral wedding — but it consumes
+          the entire day before the wedding, requires refrigeration
+          space for 200+ stems, and produces results that read as
+          DIY in photos. The middle ground that most couples eventually
+          land on: hire a florist for personals and ceremony florals
+          (the photo set-pieces), DIY the centrepieces with bud vases
+          + greenery. Saves $1,000–$2,000 and the labour is
+          manageable.
+        </p>
+
         <p>
           Browse florists by region with reviews + portfolio links on{" "}
-          <a href="/vendors/florist">the florist directory</a>.
+          <a href="/vendors/florist">the florist directory</a>. If your
+          florist isn&rsquo;t handling lighting (and most don&rsquo;t),
+          see the{" "}
+          <a href="/vendors/lighting_decor">lighting + decor directory</a>{" "}
+          — the combination of florals + ambient lighting is what carries
+          most reception rooms in Ontario.
         </p>
       </>
     ),
