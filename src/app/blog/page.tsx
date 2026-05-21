@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata, Route } from "next";
-import { listBlogPosts } from "@/lib/blog";
-import { listDbBlogPosts } from "@/lib/blog-agent/db-posts";
+import { listBlogPosts, type BlogPost } from "@/lib/blog";
+import { listDbBlogPosts, type DbBlogPost, DB_BLOG_FALLBACK_HERO } from "@/lib/blog-agent/db-posts";
 import { BreadcrumbSchema } from "@/components/seo/SchemaInjector";
 import { BlogIndexClient } from "@/components/blog/BlogIndexClient";
 
@@ -17,14 +17,39 @@ export const metadata: Metadata = {
  * the JS — no extra fetch cost. */
 export const dynamic = "force-dynamic";
 
+/* DbBlogPost → BlogPost-shaped card data. The index client only reads
+ * slug / category / heroImage / readMinutes / title / excerpt /
+ * publishedAt — body is required by the BlogPost type but never used
+ * on this page, so we set it to null (a valid ReactNode). */
+function dbPostToIndexCard(p: DbBlogPost): BlogPost {
+  return {
+    slug:            p.slug,
+    title:           p.title,
+    excerpt:         p.excerpt,
+    category:        p.category,
+    publishedAt:     p.publishedAt,
+    readMinutes:     p.readMinutes,
+    heroImage:       p.heroImageUrl ?? DB_BLOG_FALLBACK_HERO,
+    metaDescription: p.metaDescription,
+    body:            null,
+  };
+}
+
 export default async function BlogIndexPage() {
   const staticPosts = listBlogPosts();
-  let dbPosts: typeof staticPosts = [];
-  try { dbPosts = await listDbBlogPosts(); } catch { /* DB optional */ }
-  /* Dedupe by slug — static wins, so an agent-generated post with
-   * the same slug as a TSX one stays hidden until the TSX is removed. */
+  let dbPosts: DbBlogPost[] = [];
+  try {
+    dbPosts = await listDbBlogPosts();
+  } catch (err) {
+    console.error("[/blog] DB index lookup failed:",
+      err instanceof Error ? err.message : err);
+  }
+  /* DB FIRST on dedupe — agent-published version of a slug wins over
+   * a stale TSX entry with the same slug. publishedAt sort gives us
+   * the standard newest-first feed. */
+  const dbCards = dbPosts.map(dbPostToIndexCard);
   const seen = new Set<string>();
-  const posts = [...staticPosts, ...dbPosts]
+  const posts: BlogPost[] = [...dbCards, ...staticPosts]
     .filter((p) => (seen.has(p.slug) ? false : (seen.add(p.slug), true)))
     .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
 

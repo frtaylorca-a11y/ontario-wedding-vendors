@@ -1,18 +1,42 @@
 /**
- * Read helpers that bridge the agent-generated DB posts into the
- * /blog routes. Both functions return a BlogPost-shaped value
- * that the existing rendering pipeline understands.
+ * DB-sourced blog post adapter — read helpers that bridge blog_posts
+ * rows into the /blog rendering pipeline.
  *
- * The static BLOG_POSTS array in src/lib/blog.tsx is still the
- * primary source — these helpers only fill in DB entries that
- * don't exist in the static array.
+ * The previous version constructed React JSX inline inside this module.
+ * That works in Next.js's automatic JSX transform but throws
+ * 'React is not defined' anywhere else (tsx CLI, edge runtime warmup,
+ * server-component cache rebuilds). The resolver in [slug]/page.tsx
+ * was swallowing the error in a try/catch and returning null → 404.
+ *
+ * This file now returns POJOs with the markdown rendered to an HTML
+ * string. The page component decides how to mount that HTML
+ * (dangerouslySetInnerHTML) — JSX construction stays out of this lib.
  */
 import { eq, desc, and } from "drizzle-orm";
-import type { ReactNode } from "react";
 import { db } from "@/lib/db";
 import { blogPosts } from "@/lib/schema";
-import type { BlogPost } from "@/lib/blog";
 import { renderMarkdown } from "@/lib/blog-agent/render-markdown";
+
+export type DbBlogPost = {
+  slug:             string;
+  title:            string;
+  excerpt:          string;
+  category:         string;
+  /* ISO date string (YYYY-MM-DD) — matches the static BlogPost shape. */
+  publishedAt:      string;
+  /* Original full ISO timestamp — used by Article JSON-LD. */
+  publishedAtIso:   string;
+  readMinutes:      number;
+  heroImageUrl:     string | null;
+  heroImageAlt:     string | null;
+  metaDescription:  string;
+  /* Markdown already rendered to safe-ish HTML by renderMarkdown.
+   * The page mounts it via dangerouslySetInnerHTML. */
+  contentHtml:      string;
+  tags:             string[];
+  internalLinks:    Array<{ text: string; url: string; kind?: string }>;
+  isAiGenerated:    boolean;
+};
 
 const FALLBACK_HERO = "/images/hero-niagara-vineyard.png";
 
@@ -20,45 +44,48 @@ function readMinutesFor(words: number): number {
   return Math.max(2, Math.round(words / 220));
 }
 
-/* Build a BlogPost-shaped object from a blog_posts row. The body
- * is rendered to HTML on the server and wrapped in a div so the
- * existing .blog-prose CSS applies untouched. */
-function rowToBlogPost(row: typeof blogPosts.$inferSelect): BlogPost {
-  const html = renderMarkdown(row.content);
-  const body: ReactNode = (
-    <div dangerouslySetInnerHTML={{ __html: html }} />
-  );
+function rowToDbPost(row: typeof blogPosts.$inferSelect): DbBlogPost {
+  const when = row.publishedAt ?? row.createdAt ?? new Date();
   return {
     slug:            row.slug,
     title:           row.title,
     excerpt:         row.excerpt ?? "",
     category:        row.category ?? "Ontario weddings",
-    publishedAt:     (row.publishedAt ?? row.createdAt ?? new Date()).toISOString().slice(0, 10),
+    publishedAt:     when.toISOString().slice(0, 10),
+    publishedAtIso:  when.toISOString(),
     readMinutes:     readMinutesFor(row.wordCount ?? 800),
-    heroImage:       row.heroImageUrl ?? FALLBACK_HERO,
+    heroImageUrl:    row.heroImageUrl ?? null,
+    heroImageAlt:    row.heroImageAlt ?? null,
     metaDescription: row.metaDescription ?? row.excerpt ?? row.title,
-    body,
+    contentHtml:     renderMarkdown(row.content),
+    tags:            Array.isArray(row.tags) ? (row.tags as string[]) : [],
+    internalLinks:   Array.isArray(row.internalLinks)
+      ? (row.internalLinks as Array<{ text: string; url: string; kind?: string }>)
+      : [],
+    isAiGenerated:   row.isAiGenerated ?? false,
   };
 }
 
-export async function getDbBlogPost(slug: string): Promise<BlogPost | null> {
+export const DB_BLOG_FALLBACK_HERO = FALLBACK_HERO;
+
+export async function getDbBlogPost(slug: string): Promise<DbBlogPost | null> {
   const [row] = await db
     .select()
     .from(blogPosts)
     .where(and(eq(blogPosts.slug, slug), eq(blogPosts.isPublished, true)))
     .limit(1);
   if (!row) return null;
-  return rowToBlogPost(row);
+  return rowToDbPost(row);
 }
 
-export async function listDbBlogPosts(limit = 100): Promise<BlogPost[]> {
+export async function listDbBlogPosts(limit = 100): Promise<DbBlogPost[]> {
   const rows = await db
     .select()
     .from(blogPosts)
     .where(eq(blogPosts.isPublished, true))
     .orderBy(desc(blogPosts.publishedAt))
     .limit(limit);
-  return rows.map(rowToBlogPost);
+  return rows.map(rowToDbPost);
 }
 
 /* Slugs only — used by generateStaticParams to enumerate DB-backed posts. */
