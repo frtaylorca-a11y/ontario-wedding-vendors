@@ -33,6 +33,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import { db } from "../src/lib/db";
 import { vendors, type NewVendor } from "../src/lib/schema";
+import { isSocialOnlyUrl } from "../src/lib/social-hosts";
 
 const DEFAULT_DIR =
   "C:\\Users\\rtayl\\OneDrive\\Desktop\\ontario-venues-scraper\\data\\vendors";
@@ -199,12 +200,60 @@ function toRow(raw: ScrapedVendor): NewVendor | null {
         ? "yes"
         : "no";
 
-  /* Hide imports that lack a website on file from public listings and
-   * flag them for the find-vendor-websites.ts AI search pass. Once
-   * that script finds + validates a URL it un-hides the row in the
-   * same write. */
-  const website = cleanString(raw.website);
-  const hasNoWebsite = !website;
+  /* Website handling — three branches:
+   *
+   *   1. No website at all  → hide as 'no_website', flag for search.
+   *   2. Social-media URL only (Instagram, FB, etc.) — split by review count:
+   *        rating + 5+ reviews     → strip URL, keep visible, flag for
+   *                                   re-search. Independent proof
+   *                                   exists; we'll find a real domain
+   *                                   later via find-vendor-websites.ts
+   *                                   or generate a bio from web_search.
+   *        no rating OR < 5 revs   → strip URL, hide as
+   *                                   'social_only_no_reviews', flag.
+   *   3. Real website URL    → keep as-is, set needs_photo_backfill.
+   */
+  const rawWebsite     = cleanString(raw.website);
+  const isSocialOnly   = rawWebsite != null && isSocialOnlyUrl(rawWebsite);
+  const reviewCount    = raw.review_count ?? 0;
+  const hasReviewProof =
+    raw.google_rating != null && reviewCount >= 5;
+
+  let website: string | null;
+  let isHidden:         boolean;
+  let hiddenReason:     string | null;
+  let needsWebsiteSearch: boolean;
+  let needsPhotoBackfill: boolean;
+
+  if (!rawWebsite) {
+    /* Branch 1 — no website */
+    website            = null;
+    isHidden           = true;
+    hiddenReason       = "no_website";
+    needsWebsiteSearch = true;
+    needsPhotoBackfill = false;
+  } else if (isSocialOnly && hasReviewProof) {
+    /* Branch 2a — social-only but has independent review proof */
+    website            = null;
+    isHidden           = false;
+    hiddenReason       = null;
+    needsWebsiteSearch = true;
+    needsPhotoBackfill = true;  /* visible row — still wants a photo */
+  } else if (isSocialOnly) {
+    /* Branch 2b — social-only, no review threshold */
+    website            = null;
+    isHidden           = true;
+    hiddenReason       = "social_only_no_reviews";
+    needsWebsiteSearch = true;
+    needsPhotoBackfill = false;
+  } else {
+    /* Branch 3 — real website URL */
+    website            = rawWebsite;
+    isHidden           = false;
+    hiddenReason       = null;
+    needsWebsiteSearch = false;
+    needsPhotoBackfill = true;
+  }
 
   return {
     placeId:               raw.place_id,
@@ -222,14 +271,10 @@ function toRow(raw: ScrapedVendor): NewVendor | null {
     googleRating:          raw.google_rating != null ? String(raw.google_rating) : null,
     reviewCount:           raw.review_count ?? null,
     googleClosed,
-    isHidden:              hasNoWebsite,
-    hiddenReason:          hasNoWebsite ? "no_website" : null,
-    needsWebsiteSearch:    hasNoWebsite,
-    /* When website IS present but hero_image is still NULL at import
-     * time (always true for fresh rows — the photo backfill runs as
-     * Stage-1 after import), flag this row for the next backfill pass.
-     * No-website rows are already hidden, so they don't get flagged. */
-    needsPhotoBackfill:    !hasNoWebsite,
+    isHidden,
+    hiddenReason,
+    needsWebsiteSearch,
+    needsPhotoBackfill,
     priceTier:             cleanString(raw.price_tier),
     priceFrom:             raw.price_from ?? null,
     priceTo:               raw.price_to ?? null,
