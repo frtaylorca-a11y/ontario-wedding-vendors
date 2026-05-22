@@ -1,10 +1,14 @@
 /**
- * One-time backfill: flag vendors with no website on file as hidden
- * from public listings, and queue them for the find-vendor-websites.ts
- * AI search pass.
+ * Backfill: hide vendors with no public presence we can link to.
  *
- * Filter:
- *   website IS NULL OR website = ''
+ * "No public presence" means ALL of:
+ *   - website IS NULL OR website = ''
+ *   - instagram_handle IS NULL  (social presence #1)
+ *   - yelp_url IS NULL          (social presence #2)
+ *   - pinterest_url IS NULL     (social presence #3)
+ *   - NOT (google_rating >= 4.5 AND review_count >= 20)
+ *     (a high-rated vendor with no web presence is still a real
+ *      business worth listing — they get a Google-backed profile)
  *
  * For each match, set:
  *   is_hidden            = true
@@ -32,7 +36,7 @@
  *   npx tsx scripts/hide-no-website-vendors.ts --confirm         # apply
  */
 import "dotenv/config";
-import { and, eq, isNull, or, sql } from "drizzle-orm";
+import { and, eq, gte, isNull, not, or, sql } from "drizzle-orm";
 import { db } from "../src/lib/db";
 import { vendors } from "../src/lib/schema";
 
@@ -55,8 +59,19 @@ async function main() {
   const { confirm } = parseArgs();
   const mode = confirm ? "APPLY" : "DRY-RUN";
 
-  /* Match the filter exactly: website IS NULL OR website = '' */
-  const candidateFilter = or(isNull(vendors.website), eq(vendors.website, ""));
+  /* Hide only when ALL of: no website, no social URLs on file, and the
+   * Google rating doesn't qualify as a high-rated business. Anything
+   * that has a social link OR a strong Google footprint is left
+   * visible — we can still surface it without our own website. */
+  const noWebsite        = or(isNull(vendors.website), eq(vendors.website, ""));
+  const noInstagram      = isNull(vendors.instagramHandle);
+  const noYelp           = isNull(vendors.yelpUrl);
+  const noPinterest      = isNull(vendors.pinterestUrl);
+  const notHighlyRated   = not(and(
+    gte(vendors.googleRating, "4.5"),
+    gte(vendors.reviewCount, 20),
+  )!);
+  const candidateFilter  = and(noWebsite, noInstagram, noYelp, noPinterest, notHighlyRated);
 
   /* Count by category — what the user is going to read */
   const perCategory = await db

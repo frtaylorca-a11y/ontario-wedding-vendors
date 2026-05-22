@@ -93,26 +93,27 @@ export async function recomputeVendorDisplayRankScore(vendorId: number): Promise
  * detail page so Google leaves them out of the SERP — but the page
  * stays directly accessible at its URL.
  */
-/* Indexability rule (updated):
+/* Indexability rule (relaxed alongside the social-presence
+ * visibility rule):
  *   is_indexable = TRUE iff ALL of:
  *     - is_hidden = FALSE
- *     - hero_image IS NOT NULL                 ← new hard requirement
+ *     - hero_image IS NOT NULL                 ← hard requirement
  *     - AND one of:
- *         (description IS NOT NULL AND bio_enriched_at IS NOT NULL)
- *         (google_rating >= 4.0 AND review_count >= 10)
+ *         description IS NOT NULL (and non-empty)
+ *         google_rating >= 4.0
  *
- * No photo = noindex. A photoless listing has nothing to show in
- * image search and reads as a stub in the SERP — better to keep it
- * out of Google entirely until the photo backfill catches it. */
+ * Dropped the bio_enriched_at + review_count >= 10 gates so vendors
+ * surfaced through the new visibility rule (Instagram-only,
+ * highly-rated-only) can become indexable on the strength of their
+ * Google profile alone. A photoless listing is still noindex —
+ * nothing to show in image search and it reads as a stub. */
 export const IS_INDEXABLE_SQL = sql<boolean>`(
   ${vendors.isHidden} = FALSE
   AND ${vendors.heroImage} IS NOT NULL
   AND (
     (${vendors.description} IS NOT NULL
-      AND ${vendors.description} <> ''
-      AND ${vendors.bioEnrichedAt} IS NOT NULL)
-    OR (${vendors.googleRating} >= 4.0
-      AND ${vendors.reviewCount} >= 10)
+      AND ${vendors.description} <> '')
+    OR ${vendors.googleRating} >= 4.0
   )
 )`;
 
