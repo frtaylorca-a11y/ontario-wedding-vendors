@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 /* ─── Types ──────────────────────────────────────────────────────── */
 
-type Tab = "run" | "scout" | "posts" | "settings";
+type Tab = "run" | "scout" | "posts" | "newsletter" | "settings";
 
 type ScoutRow = {
   id:           number;
@@ -108,10 +108,11 @@ export function BlogAgentClient({ bootstrapToken }: { bootstrapToken?: string })
         {/* Tab bar */}
         <nav className="mb-6 flex flex-wrap gap-2 border-b border-border">
           {([
-            ["run",      "Run Now"],
-            ["scout",    "Scout Log"],
-            ["posts",    "Published Posts"],
-            ["settings", "Settings"],
+            ["run",        "Run Now"],
+            ["scout",      "Scout Log"],
+            ["posts",      "Published Posts"],
+            ["newsletter", "Newsletter"],
+            ["settings",   "Settings"],
           ] as const).map(([key, label]) => (
             <button
               key={key}
@@ -128,10 +129,11 @@ export function BlogAgentClient({ bootstrapToken }: { bootstrapToken?: string })
           ))}
         </nav>
 
-        {tab === "run"      && <RunTab      tokenHeader={tokenHeader} />}
-        {tab === "scout"    && <ScoutTab    tokenHeader={tokenHeader} />}
-        {tab === "posts"    && <PostsTab    tokenHeader={tokenHeader} />}
-        {tab === "settings" && <SettingsTab tokenHeader={tokenHeader} />}
+        {tab === "run"        && <RunTab        tokenHeader={tokenHeader} />}
+        {tab === "scout"      && <ScoutTab      tokenHeader={tokenHeader} />}
+        {tab === "posts"      && <PostsTab      tokenHeader={tokenHeader} />}
+        {tab === "newsletter" && <NewsletterTab tokenHeader={tokenHeader} />}
+        {tab === "settings"   && <SettingsTab   tokenHeader={tokenHeader} />}
       </div>
     </main>
   );
@@ -712,6 +714,130 @@ function Toggle({
         className="mt-1 h-5 w-5 cursor-pointer"
       />
     </label>
+  );
+}
+
+/* ─── Tab: Newsletter ────────────────────────────────────────────── */
+
+type NewsletterStats = {
+  stats:  { total: number; active: number; last7: number; last30: number };
+  recent: Array<{
+    id:           number;
+    email:        string;
+    name:         string | null;
+    region:       string | null;
+    subscribedAt: string | null;
+    isActive:     boolean;
+  }>;
+};
+
+function NewsletterTab({ tokenHeader }: { tokenHeader: Record<string, string> }) {
+  const [data, setData]   = useState<NewsletterStats | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setError(null);
+    try {
+      const res  = await fetch("/api/admin/newsletter/stats", { headers: tokenHeader });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Failed");
+      setData(json);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }, [tokenHeader]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  if (error) {
+    return (
+      <p className="rounded-card border border-border bg-white p-6 text-sm text-rose">
+        {error}
+      </p>
+    );
+  }
+  if (!data) {
+    return (
+      <p className="rounded-card border border-border bg-white p-6 text-sm text-text-mid">
+        Loading subscribers…
+      </p>
+    );
+  }
+
+  const { stats, recent } = data;
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <StatCard label="Active subscribers"  value={stats.active} />
+        <StatCard label="Last 7 days"         value={stats.last7} accent="rose" />
+        <StatCard label="Last 30 days"        value={stats.last30} />
+        <StatCard label="All-time total"      value={stats.total} muted />
+      </div>
+
+      <div className="rounded-card border border-border bg-white p-6">
+        <h2 className="font-display text-xl text-charcoal">Recent signups</h2>
+        <p className="mt-1 text-sm text-text-mid">
+          Last 25 by signup date. New subscribers receive a welcome email
+          automatically via Brevo.
+        </p>
+
+        {recent.length === 0 ? (
+          <p className="mt-4 text-sm text-text-mid">No subscribers yet.</p>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="border-b border-border text-left text-xs uppercase tracking-wide text-text-mid">
+                <tr>
+                  <th className="px-3 py-2">Email</th>
+                  <th className="px-3 py-2">Name</th>
+                  <th className="px-3 py-2">Region</th>
+                  <th className="px-3 py-2">Signed up</th>
+                  <th className="px-3 py-2">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recent.map((r) => (
+                  <tr key={r.id} className="border-b border-border/60 last:border-0">
+                    <td className="px-3 py-2 font-mono text-xs">{r.email}</td>
+                    <td className="px-3 py-2">{r.name ?? "—"}</td>
+                    <td className="px-3 py-2">{r.region ?? "—"}</td>
+                    <td className="px-3 py-2 text-text-mid">
+                      {r.subscribedAt ? new Date(r.subscribedAt).toLocaleDateString() : "—"}
+                    </td>
+                    <td className="px-3 py-2">
+                      {r.isActive ? (
+                        <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-800">
+                          active
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">
+                          unsubscribed
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StatCard({
+  label, value, accent, muted,
+}: { label: string; value: number; accent?: "rose"; muted?: boolean }) {
+  const valueColor = accent === "rose"
+    ? "text-rose"
+    : muted ? "text-text-mid" : "text-charcoal";
+  return (
+    <div className="rounded-card border border-border bg-white p-4">
+      <p className="text-xs font-bold uppercase tracking-[0.08em] text-text-mid">{label}</p>
+      <p className={`mt-1 font-display text-3xl ${valueColor}`}>{value.toLocaleString()}</p>
+    </div>
   );
 }
 
