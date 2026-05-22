@@ -35,7 +35,7 @@ import { db } from "../src/lib/db";
 import { vendors, type NewVendor } from "../src/lib/schema";
 import { isSocialOnlyUrl } from "../src/lib/social-hosts";
 import { verdictFor as nameCategoryVerdict } from "./validate-vendor-names";
-import { extractAreaCode, ONTARIO_AREA_CODES } from "../src/lib/ontario-phone-codes";
+import { extractAreaCode, KNOWN_US_AREA_CODES } from "../src/lib/ontario-phone-codes";
 import { REGION_MAP } from "../src/lib/regions";
 
 const DEFAULT_DIR =
@@ -487,11 +487,18 @@ async function main() {
         /* Location sanity warnings — phone area code + city.
          * Logged as ⚠ LOC; doesn't block the import. The post-import
          * validate-vendor-locations sweep (with Claude verification)
-         * is the authoritative decision-maker. */
+         * is the authoritative decision-maker.
+         *
+         * Phone warning fires ONLY for area codes we're confident are
+         * US-only (212 / 310 / 716 / etc.). Toll-free (800/888/877/...)
+         * and Canadian-but-not-Ontario codes (514 Montréal, 604 Vancouver)
+         * stay silent here — those cases are nuanced enough that the
+         * Claude verdict in validate-vendor-locations should weigh in
+         * rather than the cheap import heuristic. */
         const ac = extractAreaCode(row.phone);
-        if (ac && !ONTARIO_AREA_CODES.has(ac)) {
+        if (ac && KNOWN_US_AREA_CODES.has(ac)) {
           console.log(
-            `    ⚠ LOC (phone):  "${row.name}" — area code ${ac} is NOT an Ontario code (phone=${row.phone})`,
+            `    ⚠ LOC (phone):  "${row.name}" — area code ${ac} is a known US area code (phone=${row.phone})`,
           );
         }
         if (row.city) {

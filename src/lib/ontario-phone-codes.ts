@@ -20,6 +20,24 @@ export const ONTARIO_AREA_CODES = new Set<string>([
   "519", "226", "548", "753",   /* Southwestern */
 ]);
 
+/* Canadian toll-free codes. These say NOTHING about where the business
+ * is located — a Toronto florist with an 1-800 number is still in
+ * Toronto. Used to skip phone-based location heuristics entirely. */
+export const TOLL_FREE_AREA_CODES = new Set<string>([
+  "800", "888", "877", "866", "855", "844", "833",
+]);
+
+/* Area codes that are KNOWN US-only (no Canadian overlay). Used to
+ * fire the import-time warning. Anything Canadian-but-not-Ontario
+ * (514 Montréal, 604 Vancouver, 403 Calgary, 306 SK, etc.) stays
+ * silent at import — the Claude verdict in validate-vendor-locations
+ * handles those nuanced cases. Add to this set as we encounter more
+ * recurring US codes in the data. */
+export const KNOWN_US_AREA_CODES = new Set<string>([
+  "212", "310", "404", "305", "312", "713", "214", "602",
+  "702", "503", "206", "617", "716", "804", "806", "386",
+]);
+
 /* Extract the area code from a Canadian / US phone string. Handles
  * "+1 (905) 555-1234", "905-555-1234", "1.905.555.1234",
  * "905.555.1234". Returns null on anything that doesn't shake out
@@ -41,4 +59,14 @@ export function extractAreaCode(phone: string | null | undefined): string | null
 export function isOntarioAreaCode(phone: string | null | undefined): boolean {
   const code = extractAreaCode(phone);
   return code != null && ONTARIO_AREA_CODES.has(code);
+}
+
+export function isTollFreeAreaCode(phone: string | null | undefined): boolean {
+  const code = extractAreaCode(phone);
+  return code != null && TOLL_FREE_AREA_CODES.has(code);
+}
+
+export function isKnownUSAreaCode(phone: string | null | undefined): boolean {
+  const code = extractAreaCode(phone);
+  return code != null && KNOWN_US_AREA_CODES.has(code);
 }

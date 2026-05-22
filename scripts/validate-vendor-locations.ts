@@ -46,7 +46,11 @@ import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { db } from "../src/lib/db";
 import { vendors } from "../src/lib/schema";
 import { REGION_MAP } from "../src/lib/regions";
-import { extractAreaCode, ONTARIO_AREA_CODES } from "../src/lib/ontario-phone-codes";
+import {
+  extractAreaCode,
+  ONTARIO_AREA_CODES,
+  TOLL_FREE_AREA_CODES,
+} from "../src/lib/ontario-phone-codes";
 
 const PER_CALL_DELAY_MS  = 300;
 const COST_PER_CHECK_USD = 0.001;
@@ -117,9 +121,13 @@ function heuristicCheck(v: {
   }
 
   /* Phone area code non-Ontario. Only flag if we have a phone AND
-   * it parses cleanly — missing/un-parseable phones don't condemn. */
+   * it parses cleanly — missing/un-parseable phones don't condemn.
+   * Toll-free codes (800/888/877/...) say nothing about location and
+   * are deliberately skipped — a Toronto florist with an 1-800 line
+   * is still a Toronto florist. Other heuristics (address, city,
+   * website) still apply. */
   const areaCode = extractAreaCode(v.phone);
-  if (areaCode && !ONTARIO_AREA_CODES.has(areaCode)) {
+  if (areaCode && !ONTARIO_AREA_CODES.has(areaCode) && !TOLL_FREE_AREA_CODES.has(areaCode)) {
     reasons.push(`area_code=${areaCode}`);
   }
 
