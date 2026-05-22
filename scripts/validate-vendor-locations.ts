@@ -55,16 +55,60 @@ import {
 const PER_CALL_DELAY_MS  = 300;
 const COST_PER_CHECK_USD = 0.001;
 
-/* Reverse the city slugs in REGION_MAP into a set we can match
- * against the raw city string. Both the slug ("niagara-on-the-lake")
- * and a normalized version of the display name ("niagara on the lake")
- * are accepted. */
+/* Cities that ARE in Ontario but don't (yet) have a region page in
+ * REGION_MAP. The region-map controls URL routing for /cities/[slug];
+ * this set is purely the location-validator's "is this an Ontario
+ * city?" allowlist. Anything here is recognised as valid Ontario and
+ * NOT flagged as unknown_city by the heuristic. Add freely. */
+const ADDITIONAL_ONTARIO_CITIES = new Set<string>([
+  /* GTA + Toronto former-municipalities */
+  "etobicoke", "north-york", "scarborough", "york", "east-york",
+  "whitchurch-stouffville", "stouffville", "georgina", "uxbridge",
+  "clarington", "bowmanville", "innisfil", "bradford",
+  /* Halton / Peel additional */
+  "georgetown", "acton", "erin", "orangeville",
+  /* Hamilton-adjacent */
+  "stoney-creek", "dundas", "binbrook", "flamborough",
+  /* Niagara additional (display variants only — most already in REGION_MAP) */
+  "queenston", "st-davids",
+  /* Cottage Country additional */
+  "wasaga-beach", "port-carling", "parry-sound", "muskoka-lakes",
+  /* Waterloo / Wellington additional */
+  "paris", "rockwood", "arthur",
+  /* Southwestern additional */
+  "simcoe", "tillsonburg", "leamington", "ingersoll", "kincardine",
+  "goderich", "owen-sound", "port-hope",
+  /* Northern Ontario */
+  "sudbury", "greater-sudbury", "thunder-bay", "timmins",
+  "sault-ste-marie", "sault-ste.-marie", "north-bay",
+  "elliot-lake", "kapuskasing",
+  /* Eastern additional */
+  "kawartha-lakes", "lindsay", "trenton", "quinte-west",
+  "smiths-falls", "perth", "brockville", "cornwall",
+  "pembroke", "renfrew", "carleton-place",
+  /* Prince Edward County additional */
+  "wellington", "consecon",
+]);
+
+/* Reverse the city slugs in REGION_MAP + ADDITIONAL_ONTARIO_CITIES
+ * into a set we can match against the raw city string. Both the slug
+ * ("niagara-on-the-lake") and a normalized version of the display
+ * name ("niagara on the lake") are accepted. */
 const ONTARIO_CITY_SET = (() => {
   const s = new Set<string>();
-  for (const slug of Object.keys(REGION_MAP)) {
+  const addBoth = (slug: string) => {
     s.add(slug);
     s.add(slug.replace(/-/g, " "));
-  }
+    /* Strip any non-letter punctuation so "sault-ste.-marie" also
+     * matches the cleaner "sault ste marie" form. */
+    const clean = slug.replace(/[^a-z0-9-]/g, "");
+    if (clean !== slug) {
+      s.add(clean);
+      s.add(clean.replace(/-/g, " "));
+    }
+  };
+  for (const slug of Object.keys(REGION_MAP)) addBoth(slug);
+  for (const slug of ADDITIONAL_ONTARIO_CITIES) addBoth(slug);
   return s;
 })();
 
