@@ -61,31 +61,57 @@ const COST_PER_CHECK_USD = 0.001;
  * city?" allowlist. Anything here is recognised as valid Ontario and
  * NOT flagged as unknown_city by the heuristic. Add freely. */
 const ADDITIONAL_ONTARIO_CITIES = new Set<string>([
-  /* GTA + Toronto former-municipalities */
+  /* GTA + Toronto former-municipalities + inner neighbourhoods */
   "etobicoke", "north-york", "scarborough", "york", "east-york",
+  "rexdale", "weston",
+  /* Peel — Mississauga / Brampton neighbourhoods */
+  "malton",
+  /* York Region — Vaughan / Markham / Richmond Hill / King townships */
+  "woodbridge", "concord", "thornhill", "maple", "kleinburg",
+  "nobleton", "schomberg",
+  /* Durham additional */
   "whitchurch-stouffville", "stouffville", "georgina", "uxbridge",
-  "clarington", "bowmanville", "innisfil", "bradford",
+  "claremont", "pickering-village", "courtice", "clarington",
+  "bowmanville", "port-perry",
+  /* Simcoe South additional */
+  "innisfil", "bradford", "tottenham", "beeton",
   /* Halton / Peel additional */
   "georgetown", "acton", "erin", "orangeville",
+  "bolton", "caledon-east", "inglewood", "alton",
   /* Hamilton-adjacent */
   "stoney-creek", "dundas", "binbrook", "flamborough",
+  /* Haldimand / Norfolk / Brant — south of Hamilton */
+  "caledonia", "cayuga", "dunnville", "port-dover", "delhi",
   /* Niagara additional (display variants only — most already in REGION_MAP) */
-  "queenston", "st-davids",
-  /* Cottage Country additional */
+  "queenston", "st-davids", "virgil", "wellandport",
+  /* Cottage Country / Muskoka additional */
   "wasaga-beach", "port-carling", "parry-sound", "muskoka-lakes",
+  "penetanguishene", "muskoka",
+  /* Haliburton / Highlands */
+  "haliburton", "bancroft", "minden",
+  /* Grey-Bruce / Georgian Bay shore */
+  "thornbury", "meaford", "wiarton", "southampton", "port-elgin",
   /* Waterloo / Wellington additional */
   "paris", "rockwood", "arthur",
   /* Southwestern additional */
   "simcoe", "tillsonburg", "leamington", "ingersoll", "kincardine",
   "goderich", "owen-sound", "port-hope",
+  "exeter", "strathroy", "st-thomas", "aylmer",
+  /* Essex County — Windsor area */
+  "kingsville", "essex", "lasalle", "tecumseh", "amherstburg",
   /* Northern Ontario */
   "sudbury", "greater-sudbury", "thunder-bay", "timmins",
   "sault-ste-marie", "sault-ste.-marie", "north-bay",
   "elliot-lake", "kapuskasing",
+  "kirkland-lake", "cochrane", "hearst",
+  /* Northwestern Ontario */
+  "kenora", "dryden", "fort-frances", "sioux-lookout",
   /* Eastern additional */
   "kawartha-lakes", "lindsay", "trenton", "quinte-west",
   "smiths-falls", "perth", "brockville", "cornwall",
   "pembroke", "renfrew", "carleton-place",
+  "napanee", "hawkesbury", "petawawa", "arnprior",
+  "almonte", "kemptville", "prescott",
   /* Prince Edward County additional */
   "wellington", "consecon",
 ]);
