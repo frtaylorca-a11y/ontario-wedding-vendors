@@ -21,6 +21,7 @@ import { PalettePicker } from "./PalettePicker";
 import { TypographyPicker } from "./TypographyPicker";
 import { PremiumUpgradeModal } from "./PremiumUpgradeModal";
 import { StylePicker } from "./StylePicker";
+import { RegisterGate } from "@/components/auth/RegisterGate";
 import type { WeddingPalette } from "@/lib/wedding-palettes";
 import type { TypographyStyle } from "@/lib/wedding-typography";
 
@@ -1143,13 +1144,21 @@ function PublishBar({
                   >
                     Preview →
                   </a>
-                  <button
-                    type="button"
-                    onClick={onPublish}
-                    className="inline-flex items-center gap-1.5 rounded-pill bg-rose px-4 py-1.5 text-xs font-bold text-white shadow-[0_4px_14px_rgba(185,100,118,0.3)] transition-all hover:bg-rose-hover"
+                  <RegisterGate
+                    active={true}
+                    intent="publish-website"
+                    headline="Create a free account to publish your wedding website"
+                    subhead="Couples need a free account before going live — it secures your custom URL and lets you edit your site from any device."
+                    callbackUrl="/plan/website"
                   >
-                    Publish website
-                  </button>
+                    <button
+                      type="button"
+                      onClick={onPublish}
+                      className="inline-flex items-center gap-1.5 rounded-pill bg-rose px-4 py-1.5 text-xs font-bold text-white shadow-[0_4px_14px_rgba(185,100,118,0.3)] transition-all hover:bg-rose-hover"
+                    >
+                      Publish website
+                    </button>
+                  </RegisterGate>
                 </>
               )}
             </>

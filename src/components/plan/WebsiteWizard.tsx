@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { StylePicker } from "./StylePicker";
 import { PremiumUpgradeModal } from "./PremiumUpgradeModal";
+import { RegisterGate } from "@/components/auth/RegisterGate";
 import { getThemeTokens } from "@/lib/wedding-themes";
 import type { WeddingTheme } from "@/lib/wedding-website";
 
@@ -425,13 +426,21 @@ function PhotoStep({
           >
             Edit sections first
           </button>
-          <button
-            type="button"
-            onClick={onPublish}
-            className="rounded-pill bg-rose px-6 py-3 text-base font-bold text-white shadow-[0_8px_24px_rgba(185,100,118,0.32)] transition-all hover:bg-rose-hover"
+          <RegisterGate
+            active={true}
+            intent="publish-website"
+            headline="Create a free account to publish your wedding website"
+            subhead="Couples need a free account before going live — it secures your custom URL and lets you edit your site from any device."
+            callbackUrl="/plan/website"
           >
-            Publish website →
-          </button>
+            <button
+              type="button"
+              onClick={onPublish}
+              className="rounded-pill bg-rose px-6 py-3 text-base font-bold text-white shadow-[0_8px_24px_rgba(185,100,118,0.32)] transition-all hover:bg-rose-hover"
+            >
+              Publish website →
+            </button>
+          </RegisterGate>
         </div>
       </div>
     </div>

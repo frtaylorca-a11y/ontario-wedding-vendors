@@ -8,6 +8,7 @@ import { venues, weddingPlans } from "@/lib/schema";
 import { readPlanSessionId } from "@/lib/session";
 import { PlannerDashboard } from "@/components/plan/PlannerDashboard";
 import { PlannerTabs } from "@/components/plan/PlannerTabs";
+import { BudgetSaveGate } from "@/components/plan/BudgetSaveGate";
 import { NewsletterSignup } from "@/components/ui/NewsletterSignup";
 import type { BudgetCategoryStates, PlanState } from "@/lib/plan-state";
 
@@ -108,6 +109,10 @@ export default async function PlanPage() {
           initialPlan={initialPlan}
           totalVenueCount={(await getSiteStats().catch(() => null))?.venueCount}
         />
+
+        {/* Passive register-prompt — 5 min on /plan with engagement
+         *  → modal once per session. See BudgetSaveGate for triggers. */}
+        <BudgetSaveGate />
 
         {/* Newsletter — appears below the dashboard. Region is passed
           * through when the couple has set one so the future digest

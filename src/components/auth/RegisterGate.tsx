@@ -93,7 +93,10 @@ export function RegisterGate({
   );
 }
 
-function RegisterModal({
+/** Standalone modal — for passive triggers (timers, navigate-away)
+ *  that drive the gate without a click target to wrap. The click-
+ *  wrapping <RegisterGate> above is the more common entry point. */
+export function RegisterModal({
   intent,
   headline,
   subhead,
