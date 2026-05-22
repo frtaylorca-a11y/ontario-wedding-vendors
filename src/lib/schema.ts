@@ -474,13 +474,76 @@ export const weddingPlans = pgTable(
     firstPage:          varchar("first_page",   { length: 500 }),
     firstVisitedAt:     timestamp("first_visited_at"),
     notes:              text("notes"),
+
+    /* ── Registration link (optional) ──────────────────────────────
+     * Anonymous plans are still the default; userId is filled in
+     * only when the couple signs in via magic link. On verify, the
+     * sessionId on the cookie is matched to this plan row and the
+     * userId is stamped here. Cross-device hydration becomes a
+     * userId lookup once registered. */
+    userId:             integer("user_id"),
+    /* Saved-venue shortlist — distinct from the locked-in venueId.
+     * Array of venue ids the couple has hearted; gated at 3 free
+     * by the RegisterGate. */
+    savedVenueIds:      jsonb("saved_venue_ids"),
+
     createdAt:          timestamp("created_at").defaultNow(),
     updatedAt:          timestamp("updated_at").defaultNow(),
   },
   (t) => ({
     sessionIdx:         index("plans_session_idx").on(t.sessionId),
+    userIdx:            index("plans_user_idx").on(t.userId),
   }),
 );
+
+/**
+ * Registered couples — created on first magic-link verification. Email
+ * is the unique identity. Anonymous plans (no userId) coexist; sign-in
+ * stamps the userId onto the active session's plan row.
+ */
+export const users = pgTable(
+  "users",
+  {
+    id:            serial("id").primaryKey(),
+    email:         varchar("email", { length: 255 }).unique().notNull(),
+    name:          varchar("name",  { length: 100 }),
+    emailVerifiedAt: timestamp("email_verified_at"),
+    lastLoginAt:   timestamp("last_login_at"),
+    createdAt:     timestamp("created_at").defaultNow().notNull(),
+  },
+);
+
+/**
+ * One-time magic-link tokens. The plaintext token only ever exists in
+ * the URL we email; the DB stores SHA-256(token) so a leaked snapshot
+ * can't be replayed. callbackUrl is the page the user came from so we
+ * can drop them back where they were after verification.
+ */
+export const magicLinkTokens = pgTable(
+  "magic_link_tokens",
+  {
+    id:          serial("id").primaryKey(),
+    email:       varchar("email", { length: 255 }).notNull(),
+    tokenHash:   varchar("token_hash", { length: 128 }).unique().notNull(),
+    callbackUrl: varchar("callback_url", { length: 500 }),
+    /* Gate that triggered the request — drives copy on the verify
+     * landing page ("Welcome — your venue shortlist is ready"). */
+    intent:      varchar("intent", { length: 40 }),
+    /* The anonymous sessionId at request-time, so we can link the
+     * pre-registration plan to the verified user. */
+    sessionId:   varchar("session_id", { length: 64 }),
+    expiresAt:   timestamp("expires_at").notNull(),
+    usedAt:      timestamp("used_at"),
+    createdAt:   timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    expiresIdx: index("magic_link_expires_idx").on(t.expiresAt),
+    emailIdx:   index("magic_link_email_idx").on(t.email),
+  }),
+);
+
+export type User = typeof users.$inferSelect;
+export type MagicLinkToken = typeof magicLinkTokens.$inferSelect;
 
 /**
  * Vendors suggested by couples via the planner's "Add a vendor not in our list"
