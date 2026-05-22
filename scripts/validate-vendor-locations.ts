@@ -112,8 +112,11 @@ const ADDITIONAL_ONTARIO_CITIES = new Set<string>([
   "pembroke", "renfrew", "carleton-place",
   "napanee", "hawkesbury", "petawawa", "arnprior",
   "almonte", "kemptville", "prescott",
-  /* Prince Edward County additional */
-  "wellington", "consecon",
+  /* Prince Edward County additional — picton/bloomfield are in REGION_MAP;
+   * include "prince-edward-county" as a city-string fallback for vendors
+   * filed with the region label rather than the town name. */
+  "wellington", "consecon", "milford", "carrying-place",
+  "prince-edward-county",
 ]);
 
 /* Reverse the city slugs in REGION_MAP + ADDITIONAL_ONTARIO_CITIES
