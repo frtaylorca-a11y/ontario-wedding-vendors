@@ -8,7 +8,12 @@
  *
  * Listing + detail pages read from BLOG_POSTS by slug.
  */
-import type { ReactNode } from "react";
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import React, { type ReactNode } from "react";
+/* React import is load-bearing: this file is also imported by tsx CLI
+ * scripts (e.g. scripts/expand-existing-posts.ts) where the JSX
+ * transform falls back to React.createElement / React.Fragment and
+ * needs React in scope. Next.js still uses the automatic runtime. */
 
 export type BlogPost = {
   slug: string;
