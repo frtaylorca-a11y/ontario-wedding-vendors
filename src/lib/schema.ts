@@ -106,6 +106,41 @@ export const venues = pgTable(
      * script; rendered by the Part-2 venue FAQ section. */
     faqs:                    jsonb("faqs"),
 
+    /* ── Deep-capture extraction pipeline ────────────────────────────
+     * One row gets a full structured object in deep_capture jsonb,
+     * with the most-filterable values promoted to scalar columns so
+     * SQL stays fast. Pipeline:
+     *   scripts/extract-venue-deepcapture.ts  → fills the raw extraction
+     *   scripts/generate-venue-narrative.ts   → adds grounded copy
+     *   scripts/score-venue-completeness.ts   → fills completeness_score
+     *
+     * raw_site_text caches the combined website text used for the
+     * extraction so re-extraction (e.g. a better prompt later) doesn't
+     * have to re-fetch the venue's site. site_snapshot_at marks when
+     * that text was captured.
+     *
+     * Confidence + provenance live on each field inside the JSON
+     * (see the schema in scripts/extract-venue-deepcapture.ts);
+     * the promoted scalars only carry value, not confidence — render-
+     * time should always cross-check deep_capture.* for the badge. */
+    ceremonyCapacity:        integer("ceremony_capacity"),
+    receptionSeatedMax:      integer("reception_seated_max"),
+    receptionStandingMax:    integer("reception_standing_max"),
+    priceTier:               varchar("price_tier",     { length: 20 }),
+    startingPrice:           integer("starting_price"),
+    cateringModel:           varchar("catering_model", { length: 30 }),
+    deepCapture:             jsonb("deep_capture"),
+    deepCaptureVersion:      integer("deep_capture_version").default(1),
+    deepCaptureAt:           timestamp("deep_capture_at"),
+    completenessScore:       numeric("completeness_score", { precision: 4, scale: 3 }),
+    /* Sort-ranking score for /venues listings + region/city pages.
+     * Set by score-venue-completeness.ts: starts from a base derived
+     * from wedding_readiness_score and adds a completeness bonus
+     * (+20 confirmed, +10 partial). */
+    displayRankScore:        integer("display_rank_score"),
+    rawSiteText:             text("raw_site_text"),
+    siteSnapshotAt:          timestamp("site_snapshot_at"),
+
     source: varchar("source", { length: 100 }),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
@@ -117,6 +152,8 @@ export const venues = pgTable(
     venueTypeIdx: index("venues_venue_type_idx").on(t.venueType),
     scoreIdx: index("venues_score_idx").on(t.weddingReadinessScore),
     tierIdx: index("venues_tier_idx").on(t.tier),
+    deepCaptureAtIdx: index("venues_deep_capture_at_idx").on(t.deepCaptureAt),
+    completenessIdx:  index("venues_completeness_idx").on(t.completenessScore),
   }),
 );
 
