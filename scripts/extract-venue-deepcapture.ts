@@ -185,6 +185,24 @@ HARD RULES:
 - Do NOT produce the "narrative" object — that is generated in a separate step. Leave it null.
 - Do NOT clobber: you are extracting raw facts; the pipeline decides what to keep.
 
+STRICT ENUM FIELDS — for these three fields the value MUST be exactly one of the listed strings or null. No paraphrasing, no synonyms, no free text. Map what the site says to the closest listed value; if no clear mapping, use null.
+
+- catering.model: EXACTLY one of "in_house" | "external_allowed" | "preferred_list" | "unknown" | null
+    in_house         — venue's own kitchen / banquet team caters; no outside catering
+    external_allowed — couple brings any licensed caterer they choose
+    preferred_list   — venue requires the caterer to be from their approved/exclusive list
+    unknown          — the site mentions catering exists but doesn't specify the policy
+
+- pricing.price_tier: EXACTLY one of "budget" | "mid" | "premium" | "luxury" | null
+    Map any explicit \$-tier wording, package floor, or per-plate floor to the closest band.
+    If the site is silent on price level AND you cannot infer one with at least medium confidence, use null.
+
+- pricing.pricing_model: EXACTLY one of "all_inclusive" | "venue_plus_catering" | "rental_only" | "per_head" | null
+    all_inclusive       — single package covers venue + catering + bar (+ often planning)
+    venue_plus_catering — venue rental priced separately; catering required (in-house or list)
+    rental_only         — venue rental only; couple sources everything else
+    per_head            — pricing is quoted per-guest (per-plate / per-person), not as a venue fee
+
 Return the JSON object only.`;
 
 const SCHEMA_SKELETON = {
