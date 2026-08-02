@@ -402,12 +402,53 @@ async function pickBestImage(
   vendorName:    string,
   vendorCategory: string,
 ): Promise<VisionPick | null> {
-  /* Build the user message with image blocks for each candidate.
-   * Claude downloads URLs server-side. */
-  const imageBlocks = candidateUrls.map((url) => ({
-    type: "image" as const,
-    source: { type: "url" as const, url },
-  }));
+  /* Claude Vision only fetches HTTPS URLs. Some vendor sites still
+   * serve image assets over plain http:, which would 400 the whole
+   * call. For those we pre-download the bytes and pass them as base64
+   * image blocks instead. HTTPS keeps the cheap URL-block path so
+   * Claude does the fetch itself.
+   *
+   * If an HTTP download fails (timeout, non-image content-type, etc.)
+   * the candidate is dropped from the request. The bestIndex Claude
+   * returns is then remapped back to the original candidateUrls array
+   * so downstream download/upload logic still picks the right URL. */
+  type PreparedBlock = {
+    originalIndex: number;
+    block: {
+      type: "image";
+      source:
+        | { type: "url"; url: string }
+        | { type: "base64"; media_type: string; data: string };
+    };
+  };
+
+  const prepared: PreparedBlock[] = [];
+  for (let i = 0; i < candidateUrls.length; i++) {
+    const url = candidateUrls[i];
+    if (url.startsWith("https://")) {
+      prepared.push({
+        originalIndex: i,
+        block: { type: "image", source: { type: "url", url } },
+      });
+      continue;
+    }
+    const img = await downloadImage(url);
+    if (!img) continue; /* skip — HTTP download failed */
+    prepared.push({
+      originalIndex: i,
+      block: {
+        type: "image",
+        source: {
+          type:       "base64",
+          media_type: img.contentType,
+          data:       img.bytes.toString("base64"),
+        },
+      },
+    });
+  }
+
+  if (prepared.length === 0) return null;
+  const imageBlocks = prepared.map((p) => p.block);
 
   let res: AnthropicResp;
   try {
@@ -423,7 +464,7 @@ async function pickBestImage(
             text:
               `Vendor: ${vendorName}\n` +
               `Category: ${vendorCategory}\n\n` +
-              `These are 3 candidate hero images from their website (in order 0, 1, 2). Pick the best one per the rules in the system prompt.`,
+              `These are ${prepared.length} candidate hero images from their website (indexed 0..${prepared.length - 1}). Pick the best one per the rules in the system prompt.`,
           },
           ...imageBlocks,
         ],
@@ -454,8 +495,11 @@ async function pickBestImage(
     catch { return null; }
   }
 
-  const bestIndex = typeof parsed.best_index === "number" ? parsed.best_index : -1;
-  if (bestIndex < 0 || bestIndex >= candidateUrls.length) return null;
+  const preparedIndex = typeof parsed.best_index === "number" ? parsed.best_index : -1;
+  if (preparedIndex < 0 || preparedIndex >= prepared.length) return null;
+  /* Claude picked over `prepared` (filtered) — remap back to the caller's
+   * original candidateUrls array so R2 upload picks the right URL. */
+  const bestIndex = prepared[preparedIndex].originalIndex;
   const conf = (parsed.confidence === "high" || parsed.confidence === "medium" || parsed.confidence === "low")
     ? parsed.confidence
     : "low";
