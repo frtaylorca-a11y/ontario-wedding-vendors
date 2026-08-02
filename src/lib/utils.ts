@@ -155,61 +155,45 @@ export function normalizeRegionDisplay(region: string | null | undefined): strin
 }
 
 /**
- * Resolve a vendor's hero image URL via the photo pipeline priority:
- *   1. hero_image_custom (R2 URL, permanent, Stage 2 + AI-validated) — best
- *   2. hero_image (Google photo_reference, Stage 1 bootstrap) — fallback
- *   3. null → caller renders the category colour gradient
+ * Resolve a vendor's hero image URL. Only hero_image_custom (R2 URL) is
+ * served — the legacy Google Places Photo endpoint is disabled on this
+ * project and returns 403 on every call, so we no longer build URLs
+ * against vendor.heroImage. Vendors without a custom hero fall through
+ * to null → caller renders the per-category placeholder.
  *
- * The Google variant exposes the API key in the URL by design — Google's
- * photo endpoint requires it and protects against abuse via referrer
- * restrictions on the key. Set GOOGLE_PLACES_API_KEY in env.
+ * The photo pipeline (scripts/backfill-website-heros.ts) writes
+ * hero_image_custom by scraping each vendor's own website and letting
+ * Claude Vision pick the best hero out of the top 3 candidates. See
+ * that script's header comment for how to rebuild coverage.
+ *
+ * The `opts.maxwidth` argument is retained for callsite compatibility
+ * but is a no-op — R2 serves one URL per row.
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function vendorHeroImageUrl(vendor: {
   heroImage?: string | null;
   heroImageCustom?: string | null;
-}, opts?: { maxwidth?: number }): string | null {
-  if (vendor.heroImageCustom) return vendor.heroImageCustom;
-  if (vendor.heroImage) {
-    const key = process.env.GOOGLE_PLACES_API_KEY ?? process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
-    if (!key) return null;
-    const w = opts?.maxwidth ?? 600;
-    return (
-      `https://maps.googleapis.com/maps/api/place/photo` +
-      `?maxwidth=${w}` +
-      `&photo_reference=${encodeURIComponent(vendor.heroImage)}` +
-      `&key=${key}`
-    );
-  }
-  return null;
+}, _opts?: { maxwidth?: number }): string | null {
+  return vendor.heroImageCustom ?? null;
 }
 
 /**
- * Resolve a venue's hero image URL — same priority chain as vendors:
- *   1. hero_image_custom (R2 URL, set by upgrade-venue-photos.ts when
- *      the venue's own website image beat the Google photo in a
- *      Claude Vision compare)
- *   2. hero_image (Google photo_reference, set by backfill-venue-photos.ts)
- *   3. null → caller renders the per-venue-type category image
+ * Resolve a venue's hero image URL. Only hero_image_custom (R2 URL) is
+ * served — the legacy Google Places Photo endpoint is disabled on this
+ * project and returns 403 on every call. Venues without a custom hero
+ * fall through to null → caller renders the per-venue-type placeholder.
  *
- * Mirrors vendorHeroImageUrl exactly so the same fallback pattern
- * works in VenueCard. */
+ * Populate hero_image_custom by scraping the venue's own website; the
+ * upgrade-venue-photos.ts stage-2 script covers this once R2 creds are
+ * set and the Google-comparison branch is removed (see also the vendor
+ * variant scripts/backfill-website-heros.ts for a Google-free version).
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function venueHeroImageUrl(venue: {
   heroImage?: string | null;
   heroImageCustom?: string | null;
-}, opts?: { maxwidth?: number }): string | null {
-  if (venue.heroImageCustom) return venue.heroImageCustom;
-  if (venue.heroImage) {
-    const key = process.env.GOOGLE_PLACES_API_KEY ?? process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
-    if (!key) return null;
-    const w = opts?.maxwidth ?? 800;
-    return (
-      `https://maps.googleapis.com/maps/api/place/photo` +
-      `?maxwidth=${w}` +
-      `&photo_reference=${encodeURIComponent(venue.heroImage)}` +
-      `&key=${key}`
-    );
-  }
-  return null;
+}, _opts?: { maxwidth?: number }): string | null {
+  return venue.heroImageCustom ?? null;
 }
 
 export function getEstimatedCapacity(

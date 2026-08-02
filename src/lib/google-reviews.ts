@@ -38,15 +38,21 @@ export async function loadCachedAdditionalPhotos(
   persist: (id: number, photos: GoogleVendorPhoto[]) => Promise<void>,
   count = 6,
 ): Promise<GoogleVendorPhoto[]> {
-  /* 1 — already cached. */
+  /* 1 — already cached. Google Places Photo URLs (maps.googleapis.com)
+   * are dropped: the legacy endpoint is disabled on this project and
+   * returns 403 on every call. If dropping those leaves the cache empty,
+   * fall through to a fresh scrape rather than returning nothing. */
   if (Array.isArray(row.additionalPhotos)) {
-    return (row.additionalPhotos as unknown[])
+    const cached = (row.additionalPhotos as unknown[])
       .filter((p): p is GoogleVendorPhoto => {
         if (!p || typeof p !== "object") return false;
         const r = p as Record<string, unknown>;
         return typeof r.url === "string" && Array.isArray(r.attributions);
       })
+      .filter((p) => !p.url.includes("maps.googleapis.com"))
       .slice(0, count);
+    if (cached.length > 0) return cached;
+    /* else fall through to scrape / google branches below */
   }
 
   /* 2 — website scrape. Requires name + slug + website to be passed
