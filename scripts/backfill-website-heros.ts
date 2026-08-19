@@ -27,7 +27,7 @@
  *   npx tsx scripts/backfill-website-heros.ts --name "X"     # smoke a specific vendor
  *   npx tsx scripts/backfill-website-heros.ts --confirm --name "Medalla"
  */
-import "dotenv/config";
+import "./_env";  /* must load env before any import that reads process.env */
 import Anthropic from "@anthropic-ai/sdk";
 import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { db } from "../src/lib/db";
