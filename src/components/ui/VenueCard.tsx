@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import type { Route } from "next";
 import type { Venue } from "@/lib/schema";
 import {
@@ -11,6 +10,7 @@ import {
   SCORE_TIER_LABEL,
   venueHeroImageUrl,
 } from "@/lib/utils";
+import { HeroImage } from "@/components/ui/HeroImage";
 
 const VENUE_TYPE_IMAGE: Record<string, string> = {
   winery: "/images/venue-winery.png",
@@ -131,8 +131,8 @@ export function VenueCard({ venue }: { venue: Venue }) {
    *   2. /images/venue-{type}.png — per-type category image
    *   3. FALLBACK_IMAGE (default winery)
    * The card never renders an empty image slot. */
-  const realPhoto = venueHeroImageUrl(venue, { maxwidth: 800 });
-  const imageSrc  = realPhoto ?? ((typeKey && VENUE_TYPE_IMAGE[typeKey]) || FALLBACK_IMAGE);
+  const realPhoto   = venueHeroImageUrl(venue, { maxwidth: 800 });
+  const fallbackUrl = (typeKey && VENUE_TYPE_IMAGE[typeKey]) || FALLBACK_IMAGE;
 
   return (
     <article className="group relative flex flex-col overflow-hidden rounded-card border-[1.5px] border-border bg-white shadow-sm transition-all duration-500 ease-in-out hover:-translate-y-2 hover:border-transparent hover:shadow-[var(--shadow-hover)]">
@@ -141,9 +141,10 @@ export function VenueCard({ venue }: { venue: Venue }) {
        * as one harmonised set: slow 700ms zoom + scale-110, coordinated
        * with the card's 500ms hover lift. */}
       <div className="relative aspect-video w-full overflow-hidden bg-bg-soft">
-        <Image
-          src={imageSrc}
-          alt=""
+        <HeroImage
+          src={realPhoto}
+          fallbackSrc={fallbackUrl}
+          alt={`${venue.name} — ${typeLabel ?? "wedding venue"} in ${venue.city ?? "Ontario"}`}
           fill
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           className="object-cover transition-transform duration-700 ease-in-out group-hover:scale-110"

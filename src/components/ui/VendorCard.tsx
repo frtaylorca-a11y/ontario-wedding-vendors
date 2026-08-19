@@ -5,6 +5,7 @@ import type { Vendor } from "@/lib/schema";
 import { formatRating, normalizeRegionDisplay, vendorHeroImageUrl } from "@/lib/utils";
 import { categoryColourVars } from "@/lib/vendor-colours";
 import { SaveVendorButton } from "@/components/plan/SaveVendorButton";
+import { HeroImage } from "@/components/ui/HeroImage";
 
 const CATEGORY_LABEL: Record<string, string> = {
   photographer:    "Photographer",
@@ -177,10 +178,11 @@ export function VendorCard({
       ? `${Math.round(vendor.distanceKm)} km from your venue`
       : null;
 
-  /* Real photo → fall back to category image. Always truthy. */
-  const photoUrl =
-    vendorHeroImageUrl(vendor, { maxwidth: 800 }) ??
-    vendorCategoryFallbackImage(vendor.category);
+  /* Real photo (R2). Falls back to per-category curated placeholder,
+   * then to a styled placeholder div (see HeroImage) — never renders a
+   * torn-image icon. */
+  const photoUrl     = vendorHeroImageUrl(vendor, { maxwidth: 800 });
+  const fallbackUrl  = vendorCategoryFallbackImage(vendor.category);
 
   /* CSS vars from the category's signature colour drive every accent. */
   const cssVars = categoryColourVars(vendor.category) as CSSProperties;
@@ -194,12 +196,13 @@ export function VendorCard({
     >
       {/* ─── Image area ──────────────────────────────────────────── */}
       <div className="relative aspect-video w-full overflow-hidden bg-bg-soft">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <HeroImage
           src={photoUrl}
-          alt=""
-          loading="lazy"
-          className="h-full w-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-110"
+          fallbackSrc={fallbackUrl}
+          alt={`${vendor.name} — ${categoryLabel} in ${vendor.city ?? "Ontario"}`}
+          fill
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          className="object-cover transition-transform duration-700 ease-in-out group-hover:scale-110"
         />
 
         {/* 3px category accent bar at the very top */}

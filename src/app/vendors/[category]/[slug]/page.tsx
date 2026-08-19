@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Route } from "next";
+import { HeroImage } from "@/components/ui/HeroImage";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
@@ -272,8 +273,11 @@ export default async function VendorPage({ params }: { params: Params }) {
    *   3. category fallback /images/vendor-{cat}.png
    * The page previously used only the category fallback regardless of
    * what data was on the row — fixed here. */
-  const heroImage =
-    vendorHeroImageUrl(vendor, { maxwidth: 1600 }) ?? CATEGORY_HERO_IMAGE[category];
+  const heroPhotoUrl    = vendorHeroImageUrl(vendor, { maxwidth: 1600 });
+  const heroFallbackUrl = CATEGORY_HERO_IMAGE[category];
+  /* For schema.org — must be a real URL. Prefer the actual photo,
+   * fall back to the curated per-category asset. */
+  const heroImage       = heroPhotoUrl ?? heroFallbackUrl;
   const cityRegion = [vendor.city, regionLabel(vendor.region)].filter(Boolean).join(" · ");
 
   const [reviews, galleryPhotos, similar, recommendingVenues, planningResources] = await Promise.all([
@@ -409,8 +413,9 @@ export default async function VendorPage({ params }: { params: Params }) {
       <main className="bg-bg-warm">
         {/* Hero */}
         <section className="relative h-[360px] overflow-hidden md:h-[440px]">
-          <Image
-            src={heroImage}
+          <HeroImage
+            src={heroPhotoUrl}
+            fallbackSrc={heroFallbackUrl}
             alt={`${vendor.name} — Wedding ${label} in ${vendor.city ?? regionLabel(vendor.region) ?? "Ontario"} Ontario`}
             fill
             priority

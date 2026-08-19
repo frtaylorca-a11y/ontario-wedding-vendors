@@ -18,6 +18,10 @@ const MediaItem = ({ item, className, onClick }: { item: MediaItemType, classNam
     const videoRef = useRef<HTMLVideoElement>(null); // Reference for video element
     const [isInView, setIsInView] = useState(false); // To track if video is in the viewport
     const [isBuffering, setIsBuffering] = useState(true);  // To track if video is buffering
+    /* Belt-and-suspenders fallback: if the R2 or scraped URL 404s at
+     * render time, swap in a styled rose placeholder instead of the
+     * browser's default torn-image icon. */
+    const [imageErrored, setImageErrored] = useState(false);
 
     // Intersection Observer to detect if video is in view and play/pause accordingly
     useEffect(() => {
@@ -118,6 +122,31 @@ const MediaItem = ({ item, className, onClick }: { item: MediaItemType, classNam
         );
     }
 
+    if (imageErrored || !item.url) {
+        return (
+            <div
+                aria-label={item.title}
+                role="img"
+                className={`${className} flex cursor-pointer items-center justify-center`}
+                style={{ backgroundColor: "#F7EEF1" }}
+                onClick={onClick}
+            >
+                <svg
+                    aria-hidden
+                    viewBox="0 0 48 48"
+                    className="h-10 w-10"
+                    style={{ color: "#C4909D", opacity: 0.55 }}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                >
+                    <circle cx="18" cy="28" r="10" />
+                    <circle cx="30" cy="28" r="10" />
+                </svg>
+            </div>
+        );
+    }
+
     return (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -127,6 +156,7 @@ const MediaItem = ({ item, className, onClick }: { item: MediaItemType, classNam
             onClick={onClick} // Trigger onClick when the image is clicked
             loading="lazy" // Lazy load the image for performance
             decoding="async" // Decode the image asynchronously
+            onError={() => setImageErrored(true)}
         />
     );
 };
