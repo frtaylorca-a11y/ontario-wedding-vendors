@@ -213,23 +213,25 @@ const TERRACOTTA: ThemeTokens = {
   isDark:        false,
 };
 
-/* ── 10. Frosted Glass — Golden hour + blurred glass card (variant) ─ */
+/* ── 10. Frosted Glass — Dark cinematic navy + gold accent (premium) ─
+ * Kept in sync with src/components/weddings/layouts/FrostedGlassLayout.tsx.
+ * pageBg → background, surface → surface, ink → ink, accent → gold. */
 const FROSTED: ThemeTokens = {
-  pageBg:        "#FBF7EE",
-  surface:       "#FFFFFF",
-  surfaceAlt:    "#F0EAD8",
-  border:        "#D6CFB6",
-  ink:           "#3D4A2E",
-  inkMuted:      "#5F6C4F",
-  accent:        "#7C9A7E",
-  accentInk:     "#FBF7EE",
-  accentSoft:    "#D4DCC4",
+  pageBg:        "#1A1F2E",
+  surface:       "#242938",
+  surfaceAlt:    "#2D3548",
+  border:        "#2D3548",
+  ink:           "#F0F4F8",
+  inkMuted:      "#94A3B8",
+  accent:        "#C9A96E",
+  accentInk:     "#1A1F2E",
+  accentSoft:    "#4A5568",
   fontDisplay:   "var(--font-display), 'Cormorant Garamond', Georgia, serif",
-  fontBody:      "var(--font-nunito), 'Nunito', system-ui, sans-serif",
+  fontBody:      "var(--font-body), 'Inter', system-ui, sans-serif",
   displayItalic: "italic",
   fontDisplayLabel: "Cormorant Garamond",
-  fontBodyLabel:    "Nunito",
-  isDark:        false,
+  fontBodyLabel:    "Inter",
+  isDark:        true,
 };
 
 /* ── 11. Editorial — Sage + cream, massive serif, collage feel ───── */
