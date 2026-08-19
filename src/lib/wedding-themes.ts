@@ -234,17 +234,20 @@ const FROSTED: ThemeTokens = {
   isDark:        true,
 };
 
-/* ── 11. Editorial — Sage + cream, massive serif, collage feel ───── */
+/* ── 11. Editorial — Bold magazine spread, black + rose, high contrast ─
+ * Kept in sync with src/components/weddings/layouts/EditorialLayout.tsx.
+ * Vogue-wedding-spread aesthetic: heavy Cormorant Garamond, left-aligned
+ * section headers, asymmetric photo grids, rose as the single accent. */
 const EDITORIAL: ThemeTokens = {
-  pageBg:        "#FAF7F2",
-  surface:       "#FFFFFF",
-  surfaceAlt:    "#F0EDE5",
-  border:        "#D8D3C4",
+  pageBg:        "#FAFAFA",
+  surface:       "#F0F0F0",
+  surfaceAlt:    "#F0F0F0",
+  border:        "#E0E0E0",
   ink:           "#1A1A1A",
-  inkMuted:      "#888780",
-  accent:        "#7C9A7E",
-  accentInk:     "#FAF7F2",
-  accentSoft:    "#D8E1D6",
+  inkMuted:      "#6B6B6B",
+  accent:        "#B96476",
+  accentInk:     "#FAFAFA",
+  accentSoft:    "#F3D5DC",
   fontDisplay:   "var(--font-display), 'Cormorant Garamond', Georgia, serif",
   fontBody:      "var(--font-body), 'Inter', system-ui, sans-serif",
   displayItalic: "normal",

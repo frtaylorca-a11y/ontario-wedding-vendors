@@ -27,6 +27,7 @@ import { ScrollFadeIn } from "@/components/weddings/ScrollFadeIn";
 import { EventBand } from "@/components/weddings/EventBand";
 import { TerracottaLayout } from "@/components/weddings/layouts/TerracottaLayout";
 import { FrostedGlassLayout } from "@/components/weddings/layouts/FrostedGlassLayout";
+import { EditorialLayout } from "@/components/weddings/layouts/EditorialLayout";
 import type { CreditVendor, WeddingLayoutProps } from "@/components/weddings/layouts/types";
 
 export const dynamic = "force-dynamic";
@@ -322,6 +323,9 @@ export default async function WeddingSitePage({ params }: { params: Params }) {
    * matching the screenshot they picked in the wizard. */
   if (plan.weddingTheme === "terracotta") {
     return <TerracottaLayout {...layoutProps} />;
+  }
+  if (plan.weddingTheme === "editorial") {
+    return <EditorialLayout {...layoutProps} />;
   }
   const isPremium = plan.tier === "premium";
   if (isPremium && plan.weddingTheme === "frosted") {
