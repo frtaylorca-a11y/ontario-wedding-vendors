@@ -1,1025 +1,356 @@
-# CLAUDE.md — Ontario Wedding Vendors Platform
-## ontarioweddingvendors.com + Domain Network
-## Tagline: "Find your perfect venue. Plan your perfect wedding."
-## Last updated: May 2026
+# Ontario Wedding Vendors — Master Project File
+**Last updated:** August 19, 2026 (rev 4 — major session: images fixed, all themes complete, bulk quote live)
+**Use this file:** Start any new conversation with "Read this project file" and paste contents.
+**Replaces:** OWV_Project_File_May20_2026.md — this is the current source of truth.
 
 ---
 
-## Strategic Context
+## THE PRODUCT
 
-This is not just a venue directory. It is the central hub of a wedding media network
-designed to dominate Ontario wedding search rankings, generate leads for Pic Booth
-and OneQR, and monetize through featured vendor listings and lead generation.
+**Ontario Wedding Vendors** — Canada's most complete Ontario wedding directory + AI planning tool + wedding website builder.
 
-**Core thesis (from Niagara Wedding Domination Strategy doc):**
-No competitor in this market operates a photo booth business AND a regional wedding
-directory network. That combination is the moat. Every directory property feeds
-Pic Booth leads. Every Pic Booth event strengthens the directories.
-
-**The platform has three interlocking layers:**
-1. Venue + vendor directory (OntarioWeddingVendors.com — this project)
-2. AI-powered wedding planner tool (couples plan their full wedding here)
-3. Lead generation engine for Pic Booth, OneQR, and paying vendors
+**Live at:** https://www.ontarioweddingvendors.com
+**GitHub:** github.com/frtaylorca-a11y/ontario-wedding-vendors (private)
+**Vercel:** pic-booth scope, auto-deploy on push to main
+**Neon DB:** ontario-wedding-vendors (Neon Postgres)
+**Operated by:** Rick Taylor / Pic Booth, St. Catharines ON
 
 ---
 
-## Project Identity
+## TECH STACK
 
-- **Primary domain:** ontarioweddingvendors.com
-- **Site name:** Ontario Wedding Vendors
-- **Tagline:** Find your perfect venue. Plan your perfect wedding.
-- **Repository:** github.com/frtaylorca-a11y/ontario-wedding-venues
-- **Vercel scope:** pic-booth (same as Guest Gallery and OneQR)
-- **Database:** Neon Postgres (new project: ontario-wedding-venues)
-- **ORM:** Drizzle ORM
-- **Stack:** Next.js 15 App Router, TypeScript, Tailwind CSS v4
+**Frontend:** Next.js 15 App Router + TypeScript + Tailwind v4
+**Database:** Neon Postgres + Drizzle ORM
+**Storage:** Cloudflare R2 (vendor photos, wedding website photos) — bucket: `ontarioweddingvendors`
+**Email:** Brevo (transactional + marketing)
+**AI:** Anthropic Claude API (claude-sonnet-4-6 + claude-haiku-4-5)
+**Maps:** Google Places API — **PAUSED. Do not re-enable without budget alert. Was $500/mo.**
+**Analytics:** GA4 + Meta Pixel + Microsoft Clarity — **env vars still needed in Vercel**
+**Hosting:** Vercel (pic-booth scope)
 
-### Launch scope phasing
-- **Phase 1 (launch):** Venues only — directory, individual venue pages,
-  region/city pages, region cards, venue-type cards, AI planner mockup.
-  Venues are the discovery entry point because they are the first decision
-  every couple makes.
-- **Phase 2 (post-launch):** Vendors — photographers, DJs, florists,
-  photo booths (Pic Booth + Niagara Photo Booth), cake, hair/makeup,
-  officiants. Vendor data already in schema; pages and outreach activate
-  after venue traffic establishes.
+**Local dev machine:** Mac mini M4, hostname picbooth-dev
+**Scraper machine:** OMEN Windows PC
+**Scraper folder:** C:\Users\rtayl\OneDrive\Desktop\ontario-venues-scraper\
+**Next.js folder:** C:\Users\rtayl\OneDrive\Desktop\ontario-wedding-venues\
 
 ---
 
-## Domain Network Architecture
+## MONETIZATION STRATEGY (decided August 19, 2026)
 
-OntarioWeddingVendors.com is the data platform. All other owned domains
-(niagaraweddingvenues.com, hamiltonweddingvenues.com, etc. — full list
-below) 301-redirect into it or call its API. This is the hub.
+**Current phase: FREE & OPEN.** No paywall, no Stripe. Goal is traffic, usage, and feedback — not revenue. Everything is open to everyone. Early couples will be GRANDFATHERED FREE FOREVER as an acquisition incentive.
 
-### Tier 1 — Niagara (build first, already owned)
-```
-niagaraweddingvenues.com          → /regions/niagara
-niagaraweddingdirectory.com       → /regions/niagara/vendors
-niagaraonthelakeweddingvenues.com → /cities/niagara-on-the-lake
-niagarafallsweddingvenues.com     → /cities/niagara-falls
-stcatharinesweddingvenues.com     → /cities/st-catharines
-niagaraweddingphotographers.com   → /regions/niagara/vendors/photographers
-niagaraphotobooth.com             → standalone (budget photo booth brand)
-```
-
-### Tier 2 — Golden Horseshoe (already owned)
-```
-hamiltonweddingvenues.com         → /cities/hamilton
-hamiltonweddingdirectory.com      → /cities/hamilton/vendors
-burlingtonweddingvenues.com       → /cities/burlington
-oakvilleweddingvenues.com         → /cities/oakville
-```
-
-### Tier 3 — GTA (owned, build after Niagara ranking)
-```
-torontoweddingvenues.com          → /cities/toronto (Year 2 only)
-```
-
-**All redirects are 301 — pass full SEO authority to OntarioWeddingVendors.com.**
-**NiagaraWeddingVenues.com is the most important redirect — highest domain authority.**
-
-### Sub-site pattern for lightweight city sites (Hostinger)
-City-specific domains can also run as separate Next.js static exports
-that call the OntarioWeddingVendors.com API:
-```
-GET /api/venues?region=niagara
-GET /api/vendors?region=niagara&category=photographer
-```
-This lets NiagaraWeddingVenues.com have its own branding and content
-while pulling live data from the central database. One database, unlimited sites.
+**The model decided (to introduce LATER, once there's traction — do NOT build yet):**
+- **Couple-paid planning suite.** $89 CAD, ONE-TIME, lifetime-of-engagement.
+- **Reasoning:** OWV doesn't have the traffic to sell vendors on lead-gen yet. The end consumer holds the value in hand — monetize them first. Vendor revenue (existing $29/$79/$149 tiers) is DEFERRED, not abandoned.
+- **Wall type:** FREE-TO-TRY preview. Let couples feel the value, then pay to keep their work.
+- **FREE tier (forever):** full vendor + venue directory; budget calculator fully usable but NOT saveable; Stag & Doe checklist.
+- **PAID tier ($89):** wedding website builder, AI generation, bulk quote / contact vendors, saved vendors, guest list, itinerary, music, full checklist, OneQR activation, saving a plan.
+- **Stripe:** required before paid launch. First few sales can be manual (payment link + flip tier='premium' by hand). Do not build until demand is validated.
+- **Validation sequence:** open free → drive real Ontario couples → watch behaviour → place paywall where couples actually felt value.
+- **Industry context:** The Knot/WeddingWire/Zola are all free-to-couple, vendor-monetized. Paid-couple players (Kaiplan $79 one-time, Folia $89/yr) are niche but real. OWV is choosing couple-paid because it lacks vendor-side traffic. This is a sequencing decision, not a permanent model choice.
+- **OneQR continuity is a differentiator:** OWV covers planning → website → day-of via OneQR. Use this full-lifecycle story to justify the price.
 
 ---
 
-## Design System — "The Niagara Edit"
+## DATABASE STATE (August 19, 2026)
 
-### Colours
-```css
---owv-rose:        #B96476;   /* dusty rose — primary CTA */
---owv-rose-light:  #D4899A;   /* hover states */
---owv-rose-pale:   #FDF5F7;   /* card backgrounds */
---owv-charcoal:    #2C2C2C;   /* headings, body text */
---owv-warm-grey:   #6B6B6B;   /* secondary text */
---owv-border:      #E8D5D9;   /* card borders, dividers */
---owv-white:       #FFFFFF;
---owv-cream:       #FAF7F2;   /* page background */
---owv-emerald:     #059669;   /* Premier badge */
---owv-blue:        #2563EB;   /* Active badge */
---owv-amber:       #D97706;   /* Listed badge */
-```
+| Table | Count | Notes |
+|---|---|---|
+| venues | 639 | 536 have R2 hero photos (84% coverage) |
+| vendors | 11,487 total | 4,018 visible, 7,469 hidden (dupes, no website, non-Ontario, social-only) |
+| vendor_pricing_data | ~300 | Thin but hardcoded ranges cover budget calculator |
+| wedding_plans | 7 | ALL are Rick's test data — true user count = 0 |
+| vendor_claims | 0 | Claim listing launched, no claims yet |
 
-### Typography
-- **Display/headings:** Cormorant Garamond (Google Fonts)
-- **Body/UI:** Inter (Google Fonts)
+**Visible vendor photo coverage:**
+- 2,562 of 4,018 visible vendors have R2 hero photos (64%)
+- 1,456 visible vendors on styled placeholders (dead sites, SPAs — won't improve via scraping)
+- All photos served from Cloudflare R2 — zero Google API dependency
 
-### Score badges
-```
-90+  → bg-emerald-100 text-emerald-800  "Premier"
-70–89 → bg-blue-100 text-blue-800       "Active"
-50–69 → bg-amber-100 text-amber-800     "Listed"
-<50  → hidden from public display
-```
+**Vendor breakdown by category (visible):**
+limo 1163, lighting_decor 929, hair_makeup 485, photographer 420, cake 374, florist 368, catering 347, videographer 264, wedding_planner 217, officiant 173, photo_booth 167, dj 126
 
-### Component conventions
-- Card: `rounded-2xl shadow-sm hover:shadow-md transition-shadow`
-- Button primary: rose bg, white text, `rounded-full px-6 py-3`
-- Button secondary: white bg, rose border + text, `rounded-full`
-- Pill/badge: `rounded-full px-3 py-1 text-xs font-medium`
+**Vendor regions:** gta 4154, niagara 456, hamilton 241, muskoka 166, southwestern 16
 
 ---
 
-## Geographic Zone Logic
+## BRAND
 
-The zone determines which Pic Booth / OneQR products are featured.
+**Colours:**
+- Rose: #B96476
+- Rose Light: #F7EEF1
+- Gold: #C9A96E
+- Navy: #1F2937
+- Charcoal: #2C2C2A
+- Cream/Warm White: #FAF8F5 (page background)
+- Card: #ffffff
 
-```typescript
-// src/lib/zones.ts
-
-export type Zone = 'niagara-gta' | 'ontario'
-
-const NIAGARA_GTA_REGIONS = ['niagara', 'gta', 'golden-horseshoe']
-
-export function getZone(region: string): Zone {
-  return NIAGARA_GTA_REGIONS.includes(region) ? 'niagara-gta' : 'ontario'
-}
-
-// Zone: niagara-gta
-//   Photo booth category → Pic Booth FEATURED (pinned top)
-//   Venue pages → Pic Booth contextual mention if venue is compatible
-//   Budget planner → Pic Booth recommended for photo booth category
-//   OneQR → shown as "digital guest experience" add-on
-
-// Zone: ontario (outside Niagara/GTA)
-//   Photo booth category → local vendors (no Pic Booth — they don't serve here)
-//   OneQR → shown as venue technology on ALL venue pages province-wide
-//   Budget planner → local photo booth vendors shown, OneQR promoted
-```
-
-### Pic Booth appearance rules (from strategy doc)
-The editorial test: "Would this mention make sense if Pic Booth were a competitor's
-business?" If yes — it's genuine editorial. If no — it's an ad in disguise.
-Only publish mentions that pass this test.
-
-| Page type | Placement |
-|-----------|-----------|
-| Venue page (Zone: niagara-gta, compatible) | Body copy only — venue-specific context |
-| Category page (outdoor/winery) | Editorial advice paragraph |
-| Blog post | Natural recommendation in vendor context |
-| Vendor listing | Standard entry alongside real competitors |
-| Budget planner | Recommended vendor for photo booth category |
-
-### Two-brand photo booth strategy
-- **Pic Booth** (picbooth.ca) — premium, JUNO Awards, editorial voice
-- **Niagara Photo Booth** (niagaraphotobooth.com) — budget tier, separate brand
-- Both listed as separate vendors in the directory — no visual distinction
-- Pic Booth pinned as Featured. Niagara Photo Booth listed normally.
-- niagaraphotobooth.com has NO mention of Pic Booth — full separation
-
-### OneQR placement
-- Every venue page across ALL Ontario: "Ask about OneQR digital guest experience"
-- Venue coordinator outreach: OneQR as their platform, not just a rental
-- Vendors section: OneQR as recommended event tech for venues
-- UTM: `utm_source=owv&utm_medium=venue-page&utm_campaign=oneqr-upsell`
+**Fonts:** Cormorant Garamond (display) + Inter (body)
+Page background warm cream (#FAF8F5); cards white (#fff); footer dark charcoal #2C2C2A.
 
 ---
 
-## Database Schema
-
-### venues table
-```typescript
-export const venues = pgTable('venues', {
-  id:                    serial('id').primaryKey(),
-  placeId:               varchar('place_id', { length: 255 }).unique(),
-  slug:                  varchar('slug', { length: 255 }).unique().notNull(),
-  name:                  varchar('name', { length: 255 }).notNull(),
-  address:               text('address'),
-  city:                  varchar('city', { length: 100 }),
-  region:                varchar('region', { length: 100 }),
-  province:              varchar('province', { length: 10 }).default('ON'),
-  postalCode:            varchar('postal_code', { length: 10 }),
-  phone:                 varchar('phone', { length: 50 }),
-  website:               varchar('website', { length: 500 }),
-  email:                 varchar('email', { length: 255 }),
-  category:              varchar('category', { length: 100 }),
-  venueType:             varchar('venue_type', { length: 100 }),
-  capacityMin:           integer('capacity_min'),
-  capacityMax:           integer('capacity_max'),
-  coordinatorName:       varchar('coordinator_name', { length: 255 }),
-  coordinatorEmail:      varchar('coordinator_email', { length: 255 }),
-  coordinatorPhone:      varchar('coordinator_phone', { length: 50 }),
-  catering:              varchar('catering', { length: 100 }),
-  accommodations:        varchar('accommodations', { length: 50 }),
-  indoorOutdoor:         varchar('indoor_outdoor', { length: 50 }),
-  hasWeddingsPage:       varchar('has_weddings_page', { length: 10 }),
-  weddingsPageUrl:       varchar('weddings_page_url', { length: 500 }),
-  hasPackages:           varchar('has_packages', { length: 10 }),
-  packages:              text('packages'),
-  hasPricing:            varchar('has_pricing', { length: 10 }),
-  hasTestimonials:       varchar('has_testimonials', { length: 10 }),
-  bookingPlatform:       varchar('booking_platform', { length: 100 }),
-  instagramHandle:       varchar('instagram_handle', { length: 100 }),
-  googleRating:          numeric('google_rating', { precision: 3, scale: 1 }),
-  reviewCount:           integer('review_count'),
-  googleClosed:          varchar('google_closed', { length: 10 }).default('no'),
-  weddingReadinessScore: integer('wedding_readiness_score'),
-  scoreReasoning:        text('score_reasoning'),
-  description:           text('description'),
-  picBoothCompatible:    boolean('pic_booth_compatible').default(false),
-  lat:                   numeric('lat', { precision: 10, scale: 7 }),
-  lng:                   numeric('lng', { precision: 10, scale: 7 }),
-  tier:                  varchar('tier', { length: 20 }).default('free'),
-  claimed:               boolean('claimed').default(false),
-  verified:              boolean('verified').default(false),
-  featured:              boolean('featured').default(false),
-  websiteStatus:         varchar('website_status', { length: 50 }),
-  lastGoogleSync:        timestamp('last_google_sync'),
-  lastWebsiteCheck:      timestamp('last_website_check'),
-  lastVerified:          timestamp('last_verified'),
-  source:                varchar('source', { length: 100 }),
-  createdAt:             timestamp('created_at').defaultNow(),
-  updatedAt:             timestamp('updated_at').defaultNow(),
-})
-```
-
-### vendors table
-```typescript
-export const vendors = pgTable('vendors', {
-  id:               serial('id').primaryKey(),
-  placeId:          varchar('place_id', { length: 255 }).unique(),
-  slug:             varchar('slug', { length: 255 }).unique().notNull(),
-  name:             varchar('name', { length: 255 }).notNull(),
-  category:         varchar('category', { length: 100 }).notNull(),
-  // Categories: photographer, videographer, dj, florist, photo_booth,
-  // catering, cake, hair_makeup, officiant, limo
-  city:             varchar('city', { length: 100 }),
-  region:           varchar('region', { length: 100 }),
-  province:         varchar('province', { length: 10 }).default('ON'),
-  address:          text('address'),
-  phone:            varchar('phone', { length: 50 }),
-  website:          varchar('website', { length: 500 }),
-  email:            varchar('email', { length: 255 }),
-  instagramHandle:  varchar('instagram_handle', { length: 100 }),
-  googleRating:     numeric('google_rating', { precision: 3, scale: 1 }),
-  reviewCount:      integer('review_count'),
-  googleClosed:     varchar('google_closed', { length: 10 }).default('no'),
-  priceTier:        varchar('price_tier', { length: 20 }),
-  priceFrom:        integer('price_from'),
-  priceTo:          integer('price_to'),
-  description:      text('description'),
-  lat:              numeric('lat', { precision: 10, scale: 7 }),
-  lng:              numeric('lng', { precision: 10, scale: 7 }),
-  serveRadiusKm:    integer('serve_radius_km').default(100),
-  tier:             varchar('tier', { length: 20 }).default('free'),
-  claimed:          boolean('claimed').default(false),
-  verified:         boolean('verified').default(false),
-  featured:         boolean('featured').default(false),
-  isPicBooth:       boolean('is_pic_booth').default(false),
-  isNiagaraPhotoBooth: boolean('is_niagara_photo_booth').default(false),
-  isOneQR:          boolean('is_oneqr').default(false),
-  source:           varchar('source', { length: 100 }),
-  createdAt:        timestamp('created_at').defaultNow(),
-  updatedAt:        timestamp('updated_at').defaultNow(),
-})
-```
-
-### weddingPlans table (AI Wedding Planner)
-```typescript
-export const weddingPlans = pgTable('wedding_plans', {
-  id:                 serial('id').primaryKey(),
-  coupleId:           varchar('couple_id', { length: 255 }).unique(),
-  brideName:          varchar('bride_name', { length: 100 }),
-  groomName:          varchar('groom_name', { length: 100 }),
-  weddingDate:        date('wedding_date'),
-  totalBudget:        integer('total_budget'),
-  venueId:            integer('venue_id').references(() => venues.id),
-  guestCount:         integer('guest_count'),
-  region:             varchar('region', { length: 100 }),
-  style:              varchar('style', { length: 50 }), // intimate, standard, luxury
-  budgetAllocations:  jsonb('budget_allocations'),   // Claude AI allocations
-  bookedVendors:      jsonb('booked_vendors'),        // [{vendorId, category, amount}]
-  tasks:              jsonb('tasks'),                 // [{title, dueDate, done, assignee}]
-  guests:             jsonb('guests'),                // [{name, rsvp, dietary, table}]
-  itinerary:          jsonb('itinerary'),             // [{time, event, notes}]
-  packingList:        jsonb('packing_list'),
-  musicList:          jsonb('music_list'),
-  notes:              text('notes'),
-  createdAt:          timestamp('created_at').defaultNow(),
-  updatedAt:          timestamp('updated_at').defaultNow(),
-})
-```
-
----
-
-## Project Structure
+## ONTARIO PRICING (validated May 2026 — in src/lib/ontario-pricing.ts)
 
 ```
-ontario-wedding-venues/
-├── CLAUDE.md
-├── package.json
-├── next.config.ts
-├── tailwind.config.ts
-├── drizzle.config.ts
-├── .env.local              ← never commit
-├── .env.example
-├── .gitignore
-│
-├── src/
-│   ├── app/
-│   │   ├── globals.css         ← design tokens
-│   │   ├── layout.tsx          ← root layout, fonts, nav
-│   │   ├── page.tsx            ← homepage
-│   │   ├── sitemap.ts          ← auto-generated from DB
-│   │   ├── robots.ts
-│   │   │
-│   │   ├── venues/
-│   │   │   ├── page.tsx        ← listing + filter
-│   │   │   └── [slug]/page.tsx ← individual venue
-│   │   │
-│   │   ├── regions/
-│   │   │   └── [region]/page.tsx
-│   │   │
-│   │   ├── cities/
-│   │   │   └── [city]/page.tsx
-│   │   │
-│   │   ├── vendors/
-│   │   │   ├── page.tsx
-│   │   │   └── [category]/page.tsx
-│   │   │
-│   │   ├── plan/
-│   │   │   └── page.tsx        ← AI wedding planner
-│   │   │
-│   │   ├── blog/
-│   │   │   ├── page.tsx
-│   │   │   └── [slug]/page.tsx
-│   │   │
-│   │   └── api/
-│   │       ├── venues/
-│   │       │   ├── route.ts    ← GET /api/venues
-│   │       │   └── [slug]/route.ts
-│   │       ├── vendors/route.ts
-│   │       └── plan/
-│   │           ├── route.ts    ← POST /api/plan (Claude AI allocator)
-│   │           └── [id]/route.ts
-│   │
-│   ├── components/
-│   │   ├── ui/
-│   │   │   ├── VenueCard.tsx
-│   │   │   ├── VendorCard.tsx
-│   │   │   ├── ScoreBadge.tsx
-│   │   │   ├── RatingStars.tsx
-│   │   │   ├── FilterBar.tsx
-│   │   │   ├── MapEmbed.tsx
-│   │   │   └── PicBoothCTA.tsx  ← contextual, zone-aware
-│   │   ├── layout/
-│   │   │   ├── Header.tsx
-│   │   │   ├── Footer.tsx       ← includes disclosure line
-│   │   │   └── Nav.tsx
-│   │   ├── seo/
-│   │   │   └── SchemaInjector.tsx ← auto-generates JSON-LD
-│   │   └── features/
-│   │       ├── BudgetPlanner.tsx
-│   │       ├── VenueGrid.tsx
-│   │       ├── VendorGrid.tsx
-│   │       └── WeddingPlanDashboard.tsx
-│   │
-│   ├── lib/
-│   │   ├── db.ts               ← Neon + Drizzle client
-│   │   ├── schema.ts           ← all table definitions
-│   │   ├── queries.ts          ← reusable DB queries
-│   │   ├── regions.ts          ← city → region mapping
-│   │   ├── zones.ts            ← geographic zone logic
-│   │   ├── budget.ts           ← Ontario pricing benchmarks
-│   │   └── utils.ts            ← slug generation, formatting
-│   │
-│   └── types/index.ts
-│
-└── scripts/
-    ├── import-venues.ts        ← imports directory_ready.csv
-    ├── import-vendors.ts       ← imports vendor data
-    └── generate-slugs.ts
+photographer:    niagara {1200, 1875, 7500}   gta {1500, 3200, 7000}
+videographer:    niagara {1500, 3500, 4900}   gta {1800, 2500, 9000}
+dj:              niagara {1200, 1750, 3500}   gta {1200, 1599, 3800}
+florist:         niagara {2000, 3500, 8000}   gta {1500, 3000, 8000}
+officiant:       niagara { 150,  350, 1400}   gta { 200,  399, 1200}
+hair_makeup:     niagara { 250,  450,  750}   gta { 300,  500, 1200}
+catering (pp):   niagara {  85,  125,  200}   gta {  95,  140,  250}
+wedding_planner: niagara {1500, 3000, 8000}   gta {2500, 6000,15800}
+cake:            niagara { 400,  750, 2500}   gta { 500,  900, 3000}
+limo:            niagara { 600, 1200, 3000}   gta { 800, 1500, 3995}
+photo_booth:     niagara { 895, 1295, 2495}   gta { 800, 1200, 2500} ← Pic Booth hardcoded
+lighting_decor:  niagara { 800, 1500, 4000}   gta {1000, 2000, 6000}
+```
+(format: {min, median, max})
+
+---
+
+## DOMAINS OWNED
+
+All registered, DNS at Hostinger:
+- ontarioweddingvendors.com (main site)
+- niagaraweddingvenues.com ← wedding website subdomains
+- niagaraonthelakeweddingvenues.com ← wedding website subdomains
+- niagarafallsweddingvenues.com
+- stcatharinesweddingvenues.com
+- burlingtonweddingvenues.com ← wedding website subdomains
+- torontoweddingdirectory.com ← wedding website subdomains
+- hamiltonweddingdirectory.com
+- oakvilleweddingvenues.com
+- mississaugaweddingvenues.com
+- niagaraweddingdirectory.com
+- niagaraweddingphotographers.com
+- niagaraphotobooth.com (separate budget brand)
+
+**Wedding website subdomain routing:** couples get [names].[regionaldomain].com
+Middleware rewrites to /weddings/[slug]. DNS: wildcard CNAME *.domain → cname.vercel-dns.com
+STATUS: Code built, DNS NOT yet configured in Hostinger.
+
+---
+
+## WHAT'S BUILT (Features Shipped — current as of Aug 19, 2026)
+
+### Directory
+- Venue + vendor listing pages with filters
+- Venue + vendor detail pages (enriched data, R2 photos, ratings)
+- Proximity/distance filter (haversine)
+- Pinned vendor system (Pic Booth pinned in photo_booth)
+- normalizeRegionDisplay() across all pages
+- Dynamic trust bar (live DB counts)
+- Bulletproof HeroImage component — graceful R2 photo fallback, never shows broken image icon
+- Styled per-category placeholder for vendors with no photo
+
+### Planning Tool (/plan)
+- 20-category budget calculator with validated Ontario pricing (fully usable free, save requires paid later)
+- Progressive budget UI (8 active + 12 collapsible)
+- Venue-aware pricing, bundle detection
+- Quote request system (single vendor — date+venue required, Lead Quality Score 0–5)
+- Saved vendors (heart/bookmark → wedding_plans)
+- Living checklist (38 tasks), Stag & Doe planner
+- Inclusive partner1Name/partner2Name fields
+- /plan/music, /plan/guests, /plan/itinerary, /plan/website
+- **Bulk quote system — SHIPPED (/plan/quotes):** couples select saved vendors by category, AI generates personalised 3-part email from plan data + rawStory, sends one email per vendor via Brevo, reply-to = couple's email, logs to quote_requests, "Contacted ✓" badges. Guardrails: date+venue required, batch cap ~15, 30-day re-send confirm, skips vendors with no email. rawStory seed swap in place so email tone matches wedding website voice.
+
+### Wedding Websites (/weddings/[slug])
+- Auto-provisioning: slug minted on venue/name save
+- **14 themes total — ALL SHIPPED:**
+  - Original 8: Romantic, Classic, Rustic, Modern, Garden, Coastal, Boho, Luxe
+  - New 6 (Aug 19): Editorial, Minimal Blush, Terracotta, Retro Charm, Bold Garden, Frosted Glass
+  - Terracotta + Frosted Glass are premium-gated (server-side enforcement)
+- Colour palette picker — 23 palettes in 6 groups, first 8 free, rest premium-locked
+- Typography selector — 5 styles with live font previews, promptHint pipes to AI generator
+- Premium gate — 3 free AI generations, upgrade modal, lock badges
+- Sticky publish button on /plan/website
+- AI copy generation (/api/wedding-website/generate, safeParseJson)
+- Password protection, wedding hashtag, section toggle editor (12 sections)
+- Vendor credits section, OneQR QR embed
+- **Wedding website wizard — IN PROGRESS** (screenshot-based 3-step flow — see Priority 1 below)
+
+### Vendor Features
+- Claim listing (/claim-listing) — LIVE
+- Vendor dashboard skeleton (/vendors/dashboard)
+- Logo upload, "Is this your business?" sidebar card, vendor_claims table
+
+### Images / R2
+- All vendor/venue images served from Cloudflare R2 — zero Google API dependency
+- 2,562 visible vendors with R2 hero photos (64%)
+- 536 venues with R2 hero photos (84%)
+- Scripts: backfill-website-heros.ts (--only-missing flag), backfill-venue-website-heros.ts, hoist-gallery-photo-to-hero.ts
+- R2 URL protocol normalization in place (bf4f48d) — all URLs properly https://
+
+### Content / Infra
+- 8 blog posts (SEO), /about, /terms
+- robots.txt (AI crawlers blocked), rate limiting (30/min/IP), honeypot /api/hp
+- Analytics scaffolding ready — needs env vars (see Manual Tasks)
+- Cookie consent, UTM capture, OneQR integration
+
+---
+
+## PENDING / NEXT FOR CLAUDE CODE (priority order)
+
+### Priority 1 — Wedding Website Wizard (screenshot-based)
+Replaces theme picker as entry point when wizardCompleted=false. Full editor becomes "advanced" path.
+
+**DECISION (settled):** Screenshots ARE the theme + palette choice. No separate colour-mood step.
+
+- **Step 1:** 2×3 grid of 6 screenshot cards → tap one → rose border + checkmark → sets weddingTheme
+  - editorial.jpg → 'editorial' "Bold typography, collage photos"
+  - minimal-blush.jpg → 'minimal' "Clean, soft, timeless"
+  - terracotta.jpg → 'terracotta' "Earthy tones, rustic warmth"
+  - retro-charm.jpg → 'retro' "Playful, vintage, personality"
+  - bold-garden.jpg → 'bold-garden' "Vibrant, editorial, modern"
+  - frosted-glass.jpg → 'frosted' "Elegant, moody, dramatic"
+  - NOTE: card slug ≠ themeKey for minimal-blush→minimal and retro-charm→retro
+  - Footer: "Want more options? Browse all 14 themes →"
+- **Step 2:** "Your story" textarea (500 chars, optional) → [Generate my website →] rose CTA
+- **Step 3 (after generation):** photo upload → own photo to R2 | pick from 20 heroes | skip → gradient. Then preview + publish.
+- **Assets needed:** 6 reference screenshots → /public/images/wedding-styles/ (Rick to supply)
+- **DB additions:** wedding_plans.rawStory text, wizardCompleted boolean, wizardCompletedAt timestamp
+
+### Priority 2 — Wire hero image picker
+Once Midjourney images are uploaded to /public/images/wedding-heroes/ (hero-01.jpg through hero-20.jpg), wire them into wizard Step 3 Card B photo picker.
+
+### Priority 3 — One polished demo plan
+Build "Charlotte & Francis" as a showcase wedding website — polished content, real venue, good hero photo. Used for marketing screenshots and to show couples what's possible.
+
+### Then — Stripe + paywall
+Only after real user demand is validated. See monetization strategy above.
+
+---
+
+## MANUAL TASKS PENDING (Rick)
+
+**Urgent — blocks analytics:**
+- GA4: analytics.google.com → create property → get G-XXXXXXXXXX → add NEXT_PUBLIC_GA4_ID to Vercel
+- Microsoft Clarity: clarity.microsoft.com → get project ID → add NEXT_PUBLIC_CLARITY_ID to Vercel
+- Meta Pixel: business.facebook.com → Events Manager → add NEXT_PUBLIC_META_PIXEL_ID to Vercel
+
+**Urgent — blocks wedding website subdomains:**
+- Hostinger DNS: wildcard CNAMEs for *.niagaraweddingvenues.com, *.niagaraonthelakeweddingvenues.com, *.burlingtonweddingvenues.com, *.torontoweddingdirectory.com → cname.vercel-dns.com
+- Vercel: add each *.domain as wildcard domain on the project
+
+**Growth:**
+- Google Search Console: add www.ontarioweddingvendors.com, submit /sitemap.xml
+- Midjourney: generate 20 hero images, name hero-01.jpg through hero-20.jpg, copy to public/images/wedding-heroes/
+- Reference screenshots: save 6 design screenshots to public/images/wedding-styles/ (editorial.jpg, minimal-blush.jpg, terracotta.jpg, retro-charm.jpg, bold-garden.jpg, frosted-glass.jpg)
+- First users: Pic Booth network, local Ontario wedding Facebook groups, r/WeddingsCanada
+
+**Env vars still needed in Vercel:**
+- NEXT_PUBLIC_GA4_ID
+- NEXT_PUBLIC_CLARITY_ID
+- NEXT_PUBLIC_META_PIXEL_ID
+- BREVO_API_KEY
+- ONEQR_API_URL + ONEQR_API_KEY
+
+---
+
+## DATA PIPELINE (OMEN Scripts)
+
+**Location:** C:\Users\rtayl\OneDrive\Desktop\ontario-venues-scraper\
+
+**Key scripts:** vendor_search.py (Google Places — PAUSED), enrich_venues.py, mine_reviews.py, scrape_vendor_pricing.py (safe_parse_json fix in place), ww_scraper3.py (Playwright + Claude Vision), fix_regions.py (run after EVERY import), db_full_audit.py
+
+**WeddingWire sector IDs:**
+```
+photographers 8/2, videographers 33/2, djs 202/2, florists 15/2,
+hair_makeup 38/3 (← grupo=3), catering 5/2, wedding_planners 28/2,
+cake 48/2, limo 11/2, photo_booth 207/2, lighting_decor 45/2, officiants 205/2
+```
+WW scraper: `python ww_scraper3.py --category all --start-page 1 --end-page 50`
+Browser window MUST be visible (not minimized) for screenshots.
+
+**Import pipeline (always run in this order):**
+```
+npx tsx scripts/import-vendors.ts
+python fix_regions.py
+npx tsx scripts/enrich-ww-vendors.ts
+npx tsx scripts/backfill-website-heros.ts --only-missing
+npx tsx scripts/backfill-venue-website-heros.ts
 ```
 
----
+**Google Places API: PAUSED.** Was $500/mo. Do not re-enable without a $50/mo budget alert set first. Photo backfill is now done via website scraping (R2), not Google. The only reason to re-enable would be a targeted enrichment pass for vendors missing website URLs.
 
-## Environment Variables
-
-```bash
-DATABASE_URL=postgresql://...
-ANTHROPIC_API_KEY=sk-ant-...
-GOOGLE_PLACES_API_KEY=AIza...
-NEXT_PUBLIC_SITE_URL=https://ontarioweddingvendors.com
-NEXT_PUBLIC_GOOGLE_MAPS_KEY=AIza...
+**Underserved regions worth scraping when ready:**
 ```
-
----
-
-## Region Mapping
-
-```typescript
-// src/lib/regions.ts
-export const REGION_MAP: Record<string, string> = {
-  // Niagara
-  'niagara-on-the-lake': 'niagara', 'niagara-falls': 'niagara',
-  'st-catharines': 'niagara', 'lincoln': 'niagara', 'grimsby': 'niagara',
-  'welland': 'niagara', 'thorold': 'niagara', 'pelham': 'niagara',
-  'fort-erie': 'niagara', 'port-colborne': 'niagara', 'wainfleet': 'niagara',
-  'beamsville': 'niagara', 'jordan': 'niagara', 'vineland': 'niagara',
-  'fonthill': 'niagara', 'queenston': 'niagara', 'st-davids': 'niagara',
-  // Hamilton / Burlington
-  'hamilton': 'golden-horseshoe', 'burlington': 'golden-horseshoe',
-  'oakville': 'golden-horseshoe', 'milton': 'golden-horseshoe',
-  'ancaster': 'golden-horseshoe', 'waterdown': 'golden-horseshoe',
-  // GTA
-  'toronto': 'gta', 'mississauga': 'gta', 'brampton': 'gta',
-  'vaughan': 'gta', 'markham': 'gta', 'richmond-hill': 'gta',
-  'newmarket': 'gta', 'aurora': 'gta', 'ajax': 'gta', 'whitby': 'gta',
-  'oshawa': 'gta', 'pickering': 'gta', 'king-city': 'gta',
-  'caledon': 'gta', 'halton-hills': 'gta',
-  // Muskoka / Cottage Country
-  'barrie': 'cottage-country', 'collingwood': 'cottage-country',
-  'wasaga-beach': 'cottage-country', 'orillia': 'cottage-country',
-  'gravenhurst': 'cottage-country', 'huntsville': 'cottage-country',
-  'bracebridge': 'cottage-country', 'midland': 'cottage-country',
-  // Waterloo Region
-  'kitchener': 'waterloo-region', 'waterloo': 'waterloo-region',
-  'cambridge': 'waterloo-region', 'guelph': 'waterloo-region',
-  'fergus': 'waterloo-region', 'elora': 'waterloo-region',
-  // Southwestern Ontario
-  'london': 'southwestern', 'windsor': 'southwestern',
-  'chatham': 'southwestern', 'stratford': 'southwestern',
-  'woodstock': 'southwestern', 'brantford': 'southwestern',
-  'sarnia': 'southwestern',
-  // Eastern Ontario
-  'ottawa': 'eastern', 'kingston': 'eastern', 'belleville': 'eastern',
-  'cobourg': 'eastern', 'peterborough': 'eastern', 'brockville': 'eastern',
-  // Prince Edward County
-  'picton': 'prince-edward-county', 'bloomfield': 'prince-edward-county',
-}
-
-export const REGIONS = [
-  { slug: 'niagara',              label: 'Niagara',               featured: true },
-  { slug: 'gta',                  label: 'Greater Toronto Area',  featured: true },
-  { slug: 'golden-horseshoe',     label: 'Hamilton & Burlington', featured: true },
-  { slug: 'cottage-country',      label: 'Muskoka & Cottage Country', featured: true },
-  { slug: 'waterloo-region',      label: 'Waterloo Region',       featured: false },
-  { slug: 'southwestern',         label: 'Southwestern Ontario',  featured: false },
-  { slug: 'eastern',              label: 'Eastern Ontario',       featured: false },
-  { slug: 'prince-edward-county', label: 'Prince Edward County',  featured: false },
-]
+python vendor_search.py --category all --region eastern --skip-claude
+python vendor_search.py --category all --region waterloo --skip-claude
+python vendor_search.py --category all --region pec --skip-claude
 ```
+PEC (Prince Edward County) is a major Ontario wedding destination — nearly zero coverage currently.
 
 ---
 
-## API Routes
+## BACKLOG (after site has real users)
 
-### GET /api/venues
-Params: `region`, `city`, `type`, `indoor`, `catering`, `capacity`,
-`score` (default: 50 min), `sort` (score/rating/reviews/capacity),
-`limit` (default 20), `offset`
+**Phase 2:** Cloudflare bot protection; Venue outreach email system (admin + Brevo bulk + token response form); Vendor claim email sequence; Stripe ($89 CAD one-time couple suite); Vendor dashboard with real auth; Seating plan builder /plan/seating; 20+ blog posts; Vendor analytics dashboard.
 
-Returns: `{ venues: Venue[], total: number }`
-
-Used by: venue listing page, sub-site city domains (NiagaraWeddingVenues.com etc.)
-
-### GET /api/vendors
-Params: `region`, `city`, `category`, `lat`, `lng`, `radiusKm`, `limit`, `offset`
-
-Returns: `{ vendors: Vendor[] }` — sorted by proximity when lat/lng provided
-
-### POST /api/plan
-Body: `{ budget, guestCount, venueId, region, style }`
-
-Calls Claude API to generate budget allocation across wedding categories.
-Returns Ontario-realistic pricing with specific vendor recommendations.
+**Phase 3:** Wedding websites full launch; custom domains for premium sites; RSVP in OneQR feeding back to OWV guest list; Reddit scraping (r/WeddingsCanada); AI wedding advisor in /plan; Ontario directory network sites; preferred-vendor mining.
 
 ---
 
-## UX Decisions (from competitive analysis — apply to all pages)
+## MONETIZATION MODEL
 
-### Icons — custom SVG only
-NO emoji. NO icon font libraries. All venue type icons are custom SVG.
-Stroke width: 1.5px. Stroke-linecap: round. Stroke-linejoin: round.
-Fill: none. Size in pills: 15×15px. Size in category cards: 22×22px.
+See MONETIZATION STRATEGY block above — it is current and authoritative.
 
-Approved icon paths:
-- Winery: wine glass with stem (path: cup shape + stem + base line)
-- Estate: manor house (path: peaked roof house with windows and door)
-- Outdoor: mountain silhouette (path: triangle peaks + sun circle)
-- Hotel: building with floors (path: rect with horizontal lines + windows)
-- Barn: barn roofline (path: angled roof + vertical walls + door arch)
-- Golf club: flag on green (path: vertical pole + flag + ellipse base)
-- Conservation: leaf/nature (path: teardrop leaf + center stem)
-- Intimate: heart (path: standard heart SVG path)
-
-### Venue cards — required elements
-Every VenueCard must include ALL of these:
-1. Venue type + region as category label (rose, uppercase, 0.65rem)
-2. Venue name (Cormorant Garamond, 1.1rem, charcoal)
-3. City/location (muted, 0.72rem)
-4. Detail chips: capacity · catering type · indoor/outdoor
-   (bg-soft background, border, pill shape, 0.63rem)
-5. Google rating stars + review count
-6. "Verified [Month Year]" badge in green
-7. Heart/save icon (top right of image area, or bottom of card)
-8. Score badge: Premier (90+) / Active (70–89) / Listed (50–69)
-9. "View venue →" CTA link
-
-### Homepage funnel logic
-Directory → Planner conversion happens at the heart/save icon.
-When unauthenticated user clicks heart:
-  → Modal: "Save this venue to your wedding plan"
-  → Google sign-in or email sign-up
-  → On success: redirect to /plan with venue pre-loaded
-  → Planning dashboard opens with venue locked in
-
-When authenticated user clicks heart:
-  → Venue saved instantly
-  → Toast: "Saved to your wedding plan →" (links to /plan)
-
-### Budget slider (Section 6)
-Built as a client component with useState.
-Uses ONTARIO_BUDGET_SPLITS from src/lib/budget.ts.
-No API call needed — pure frontend calculation.
-Shows category breakdown as percentage pills, not a chart (MVP).
-Updates in real time as slider moves.
-CTA text updates dynamically: "See venues under $[venue_budget] →"
-
-## SEO Architecture
-
-### Page types and targets (from SEO Playbook + Strategy doc)
-
-**Homepage** → "Ontario wedding venues", "wedding venues Ontario"
-
-### Positioning statement (use throughout site and marketing)
-"Find your perfect venue. Plan your perfect wedding."
-The venue is the first decision every couple makes. Everything else —
-budget, vendors, guest list, timeline — flows from that choice.
-OntarioWeddingVendors.com is the only Ontario platform that connects
-the venue search directly to a full AI-powered wedding planner.
-
-### Hero copy (exact)
-H1 line 1: "Find your perfect venue."
-H1 line 2 (rose italic): "Plan your perfect wedding."
-Subheading: "Ontario's most complete wedding venue directory — with an
-AI planning tool that builds your entire wedding around the venue you choose."
-Primary CTA: "Find my venue →"
-Secondary CTA: "See how it works" (smooth scrolls to bridge section)
-
-### Homepage section order (7 sections)
-
-**Section 1 — Nav + Trust bar + Hero (keep, no changes)**
-- Sticky nav: logo + links + "Sign in" + "Start planning" CTA
-- Black trust bar: "1,280+ venues · 76 premier listings · Google-verified · Updated every 60 days"
-- Hero: H1 + subheading + search bar + quick-filter type pills
-- Search bar has region dropdown (defaults to Niagara)
-- Type filter pills: Winery · Estate · Outdoor · Hotel · Barn · Golf Club · Conservation · Intimate
-- All pills use custom SVG icons — NO emoji, NO icon fonts
-
-**Section 2 — Featured venues grid (modified)**
-- Top 6 venues by score + reviews, Niagara weighted
-- Each VenueCard has:
-  - Venue type badge (top left) + Score badge (top right)
-  - Detail chips: capacity · catering · indoor/outdoor
-  - Google rating + review count + "Powered by Google"
-  - "Verified [Month Year]" badge in green
-  - Heart/save icon — clicking triggers account creation modal
-    with venue pre-loaded into planning dashboard
-- Heart save is the primary conversion point from directory → planner
-
-**Section 3 — "Find your venue. Plan your wedding." bridge (NEW)**
-- Two-column layout:
-  - Left: planning dashboard preview mockup (venue locked in,
-    budget donut chart, vendor matches shown)
-  - Right: copy block
-    Eyebrow: "More than a directory"
-    H2: "Your venue unlocks your entire wedding plan"
-    Body: "Pick any venue on OntarioWeddingVendors.com and our AI
-    planner instantly allocates your budget, matches vendors within
-    driving distance, and builds your full wedding timeline — all
-    in one place."
-    Feature list (3 items with SVG icons):
-      → AI budget allocation based on Ontario pricing
-      → Vendors matched by proximity to your venue
-      → Guest list, seating, timeline and day-of itinerary
-    CTA: "Start with a venue →" (scrolls to Section 2)
-- Background: --bg-warm (#F8F4F1) to visually separate from white sections
-- This section is NOT indexed for SEO — it introduces the product
-
-**Section 4 — Browse by region (keep, no changes)**
-- 4 featured region cards: Niagara · GTA · Muskoka · Hamilton
-- SEO-critical — do not add planner messaging here
-- Clean card grid, links to /regions/[slug]
-
-**Section 5 — Browse by venue type (keep, no changes)**
-- 8 category cards with SVG icons (approved icon set)
-- Winery featured/highlighted in rose
-- Links to /venues/[type]
-- SEO-critical — pure directory content
-
-**Section 6 — Interactive budget slider (NEW — replaces generic CTA)**
-- Live budget allocation widget (no sign-up required)
-- Couple drags total budget slider ($10k → $100k)
-- Donut chart updates in real time showing category allocations
-- Uses ONTARIO_BUDGET_SPLITS from src/lib/budget.ts
-- Shows: "Your venue budget: $X,XXX — see venues in this range →"
-- CTA links to /venues?maxPrice=[calculated]
-- Cashvertising: reciprocity — give value before asking anything
-- Background: --rose-pale (#FDF5F7)
-
-**Section 7 — Lead magnet + Footer**
-- Email capture: "Free: Ontario Wedding Checklist 2026 — 100+ tasks,
-  timeline, and vendor guide"
-- Brevo opt-in form (same list as Pic Booth nurture sequence)
-- Every subscriber enters Pic Booth Checklist Download nurture sequence
-- Footer below with disclosure line
-
-**Region pages** `/regions/[region]` → "[region] wedding venues Ontario"
-- 200-word locally-specific intro
-- Venue grid with filter
-- "Why couples choose [region]" section
-- Featured vendors in region
-
-**City pages** `/cities/[city]` → "wedding venues in [city] Ontario"
-- City-specific content — WeddingWire is weakest here
-- Your structured data (capacity, catering, coordinator) beats their thin pages
-
-**Venue type category pages** `/venues/winery`, `/venues/barn` etc.
-→ "winery wedding venues Ontario", "barn wedding venues Ontario"
-- 800–1,000 word editorial above venue grid (from SEO templates doc)
-- Tips for choosing this venue type
-- Ontario pricing expectations
-
-**Individual venue pages** `/venues/[slug]`
-→ "[venue name] wedding venue [city]"
-- All structured data: capacity, catering, coordinator, score, last verified
-- PicBoothCTA component if `picBoothCompatible: true` and zone = niagara-gta
-- JSON-LD: LocalBusiness + EventVenue schema
-- "Powered by Google" attribution on ratings
-- Nearby vendors (filtered by proximity via lat/lng)
-- OneQR mention on all venue pages regardless of zone
-
-**Blog** `/blog/[slug]` — topical authority + long-tail capture
-
-### Launch blog posts (Month 1–2, from strategy doc)
-All 10 posts target Niagara first — then expand to Ontario:
-
-1. How Much Do Wedding Venues Cost in Niagara? (2026 Guide)
-2. Best Months to Get Married in Niagara
-3. Winery Weddings in Niagara: What You Need to Know
-4. Outdoor Wedding Venues in Niagara: 8 Things to Check
-5. Small Wedding Venues in Niagara (Under 50 Guests)
-6. Niagara-on-the-Lake vs Niagara Falls: Which Is Better for Weddings?
-7. Hidden Gem Wedding Venues in Niagara
-8. How Far in Advance to Book a Niagara Wedding Venue?
-9. Niagara Wedding Venue Checklist: 15 Questions to Ask
-10. Best Niagara Wedding Vendors to Book Alongside Your Venue
-    ← Feature 10 vendors. Email all on publish day. Primary backlink strategy.
-
-### Schema Injector component
-Auto-generates JSON-LD from page data — never write schema manually.
-
-| Page type     | Schema type                    |
-|---------------|-------------------------------|
-| Homepage      | ItemList                       |
-| Venue page    | LocalBusiness + EventVenue     |
-| Category page | CollectionPage                 |
-| Region page   | CollectionPage                 |
-| Blog post     | Article                        |
-| Vendor listing| LocalBusiness                  |
-
-### GSC setup
-All .com domains: set geographic target → Canada in GSC Legacy Tools →
-International Targeting. Neutralizes .ca advantage without buying new domains.
+**Current state:** fully free and open. No paywall, no Stripe.
+**Future couple tier:** $89 CAD one-time — planning suite (website builder, AI, bulk quote, guest list, itinerary, full checklist, OneQR).
+**Future vendor tiers (deferred):** Free (listed) · Basic $29/mo · Pro $79/mo · Featured $149/mo.
 
 ---
 
-## Internal Linking Rules (from strategy doc — non-negotiable)
+## ARCHITECTURE DECISIONS
 
-- Maximum 1 cross-domain link per page
-- Contextual only — body copy, never sidebars or footer link farms
-- Geographic logic required — only link nearby cities
-- Rotate directions — avoid reciprocal patterns on same page types
-- Natural anchor text only — never exact-match keyword anchors
-- No link lists between network properties
-
-**Correct cross-link example:**
-"If your guest list includes family from Hamilton, you may also want to
-browse Hamilton wedding venues for a comparison." — geographic context,
-helpful framing, single link, natural anchor.
-
----
-
-## AI Wedding Planner
-
-### What it replicates from the Excel Wedding Planner (uploaded)
-The planner has 20 tabs. Build in phases:
-
-**Phase 1 — Launch (MVP)**
-- Dashboard: countdown, budget overview, venue + vendor status
-- Budget planner: categories vs actual, transaction tracker
-- Venue selector: filtered from database by budget allocation
-- Vendor selector: matched by category, proximity, price tier
-- Task timeline: due dates, responsible person, priority
-
-**Phase 2 — Stickiness**
-- Guest list + RSVP portal (unique URL per couple)
-- Seating plan (visual drag-and-drop)
-- Day-of itinerary hour by hour
-- Email reminders for upcoming tasks
-
-**Phase 3 — Delight (premium justification)**
-- Music playlist
-- Mood board / theme builder
-- Gifts + thank you tracker
-- Packing lists (bride + groom)
-- Honeymoon budget
-- Printable menu generator
-
-### Ontario pricing benchmarks (src/lib/budget.ts)
-Used by Claude API budget allocator:
-
-```typescript
-export const ONTARIO_BUDGET_SPLITS = {
-  venue_catering: { pct: 0.38, label: 'Venue & Catering' },
-  photography:    { pct: 0.11, label: 'Photography & Video' },
-  florals:        { pct: 0.09, label: 'Flowers & Décor' },
-  music:          { pct: 0.06, label: 'DJ or Band' },
-  photo_booth:    { pct: 0.025, label: 'Photo Booth' },
-  cake:           { pct: 0.025, label: 'Wedding Cake' },
-  hair_makeup:    { pct: 0.025, label: 'Hair & Makeup' },
-  officiant:      { pct: 0.015, label: 'Officiant' },
-  transportation: { pct: 0.02,  label: 'Transportation' },
-  attire:         { pct: 0.05,  label: 'Attire (not tracked)' },
-  misc:           { pct: 0.075, label: 'Miscellaneous / Buffer' },
-}
-
-export const NIAGARA_PRICE_RANGES = {
-  venue:        { budget: 3000,  mid: 7000,  premium: 15000 },
-  photography:  { budget: 2000,  mid: 3500,  premium: 6000  },
-  dj:           { budget: 1200,  mid: 1800,  premium: 3000  },
-  florals:      { budget: 1500,  mid: 3000,  premium: 6000  },
-  photo_booth:  { budget: 800,   mid: 1200,  premium: 1800  },
-  cake:         { budget: 400,   mid: 800,   premium: 1500  },
-  hair_makeup:  { budget: 600,   mid: 1000,  premium: 1800  },
-  officiant:    { budget: 300,   mid: 500,   premium: 800   },
-}
-```
-
-### Claude API budget allocator prompt pattern
-```
-POST /api/plan
-→ Sends to claude-sonnet-4-5:
-   - Couple budget, guest count, venue cost locked in
-   - Remaining budget to allocate
-   - Region (for Ontario-specific pricing)
-   - Style preference (intimate/standard/luxury)
-→ Claude returns JSON:
-   - Recommended allocation per category
-   - Reasoning for each allocation
-   - Specific vendor recommendations from database
-   - Flags if any category is underfunded for guest count
-```
+- OWV ↔ OneQR: separate products, HTTP API only
+- Wedding websites use owned regional domains as subdomains
+- RSVP lives in OneQR (same URL: pre-wedding RSVP → day-of experience)
+- Vendor bios enriched from real vendor websites (not AI placeholders)
+- WeddingWire vendors get Google Places enrichment before import
+- Inclusive language throughout (partner1/partner2, not bride/groom)
+- Pic Booth pinned in photo_booth category, all regions
+- fix_regions.py must run after every vendor import
+- All images served from Cloudflare R2 — no Google API at runtime
+- safeParseJson used on all Claude API response parsing throughout codebase
 
 ---
 
-## Monetization (from strategy doc)
+## KEY INTEGRATIONS
 
-### Tiers
-| Tier | Price | Includes |
-|------|-------|----------|
-| Free | $0 | Basic listing, verified badge, Google data |
-| Featured | $75–150/mo | Top of category, contact form, analytics, inquiry leads |
-| Premier | $200+/mo | Featured + blog mention + budget planner recommendation |
-
-### Vendor funnel (3 stages)
-**Stage 1 — Discovery:** Vendor appears in database automatically.
-Some will find and claim their listing.
-
-**Stage 2 — Featured listing:** Outreach email:
-"You're listed on OntarioWeddingVendors.com — [X] profile views last month.
-Upgrade to Featured for $99/month to appear at the top of searches in your area."
-
-**Stage 3 — OneQR upsell:**
-"Your couples are planning weddings on our platform. OneQR lets you offer
-a live photo gallery, digital seating chart, and day itinerary from a single
-QR code. It differentiates your venue and gives couples a reason to book you."
-
-### UTM tracking
-```
-Pic Booth referrals:
-  utm_source=owv&utm_medium=vendor-listing&utm_campaign=niagara-planner
-  utm_content=photo-booth-{venueSlug}
-
-OneQR referrals:
-  utm_source=owv&utm_medium=venue-page&utm_campaign=oneqr-upsell
-  utm_content={venueSlug}
-
-Featured venue leads:
-  utm_source=owv&utm_medium=featured&utm_campaign=venue-lead
-```
-
-### Revenue targets (from strategy doc)
-- Month 3: first 3–5 featured venues at $75–150/mo (manual invoicing)
-- Month 4+: Stripe/PayPal self-serve, expand to photographers
-- Year 1 target: 50 featured venues + 100 featured vendors = ~$12,500/mo
+- Brevo: BREVO_API_KEY (needed in Vercel)
+- Google Places: GOOGLE_PLACES_API_KEY (.env) — PAUSED
+- Anthropic: ANTHROPIC_API_KEY (.env)
+- Cloudflare R2: bucket ontarioweddingvendors, credentials in Vercel + .env.local
+- OneQR API: ONEQR_API_URL + ONEQR_API_KEY (not yet set up)
 
 ---
 
-## Backlink Strategy (from strategy doc)
+## RELATED PROJECTS
 
-**Tier 1 — Easy wins (start immediately):**
-Email every venue listed: "You're featured on OntarioWeddingVendors.com.
-Would you like to add your listing to your Preferred Vendors page?"
-
-**Tier 2 — Partnership plays:**
-- Wedding photographers: free featured spotlight page → link from their Resources
-- Wedding planners: same — they influence every vendor booking
-- Venue coordinators: relationship = dozens of warm referrals
-
-**Tier 3 — Content-driven:**
-- Blog post #10 (10 vendors featured) → email all on publish day
-- Pitch "Best Winery Wedding Venues Niagara" to wine tourism publications
-- Local Niagara lifestyle sites: pitch complete local wedding guide
-
-**Outreach script (from SEO Playbook doc):**
-Subject: Feature your venue on OntarioWeddingVendors.com
-"Hi [Name], we've featured your venue in our guide. Would love to send
-traffic your way — feel free to link back or share!"
+- **Pic Booth (picbooth.ca):** Premium photo booth rental, St. Catharines
+- **Niagara Photo Booth (niagaraphotobooth.com):** Budget tier, separate brand
+- **Guest Gallery (guest.picbooth.ca):** Live photo gallery, Next.js
+- **OneQR Events (oneqr.events):** Day-of QR experience, separate codebase
 
 ---
 
-## Footer Disclosure (required on all pages)
+## KEY COMMITS THIS SESSION (August 19, 2026)
 
-"Some vendors listed on this site have a relationship with the site operator."
-— Standard practice, protects legally, increases trust. Does not hurt conversions.
-
----
-
-## Slug Generation
-
-```typescript
-export function generateSlug(name: string, city: string): string {
-  const n = name.toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-')
-  const c = city.toLowerCase()
-    .replace(/[^a-z0-9\s]/g, '').trim().replace(/\s+/g, '-')
-  return `${n}-${c}`
-}
-// "White Oaks Resort & Spa" + "Niagara-on-the-Lake"
-// → "white-oaks-resort-spa-niagara-on-the-lake"
-```
+- `0e0459b` — Bulk quote system (/plan/quotes, QuotesPlanner, generate-email API, send-bulk API)
+- `0b1a48d` — Skip dead Google URLs at render time (bulletproof HeroImage component)
+- `33a2ab8` — HTTP→base64 fix for scraper
+- `bf4f48d` — R2 URL protocol normalization (https:// prepended automatically)
+- `8dddb02` — .env.local loader for tsx scripts
+- `eca6d77` — backfill-venue-website-heros.ts
+- `f959cc6` — FrostedGlassLayout.tsx + theme tokens
+- (Editorial, MinimalBlush, RetroCharm, BoldGarden commits — check git log for exact hashes)
+- DB writes: 2,719 rows hoisted to R2 hero URLs; 323 vendor + 57 venue photos backfilled
 
 ---
 
-## Import Scripts
-
-### scripts/import-venues.ts
-Reads: `C:\Users\rtayl\OneDrive\Desktop\ontario-venues-omen\data\validated\directory_ready.csv`
-- Generates slugs
-- Maps city → region via REGION_MAP
-- Sets picBoothCompatible based on zone + venue type
-- Upserts to Neon on place_id conflict
-- Reports: inserted, updated, skipped
-
-Run: `npx tsx scripts/import-venues.ts`
-
-### scripts/import-vendors.ts
-Reads vendor CSVs from the ontario-venues-omen data folder.
-Sets isPicBooth, isNiagaraPhotoBooth, isOneQR flags.
-Pic Booth record: `tier: 'premier', featured: true, isPicBooth: true, serveRadiusKm: 200`
-
----
-
-## Build Commands
-
-```bash
-npm run dev           # local development
-npm run build         # production build
-npm run db:generate   # generate Drizzle migrations
-npm run db:migrate    # run migrations on Neon
-npm run db:seed       # run import scripts
-npm run db:studio     # Drizzle Studio
-```
-
----
-
-## Deployment
-
-- GitHub: `frtaylorca-a11y/ontario-wedding-venues`
-- Vercel: `ontario-wedding-venues` under `pic-booth` scope
-- Auto-deploy on push to main
-- env vars set in Vercel dashboard
-
-Domain routing:
-- `ontarioweddingvendors.com` → Vercel (primary)
-- `niagaraweddingvenues.com` → 301 → ontarioweddingvendors.com/regions/niagara
-- `hamiltonweddingvenues.com` → 301 → ontarioweddingvendors.com/cities/hamilton
-- All other owned domains → 301 to appropriate regional/city page
-
----
-
-## 90-Day Execution Plan (from strategy doc)
-
-### Month 1 — Build the machine
-- Week 1: Scaffold project, Neon setup, import 639 venue records
-- Week 1: Set GSC geotargeting to Canada for all domains
-- Week 2: Homepage, 4 region pages, SchemaInjector
-- Week 3: Venue listing + individual venue pages, 2 blog posts
-- Week 4: Category pages (winery, outdoor, affordable, luxury, small), sitemap
-
-### Month 2 — Fill the tank
-- Week 5: City pages (NOTL, Niagara Falls, St. Catharines, Hamilton, Toronto)
-- Week 5: Begin venue outreach for backlinks (10 emails/week)
-- Week 6: 3 more blog posts, blog post #10 published → email all vendors
-- Week 7: Vendor pages live (photographer, DJ, florist, photo booth per region)
-- Week 8: GSC review — identify early ranking pages, optimise
-
-### Month 3 — Expand and monetize
-- Budget planner Phase 1 live (Claude API budget allocator)
-- First 3–5 featured listing revenue ($75–150/mo, manual invoicing)
-- Vendor outreach: "47 profile views last month — upgrade to Featured"
-- OneQR venue outreach begins: "ask about digital guest experience"
-
----
-
-## Notes
-
-- Scores below 50 NOT shown publicly — admin only
-- "Powered by Google" attribution required wherever ratings displayed
-- Google Maps embed (iframe): no API key needed, unlimited
-- Coordinator emails shown via contact form — not raw mailto (spam prevention)
-- picBoothCompatible auto-set true for: zone=niagara-gta AND
-  venue type in [winery, estate, hotel, resort, barn, golf club]
-  AND capacityMax >= 50 AND weddingReadinessScore >= 70
-- All venue data sourced from Google Places API under standard ToS
-
----
-
-## Wedding Website DNS Setup (manual — Rick)
-
-Couple wedding websites live at `[slug].{regional-domain}` and are served
-by OWV via a Next.js middleware rewrite to `/weddings/[slug]`. To stand up
-a new regional domain:
-
-**1. Hostinger — wildcard CNAME on each domain:**
-```
-Type: CNAME    Host: *    Value: cname.vercel-dns.com
-```
-Domains to configure:
-- `*.niagaraweddingvenues.com`
-- `*.niagaraonthelakeweddingvenues.com`
-- `*.burlingtonweddingvenues.com`
-- `*.torontoweddingdirectory.com`
-
-**2. Vercel → ontario-wedding-vendors project → Settings → Domains:**
-Add each wildcard domain (`*.niagaraweddingvenues.com`, etc.). Vercel
-auto-provisions SSL certificates for the wildcard.
-
-**3. Verify:**
-```bash
-curl -H "Host: test-couple.niagaraweddingvenues.com" https://ontarioweddingvendors.com/
-# → renders the /weddings/test-couple page if the slug exists, else 404.
-```
-
-The regional-domain map is defined in `src/lib/wedding-site.ts` →
-`REGIONAL_DOMAINS`. Adding a new domain requires updating that constant
-plus the DNS + Vercel config above.
-
----
-
-## Wedding Website Template — Vendor Credits Section
-
-Couple wedding sites at `[slug].{regional-domain}` (rewritten internally
-to `/weddings/[slug]`) render an editorial "Our Venue & Vendors" credits
-section below the Save the Date hero.
-
-**Rendered when:** `wedding_site_show_vendors` is true (default) AND
-the plan has either a venue or at least one booked vendor.
-
-**Data source:**
-- Venue (top of section): `wedding_plans.venue_id → venues` join on the
-  server. Shows name, city, and two buttons:
-  *View profile →* (links to `${SITE_URL}/venues/{slug}`) and
-  *Visit website ↗* when `venues.website` is set.
-- Vendors (grid below): `wedding_plans.booked_vendors` jsonb, hydrated
-  with each vendor's slug + website via an `IN (...)` lookup on the
-  vendors table. Each card shows the category SVG icon + name + the
-  same two buttons.
-
-**Cross-domain links:** the wedding site lives on a regional subdomain
-(`niagaraweddingvenues.com` etc.) while the directory lives on the OWV
-apex, so the View profile / Visit website links use absolute
-`SITE_URL`-prefixed `<a target="_blank">` anchors, not Next `<Link>`.
-
-**Schema:** when the plan has a date + names + venue, a JSON-LD Event
-object is injected with `location`, `startDate`, and a `performer` array
-listing every booked vendor. Useful for shared-link previews even
-though the page itself is `robots: noindex`.
-
-**Toggle:** controlled by `wedding_plans.wedding_site_show_vendors`
-(boolean default true). Future `/plan/website` editor will surface
-this; for now the default applies and couples opt out by hand.
-
-**Footer:** small "Planned with Ontario Wedding Vendors" line linking
-back to the apex.
+*Update this file at the end of each major build session.*
+*To resume: paste into a new Claude conversation.*
+*Filename convention: OWV_Project_File_[Date].md — always use the most recent date.*
