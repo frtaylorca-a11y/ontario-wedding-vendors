@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { getSiteStats } from "@/lib/queries";
+import { SignInNav } from "@/components/layout/SignInNav";
 
 const NAV_LINKS: { label: string; href: Route }[] = [
   { label: "Venues",  href: "/venues" as Route },
@@ -53,12 +54,9 @@ export async function Header() {
           </ul>
 
           <div className="flex items-center gap-2">
-            <Link
-              href={"/signin" as Route}
-              className="hidden rounded-pill border border-border bg-white px-4 py-2 text-sm font-medium text-charcoal transition-colors hover:border-rose hover:text-rose focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2 sm:inline-flex"
-            >
-              Sign in
-            </Link>
+            {/* No /signin page — auth is magic-link modal only. See
+             * SignInNav.tsx for the auth-state-aware button/link swap. */}
+            <SignInNav />
             <Link
               href={"/plan" as Route}
               className="inline-flex items-center rounded-pill bg-rose px-4 py-2 text-sm font-bold text-white shadow-[0_4px_14px_rgba(185,100,118,0.3)] transition-all duration-200 hover:bg-rose-hover hover:shadow-[0_6px_18px_rgba(185,100,118,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose focus-visible:ring-offset-2"
