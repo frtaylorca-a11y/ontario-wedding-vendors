@@ -6,8 +6,25 @@
  * but the row is excluded from category + region listings.
  *
  * Filter:
- *   hero_image IS NULL
+ *   hero_image        IS NULL     -- legacy Google photo_reference
+ *   AND hero_image_custom IS NULL -- R2 URL (fresh scrape / hoist path)
  *   AND is_hidden = FALSE
+ *   AND is_pic_booth = FALSE
+ *   AND is_niagara_photo_booth = FALSE
+ *
+ * Both photo columns must be NULL for the row to be considered
+ * photo-less: the render path (src/lib/utils.ts → vendorHeroImageUrl)
+ * prefers hero_image_custom, so a vendor with an R2 photo but a NULL
+ * hero_image still shows a real image on cards. Filtering on
+ * hero_image alone would re-hide vendors like Pic Booth every time
+ * the script runs after their website-hero backfill.
+ *
+ * The brand exemptions (is_pic_booth, is_niagara_photo_booth) are
+ * belt-and-suspenders: Rick's own brands must never be caught by the
+ * auto-hide even if their photos temporarily break (e.g. R2 outage,
+ * URL migration, scraper regression). Restored to visibility by
+ * scripts/restore-pic-booth-brands.ts if this rule ever misses them
+ * again.
  *
  * Action (on --confirm):
  *   is_hidden     = TRUE
@@ -28,6 +45,16 @@ import { db } from "../src/lib/db";
 import { vendors } from "../src/lib/schema";
 import { recomputeAllIsIndexable } from "../src/lib/queries";
 
+/* Central WHERE clause — used verbatim by the preview + the UPDATE
+ * so they can never drift out of sync. */
+const NO_PHOTO_FILTER = and(
+  isNull(vendors.heroImage),
+  isNull(vendors.heroImageCustom),
+  eq(vendors.isHidden,           false),
+  eq(vendors.isPicBooth,         false),
+  eq(vendors.isNiagaraPhotoBooth, false),
+);
+
 async function main() {
   const confirm = process.argv.includes("--confirm");
 
@@ -40,7 +67,7 @@ async function main() {
       slug:     vendors.slug,
     })
     .from(vendors)
-    .where(and(isNull(vendors.heroImage), eq(vendors.isHidden, false)));
+    .where(NO_PHOTO_FILTER);
 
   console.log(`Candidates: ${candidates.length} visible vendors with no hero_image.`);
   if (!confirm) {
@@ -66,7 +93,7 @@ async function main() {
       hiddenReason: "no_photo",
       updatedAt:    new Date(),
     })
-    .where(and(isNull(vendors.heroImage), eq(vendors.isHidden, false)))
+    .where(NO_PHOTO_FILTER)
     .returning({ id: vendors.id });
 
   console.log(`Hidden: ${updated.length} vendors marked is_hidden=true, hidden_reason='no_photo'.`);
