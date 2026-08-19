@@ -29,7 +29,7 @@
  */
 import "dotenv/config";
 import Anthropic from "@anthropic-ai/sdk";
-import { and, eq, isNotNull, sql } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { db } from "../src/lib/db";
 import { vendors } from "../src/lib/schema";
 import { scrapeWebsiteHero, buildR2Config } from "../src/lib/scrape-website-hero";
@@ -37,7 +37,7 @@ import { scrapeWebsiteHero, buildR2Config } from "../src/lib/scrape-website-hero
 const CONCURRENCY = 3;   /* Conservative — each call hits Claude vision. */
 const COST_PER_VENDOR_USD = 0.003;
 
-type Args = { limit: number; dryRun: boolean; name: string | null };
+type Args = { limit: number; dryRun: boolean; name: string | null; onlyMissing: boolean };
 
 function parseArgs(): Args {
   const a = process.argv.slice(2);
@@ -45,10 +45,12 @@ function parseArgs(): Args {
   let explicitLimit = false;
   let confirm = false;
   let name: string | null = null;
+  let onlyMissing = false;
   for (let i = 0; i < a.length; i++) {
     const arg = a[i];
     if (arg === "--confirm") confirm = true;
     else if (arg === "--dry-run") confirm = false;
+    else if (arg === "--only-missing") onlyMissing = true;
     else if (arg === "--limit") {
       const n = parseInt(a[++i] ?? "", 10);
       if (Number.isFinite(n) && n > 0) { limit = n; explicitLimit = true; }
@@ -62,7 +64,7 @@ function parseArgs(): Args {
     }
   }
   if (confirm && !explicitLimit && !name) limit = Number.MAX_SAFE_INTEGER;
-  return { limit, dryRun: !confirm, name };
+  return { limit, dryRun: !confirm, name, onlyMissing };
 }
 
 type Candidate = {
@@ -87,6 +89,12 @@ async function loadCandidates(args: Args): Promise<Candidate[]> {
       eq(vendors.isHidden, false),
       isNotNull(vendors.website),
       sql`${vendors.website} <> ''`,
+      /* --only-missing: skip rows that already have an R2 hero populated
+       * (e.g. from a prior run or the hoist-gallery-photo-to-hero script).
+       * Avoids re-scraping thousands of vendors that already have working
+       * card images — the whole point of running the scraper is to fill
+       * the NULL rows. */
+      args.onlyMissing ? isNull(vendors.heroImageCustom) : sql`TRUE`,
       args.name ? sql`${vendors.name} ILIKE ${'%' + args.name + '%'}` : sql`TRUE`,
     ))
     .orderBy(vendors.id);
