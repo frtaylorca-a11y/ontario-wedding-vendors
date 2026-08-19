@@ -1,5 +1,5 @@
 # Ontario Wedding Vendors — Master Project File
-**Last updated:** August 19, 2026 (rev 4 — major session: images fixed, all themes complete, bulk quote live)
+**Last updated:** August 19, 2026 (rev 5 — wizard verified shipped, Charlotte & Francis demo live + linked from homepage)
 **Use this file:** Start any new conversation with "Read this project file" and paste contents.
 **Replaces:** OWV_Project_File_May20_2026.md — this is the current source of truth.
 
@@ -169,7 +169,9 @@ STATUS: Code built, DNS NOT yet configured in Hostinger.
 - AI copy generation (/api/wedding-website/generate, safeParseJson)
 - Password protection, wedding hashtag, section toggle editor (12 sections)
 - Vendor credits section, OneQR QR embed
-- **Wedding website wizard — IN PROGRESS** (screenshot-based 3-step flow — see Priority 1 below)
+- **Wedding website wizard — SHIPPED** — screenshot-based 3-step flow (Style / Story / Publish), verified end-to-end. Cards fall through to theme-coloured gradients until 6 reference JPGs land in /public/images/wedding-styles/. Free tier gets 3 AI generations, then upgrade modal. `wizardCompleted` flag branches wizard vs full editor in `page.tsx:114`.
+- **Theme-picker layout previews — SHIPPED** — six layout-specific mini mockups (frosted glass panel, editorial split, minimal sidebar, retro double-frame, bold-garden split-bands, terracotta pill hero) render in both grid cards and the full right-column preview. `src/components/plan/ThemeLayoutPreview.tsx`.
+- **Charlotte & Francis showcase demo — LIVE** at `/weddings/charlotte-and-francis` — real venue (Ravine Vineyard Estate Winery), real R2 hero photo, Terracotta layout, fully-written content across all 12 sections (party, registry, things-to-do, FAQ, dress code, extra events, travel copy). Idempotent seed script at `scripts/seed-charlotte-and-francis-demo.ts`. Linked from homepage BridgeToPlanner section under the primary CTA: "Curious what the finished site looks like? See Charlotte & Francis in Niagara →".
 
 ### Vendor Features
 - Claim listing (/claim-listing) — LIVE
@@ -193,33 +195,18 @@ STATUS: Code built, DNS NOT yet configured in Hostinger.
 
 ## PENDING / NEXT FOR CLAUDE CODE (priority order)
 
-### Priority 1 — Wedding Website Wizard (screenshot-based)
-Replaces theme picker as entry point when wizardCompleted=false. Full editor becomes "advanced" path.
+### Priority 1 — Wire hero image picker
+Once Midjourney images are uploaded to /public/images/wedding-heroes/ (1.jpg through 20.jpg), wire them into wizard Step 3's "Pick a default" mode. Today the grid renders 20 deterministic gradient tiles as placeholders — the code auto-picks up real JPGs once they land.
 
-**DECISION (settled):** Screenshots ARE the theme + palette choice. No separate colour-mood step.
-
-- **Step 1:** 2×3 grid of 6 screenshot cards → tap one → rose border + checkmark → sets weddingTheme
-  - editorial.jpg → 'editorial' "Bold typography, collage photos"
-  - minimal-blush.jpg → 'minimal' "Clean, soft, timeless"
-  - terracotta.jpg → 'terracotta' "Earthy tones, rustic warmth"
-  - retro-charm.jpg → 'retro' "Playful, vintage, personality"
-  - bold-garden.jpg → 'bold-garden' "Vibrant, editorial, modern"
-  - frosted-glass.jpg → 'frosted' "Elegant, moody, dramatic"
-  - NOTE: card slug ≠ themeKey for minimal-blush→minimal and retro-charm→retro
-  - Footer: "Want more options? Browse all 14 themes →"
-- **Step 2:** "Your story" textarea (500 chars, optional) → [Generate my website →] rose CTA
-- **Step 3 (after generation):** photo upload → own photo to R2 | pick from 20 heroes | skip → gradient. Then preview + publish.
-- **Assets needed:** 6 reference screenshots → /public/images/wedding-styles/ (Rick to supply)
-- **DB additions:** wedding_plans.rawStory text, wizardCompleted boolean, wizardCompletedAt timestamp
-
-### Priority 2 — Wire hero image picker
-Once Midjourney images are uploaded to /public/images/wedding-heroes/ (hero-01.jpg through hero-20.jpg), wire them into wizard Step 3 Card B photo picker.
-
-### Priority 3 — One polished demo plan
-Build "Charlotte & Francis" as a showcase wedding website — polished content, real venue, good hero photo. Used for marketing screenshots and to show couples what's possible.
+### Priority 2 — Additional showcase demo plans (optional)
+Charlotte & Francis covers Terracotta + Niagara winery. Consider one more showcase per premium layout for marketing variety — e.g. "Amelia & Julian" already exists on Frosted Glass (`/weddings/test-frosted`, `wedding_plans.id=81`) but with a hotel venue; could seed one per layout for the theme-picker's "See this layout live" link if we add one.
 
 ### Then — Stripe + paywall
 Only after real user demand is validated. See monetization strategy above.
+
+### Recently completed (moved out of Pending)
+- ✅ Wedding Website Wizard — verified shipped end-to-end (see WHAT'S BUILT). Only remaining item is Rick supplying the 6 reference JPGs.
+- ✅ Charlotte & Francis demo — live at `/weddings/charlotte-and-francis`, linked from homepage.
 
 ---
 
@@ -339,15 +326,38 @@ See MONETIZATION STRATEGY block above — it is current and authoritative.
 
 ## KEY COMMITS THIS SESSION (August 19, 2026)
 
-- `0e0459b` — Bulk quote system (/plan/quotes, QuotesPlanner, generate-email API, send-bulk API)
+**Images / R2 pipeline:**
 - `0b1a48d` — Skip dead Google URLs at render time (bulletproof HeroImage component)
 - `33a2ab8` — HTTP→base64 fix for scraper
-- `bf4f48d` — R2 URL protocol normalization (https:// prepended automatically)
-- `8dddb02` — .env.local loader for tsx scripts
+- `2d91c2d` — `--only-missing` flag on backfill-website-heros.ts
+- `6837ac3` — HeroImage client component with cascade + onError → placeholder div
+- `8dddb02` — .env.local loader for tsx scripts (side-effect module)
 - `eca6d77` — backfill-venue-website-heros.ts
-- `f959cc6` — FrostedGlassLayout.tsx + theme tokens
-- (Editorial, MinimalBlush, RetroCharm, BoldGarden commits — check git log for exact hashes)
-- DB writes: 2,719 rows hoisted to R2 hero URLs; 323 vendor + 57 venue photos backfilled
+- `bf4f48d` — R2 URL protocol normalization (https:// prepended automatically at 4 config sites)
+- `b13377b` — hoist-gallery-photo-to-hero.ts (audit trail for the SQL hoist that populated 2,719 rows)
+
+**Wedding-site layouts (6 shipped):**
+- `f959cc6` — Frosted Glass (dark navy + gold + `blur(12px)` panels)
+- `8520d61` — Editorial (bold magazine spread, split hero, Cormorant 700)
+- `0731ecd` — Minimal Romantic (sidebar-driven, blush hairlines, italic Cormorant)
+- `952881c` — Retro Charm (heirloom letterpress, gold double-frames, Playfair italic)
+- `503eaba` — Bold Garden (chromatic split-band pink + sage)
+- `da8f4fb` — Theme-picker layout previews (mini mockup per layout in the grid + full preview panel)
+
+**Demo + docs:**
+- `4c86318` — Charlotte & Francis showcase seed (Ravine Vineyard, Terracotta, all 12 sections)
+- `fcc817b` — Homepage BridgeToPlanner link → Charlotte & Francis demo
+- `9f194ee` — PROJECT.md rev 4 (Aug 19 baseline)
+- `88630d5` — CLAUDE.md mirrored to match PROJECT.md
+
+**Earlier in session (pre-Aug 19 review):**
+- `0e0459b` — Bulk quote system (/plan/quotes, QuotesPlanner, generate-email API, send-bulk API)
+
+**DB writes this session:**
+- 2,719 rows hoisted to R2 hero URLs from existing gallery photos
+- 323 vendor + 57 venue photos scraped fresh and uploaded to R2 (~$3.87 in Claude cost)
+- 323 rows patched with `https://` prefix after the URL-normalization bug was caught
+- 6 test wedding plans seeded for the layout demos (`test-frosted` id=81, `test-editorial` id=82, `test-minimal` id=83, `test-retro` id=84, `test-bold-garden` id=85, `charlotte-and-francis` id=86)
 
 ---
 
