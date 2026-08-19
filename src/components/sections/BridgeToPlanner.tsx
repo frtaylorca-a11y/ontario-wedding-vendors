@@ -201,6 +201,20 @@ export function BridgeToPlanner() {
             Start with a venue
             <span aria-hidden>→</span>
           </Link>
+
+          {/* Secondary link: real published wedding site couples can
+           * click through to see what OWV produces end-to-end. Kept
+           * quieter than the primary CTA so it reads as social proof,
+           * not a competing action. */}
+          <p className="mt-5 text-sm text-text-mid">
+            Curious what the finished site looks like?{" "}
+            <Link
+              href={"/weddings/charlotte-and-francis" as Route}
+              className="font-bold text-rose underline-offset-4 hover:underline"
+            >
+              See Charlotte &amp; Francis in Niagara →
+            </Link>
+          </p>
         </div>
       </div>
     </section>
