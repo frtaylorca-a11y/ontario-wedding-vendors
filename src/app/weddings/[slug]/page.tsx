@@ -29,6 +29,7 @@ import { TerracottaLayout } from "@/components/weddings/layouts/TerracottaLayout
 import { FrostedGlassLayout } from "@/components/weddings/layouts/FrostedGlassLayout";
 import { EditorialLayout } from "@/components/weddings/layouts/EditorialLayout";
 import { MinimalRomanticLayout } from "@/components/weddings/layouts/MinimalRomanticLayout";
+import { RetroCharmLayout } from "@/components/weddings/layouts/RetroCharmLayout";
 import type { CreditVendor, WeddingLayoutProps } from "@/components/weddings/layouts/types";
 
 export const dynamic = "force-dynamic";
@@ -330,6 +331,9 @@ export default async function WeddingSitePage({ params }: { params: Params }) {
   }
   if (plan.weddingTheme === "minimal") {
     return <MinimalRomanticLayout {...layoutProps} />;
+  }
+  if (plan.weddingTheme === "retro") {
+    return <RetroCharmLayout {...layoutProps} />;
   }
   const isPremium = plan.tier === "premium";
   if (isPremium && plan.weddingTheme === "frosted") {
