@@ -329,9 +329,13 @@ function r2Client(): R2Config | null {
     !CLOUDFLARE_R2_ENDPOINT ||
     !CLOUDFLARE_R2_PUBLIC_URL
   ) return null;
+  /* Same protocol-normalization as buildR2Config in scrape-website-hero.ts. */
+  const publicUrl = /^https?:\/\//i.test(CLOUDFLARE_R2_PUBLIC_URL)
+    ? CLOUDFLARE_R2_PUBLIC_URL.replace(/\/+$/, "")
+    : `https://${CLOUDFLARE_R2_PUBLIC_URL.replace(/\/+$/, "")}`;
   return {
     bucket:    CLOUDFLARE_R2_BUCKET,
-    publicUrl: CLOUDFLARE_R2_PUBLIC_URL.replace(/\/+$/, ""),
+    publicUrl,
     s3: new S3Client({
       region:      "auto",
       endpoint:    CLOUDFLARE_R2_ENDPOINT,

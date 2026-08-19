@@ -106,8 +106,14 @@ export async function POST(request: Request) {
   }
 
   /* Cache-bust on the URL so a re-upload doesn't keep serving the old
-   * image off the CDN edge for the couple's own preview. */
-  const url = `${publicUrlBase.replace(/\/$/, "")}/${key}?v=${Date.now()}`;
+   * image off the CDN edge for the couple's own preview. Normalize the
+   * public-URL base to include https:// — the env var was set without a
+   * protocol in some environments, which would otherwise produce a
+   * relative-looking URL that the browser 404s on. */
+  const normalizedBase = /^https?:\/\//i.test(publicUrlBase)
+    ? publicUrlBase.replace(/\/+$/, "")
+    : `https://${publicUrlBase.replace(/\/+$/, "")}`;
+  const url = `${normalizedBase}/${key}?v=${Date.now()}`;
   await db
     .update(weddingPlans)
     .set({ weddingHeroImage: url, updatedAt: new Date() })

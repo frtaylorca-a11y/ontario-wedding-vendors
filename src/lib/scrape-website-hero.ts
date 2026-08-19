@@ -336,9 +336,16 @@ export function buildR2Config(): R2Config | null {
     !CLOUDFLARE_R2_ENDPOINT ||
     !CLOUDFLARE_R2_PUBLIC_URL
   ) return null;
+  /* Normalize the public URL: strip trailing slashes and force an https://
+   * prefix if the env var was set without one. Without this normalisation,
+   * uploads land in R2 correctly but the DB stores "pub-xxx.r2.dev/..."
+   * which the browser resolves as a relative URL → 404. */
+  const publicUrl = /^https?:\/\//i.test(CLOUDFLARE_R2_PUBLIC_URL)
+    ? CLOUDFLARE_R2_PUBLIC_URL.replace(/\/+$/, "")
+    : `https://${CLOUDFLARE_R2_PUBLIC_URL.replace(/\/+$/, "")}`;
   return {
     bucket:    CLOUDFLARE_R2_BUCKET,
-    publicUrl: CLOUDFLARE_R2_PUBLIC_URL.replace(/\/+$/, ""),
+    publicUrl,
     s3: new S3Client({
       region:      "auto",
       endpoint:    CLOUDFLARE_R2_ENDPOINT,

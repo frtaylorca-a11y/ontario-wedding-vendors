@@ -174,10 +174,14 @@ function r2Env() {
     !CLOUDFLARE_R2_ENDPOINT ||
     !CLOUDFLARE_R2_PUBLIC_URL
   ) return null;
+  /* Normalize protocol — see scrape-website-hero.ts for context. */
+  const publicUrl = /^https?:\/\//i.test(CLOUDFLARE_R2_PUBLIC_URL)
+    ? CLOUDFLARE_R2_PUBLIC_URL.replace(/\/+$/, "")
+    : `https://${CLOUDFLARE_R2_PUBLIC_URL.replace(/\/+$/, "")}`;
   return {
     bucket:    CLOUDFLARE_R2_BUCKET,
     endpoint:  CLOUDFLARE_R2_ENDPOINT,
-    publicUrl: CLOUDFLARE_R2_PUBLIC_URL.replace(/\/+$/, ""),
+    publicUrl,
     creds: {
       accessKeyId:     CLOUDFLARE_R2_ACCESS_KEY_ID,
       secretAccessKey: CLOUDFLARE_R2_SECRET_ACCESS_KEY,
