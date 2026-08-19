@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { getThemeTokens, themeStyle } from "@/lib/wedding-themes";
 import { WEDDING_THEMES, type WeddingTheme } from "@/lib/wedding-website";
+import { ThemeLayoutPreview } from "@/components/plan/ThemeLayoutPreview";
 
 /* Theme picker for /plan/website.
  *
@@ -152,48 +153,21 @@ function ThemeCard({
       {/* Color bar — 8px top accent */}
       <div className="h-2 w-full flex-shrink-0" style={{ background: t.accent }} aria-hidden />
 
-      {/* Mini hero mockup */}
+      {/* Mini preview — layout-specific for the 6 layout variants,
+       * generic tokens-driven mockup for the 8 colour-only themes. */}
+      <LayoutOrGeneric theme={theme} tokens={t} variant="card" />
+
+      {/* Font name — always shown below the preview */}
       <div
-        className="flex flex-1 flex-col items-center justify-center px-3 py-4 text-center"
-        style={{ background: t.pageBg, color: t.ink }}
+        className="border-t px-2 py-1.5 text-center"
+        style={{ borderColor: t.border, background: t.pageBg }}
       >
-        <div
-          className="text-[0.55rem] font-bold uppercase tracking-[0.16em]"
-          style={{ color: t.accent }}
-        >
-          Save the date
-        </div>
-        <div
-          className="mt-1 text-base leading-tight"
-          style={{
-            fontFamily: t.fontDisplay,
-            fontStyle:  t.displayItalic,
-            color:      t.ink,
-          }}
-        >
-          Charlotte &amp; Francis
-        </div>
-        <div
-          className="mt-0.5 text-[0.55rem]"
-          style={{ color: t.inkMuted, fontFamily: t.fontBody }}
-        >
-          Sep 12, 2026 · Niagara
-        </div>
-
-        {/* Swatches row */}
-        <div className="mt-3 flex items-center gap-1.5">
-          <Swatch color={t.accent}   title="primary" />
-          <Swatch color={t.pageBg}   title="bg" />
-          <Swatch color={t.accentSoft} title="accent" />
-        </div>
-
-        {/* Font name shown in the font itself */}
-        <div
-          className="mt-2 text-[0.6rem]"
+        <span
+          className="text-[0.58rem]"
           style={{ fontFamily: t.fontDisplay, color: t.inkMuted, fontStyle: t.displayItalic }}
         >
           {t.fontDisplayLabel}
-        </div>
+        </span>
       </div>
 
       {/* Theme name footer */}
@@ -238,6 +212,65 @@ function ThemeCard({
   );
 }
 
+/* Swap-in helper: for the 6 themes with their own <Layout> component
+ * we render a structurally-faithful mini mockup that reproduces the
+ * actual layout's signature move (Frosted's glass panel, Editorial's
+ * split, Minimal's sidebar, Retro's double frame, Bold Garden's
+ * split bands, Terracotta's warm pill hero). For the 8 colour-only
+ * themes we fall back to a generic tokens-driven mockup so couples
+ * still see the palette + fonts at a glance. */
+function LayoutOrGeneric({
+  theme, tokens, variant,
+}: {
+  theme:   WeddingTheme;
+  tokens:  ReturnType<typeof getThemeTokens>;
+  variant: "card" | "full";
+}) {
+  const layoutPreview = <ThemeLayoutPreview theme={theme} variant={variant} />;
+  const isLayoutVariant = WEDDING_THEMES.find((t) => t.id === theme)?.isLayoutVariant;
+
+  if (isLayoutVariant) {
+    return (
+      <div className={variant === "card" ? "h-[140px] w-full" : "h-[280px] w-full"}>
+        {layoutPreview}
+      </div>
+    );
+  }
+
+  /* Generic tokens-driven mockup — kept for the 8 colour-only themes.
+   * The 6 layout variants get the layout-specific preview above. */
+  return (
+    <div
+      className={`flex flex-col items-center justify-center px-3 py-4 text-center ${
+        variant === "card" ? "h-[140px]" : "h-[280px]"
+      }`}
+      style={{ background: tokens.pageBg, color: tokens.ink }}
+    >
+      <div className="text-[0.55rem] font-bold uppercase tracking-[0.16em]"
+           style={{ color: tokens.accent }}>
+        Save the date
+      </div>
+      <div className={`mt-1 leading-tight ${variant === "card" ? "text-base" : "text-2xl"}`}
+           style={{
+             fontFamily: tokens.fontDisplay,
+             fontStyle:  tokens.displayItalic,
+             color:      tokens.ink,
+           }}>
+        Charlotte &amp; Francis
+      </div>
+      <div className="mt-0.5 text-[0.6rem]"
+           style={{ color: tokens.inkMuted, fontFamily: tokens.fontBody }}>
+        Sep 12, 2026 · Niagara
+      </div>
+      <div className="mt-3 flex items-center gap-1.5">
+        <Swatch color={tokens.accent}     title="primary" />
+        <Swatch color={tokens.pageBg}     title="bg" />
+        <Swatch color={tokens.accentSoft} title="accent" />
+      </div>
+    </div>
+  );
+}
+
 function Swatch({ color, title }: { color: string; title: string }) {
   return (
     <span
@@ -249,7 +282,15 @@ function Swatch({ color, title }: { color: string; title: string }) {
   );
 }
 
-/* ─── Full preview panel — real fonts + real tokens ───────────────── */
+/* ─── Full preview panel — real fonts + real tokens ─────────────────
+ *
+ * For the 6 layout variants the top block renders a bigger version of
+ * the same layout-specific mockup used in the grid cards. The Our
+ * Story + Event Details blocks below stay generic tokens-driven —
+ * couples pick a theme largely by hero (that's what a preview
+ * screenshot would show them anyway), and rendering the exact
+ * asymmetric grids of Editorial / Bold Garden at panel scale would
+ * be hard to read. Hero is the identity; body is the palette. */
 
 function FullPreview({
   previewed, coupleLabel, weddingDateFormatted, venueLine,
@@ -260,51 +301,66 @@ function FullPreview({
   venueLine:             string | null;
 }) {
   const t = getThemeTokens(previewed);
+  const isLayoutVariant = WEDDING_THEMES.find((th) => th.id === previewed)?.isLayoutVariant;
+
   return (
     <div
       style={themeStyle(previewed)}
       className="overflow-hidden rounded-card border"
     >
-      {/* Hero */}
-      <div className="px-6 py-9 text-center" style={{ background: t.pageBg }}>
-        <div className="text-[0.6rem] font-bold uppercase tracking-[0.16em]"
-             style={{ color: t.accent }}>
-          Save the date
+      {/* Hero — layout-specific for the 6 variants, generic otherwise */}
+      {isLayoutVariant ? (
+        <div className="h-[240px] w-full">
+          <ThemeLayoutPreview
+            theme={previewed}
+            variant="full"
+            names={coupleLabel}
+            date={weddingDateFormatted ?? "Save the date"}
+            place={venueLine ?? "Ontario"}
+          />
         </div>
-        <div
-          className="mt-2 text-2xl leading-tight"
-          style={{
-            fontFamily: t.fontDisplay,
-            fontStyle:  t.displayItalic,
-            color:      t.ink,
-          }}
-        >
-          {coupleLabel}
-        </div>
-        {weddingDateFormatted && (
+      ) : (
+        <div className="px-6 py-9 text-center" style={{ background: t.pageBg }}>
+          <div className="text-[0.6rem] font-bold uppercase tracking-[0.16em]"
+               style={{ color: t.accent }}>
+            Save the date
+          </div>
           <div
-            className="mt-2 text-sm italic"
-            style={{ fontFamily: t.fontDisplay, color: t.accent }}
+            className="mt-2 text-2xl leading-tight"
+            style={{
+              fontFamily: t.fontDisplay,
+              fontStyle:  t.displayItalic,
+              color:      t.ink,
+            }}
           >
-            {weddingDateFormatted}
+            {coupleLabel}
           </div>
-        )}
-        {venueLine && (
-          <div className="mt-1 text-xs" style={{ color: t.inkMuted, fontFamily: t.fontBody }}>
-            {venueLine}
+          {weddingDateFormatted && (
+            <div
+              className="mt-2 text-sm italic"
+              style={{ fontFamily: t.fontDisplay, color: t.accent }}
+            >
+              {weddingDateFormatted}
+            </div>
+          )}
+          {venueLine && (
+            <div className="mt-1 text-xs" style={{ color: t.inkMuted, fontFamily: t.fontBody }}>
+              {venueLine}
+            </div>
+          )}
+          <div className="mt-4 flex justify-center">
+            <span
+              className="inline-flex items-center rounded-full px-4 py-1.5 text-[0.65rem] font-bold"
+              style={{ background: t.accent, color: t.accentInk }}
+            >
+              RSVP &amp; details →
+            </span>
           </div>
-        )}
-        <div className="mt-4 flex justify-center">
-          <span
-            className="inline-flex items-center rounded-full px-4 py-1.5 text-[0.65rem] font-bold"
-            style={{ background: t.accent, color: t.accentInk }}
-          >
-            RSVP &amp; details →
-          </span>
         </div>
-      </div>
+      )}
 
-      {/* Our story */}
+      {/* Our story — kept generic across all themes so couples can read
+       * the body copy in the theme's actual body font. */}
       <div className="border-t px-6 py-7" style={{ borderColor: t.border, background: t.pageBg }}>
         <h3 className="text-center text-lg"
             style={{
